@@ -1,0 +1,22 @@
+{
+  "name": "timeblock",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A built-in task manager <-> Google Calendar time-blocking life manager",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -n server,web -c blue,green \"npm:dev:server\" \"npm:dev:web\"",
+    "dev:server": "npm -w @timeblock/server run dev",
+    "dev:web": "npm -w @timeblock/web run dev",
+    "build": "npm -w @timeblock/web run build",
+    "start": "npm run build && npm -w @timeblock/server run start",
+    "test": "npm -w @timeblock/server run test",
+    "typecheck": "npm -w @timeblock/server run typecheck && npm -w @timeblock/web run typecheck"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  }
+}

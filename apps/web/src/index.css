@@ -1,0 +1,721 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background-color: #f8fafc;
+  color: #0f172a;
+}
+
+.dark body {
+  background-color: #0a0a0a;
+  color: #e5e5e5;
+}
+
+/* ---------------- Design tokens ---------------- */
+
+:root {
+  /* kind accents */
+  --tb-task: #6366f1;
+  --tb-task-bg: #eef2ff;
+  --tb-task-text: #3730a3;
+  --tb-habit: #0d9488;
+  --tb-habit-bg: #f0fdfa;
+  --tb-habit-text: #115e59;
+  --tb-done: #10b981;
+  --tb-done-bg: #ecfdf5;
+  --tb-done-text: #065f46;
+  --tb-missed: #f43f5e;
+  --tb-missed-bg: #fff1f2;
+  --tb-missed-text: #9f1239;
+  --tb-external: #cbd5e1;
+  --tb-external-bg: #f1f5f9;
+  --tb-external-text: #475569;
+  --tb-event: #a855f7;
+  --tb-event-bg: #faf5ff;
+  --tb-event-text: #6b21a8;
+
+  /* priority accents (4=P1 .. 1=P4) */
+  --tb-p1: #f43f5e;
+  --tb-p2: #f59e0b;
+  --tb-p3: #0ea5e9;
+  --tb-p4: #94a3b8;
+
+  /* motion */
+  --tb-fast: 120ms;
+  --tb-med: 150ms;
+}
+
+.dark {
+  --tb-task-bg: rgba(99, 102, 241, 0.15);
+  --tb-task-text: #c7d2fe;
+  --tb-habit-bg: rgba(13, 148, 136, 0.15);
+  --tb-habit-text: #5eead4;
+  --tb-done-bg: rgba(16, 185, 129, 0.15);
+  --tb-done-text: #6ee7b7;
+  --tb-missed-bg: rgba(244, 63, 94, 0.15);
+  --tb-missed-text: #fda4af;
+  --tb-external-bg: rgba(163, 163, 163, 0.12);
+  --tb-external-text: #d4d4d4;
+  --tb-event-bg: rgba(168, 85, 247, 0.15);
+  --tb-event-text: #e9d5ff;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fc *,
+  .tb-ev,
+  .tb-pulse,
+  .tb-skeleton,
+  .tb-glow,
+  .tb-flame,
+  .tb-xpbar::after,
+  .tb-skeleton-dark {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+/* ---------------- Game HUD theme (scoped to .tb-game, i.e. the Today page) ---------------- */
+
+.tb-game {
+  --g-bg: #0a0a0a;
+  --g-surface: #171717;
+  --g-surface-2: #1f1f1f;
+  --g-border: rgba(163, 163, 163, 0.14);
+  --g-text: #e5e5e5;
+  --g-text-dim: #a3a3a3;
+  --g-text-faint: #737373;
+  --g-xp-a: #6366f1;
+  --g-xp-b: #2dd4bf;
+  --g-cyan: #22d3ee;
+  --g-violet: #14b8a6;
+  --g-amber: #fbbf24;
+  --g-emerald: #34d399;
+  --g-rose: #fb7185;
+  --g-flame: #f97316;
+  --g-glow-indigo: 0 0 18px rgba(20, 184, 166, 0.45);
+  --g-glow-cyan: 0 0 14px rgba(34, 211, 238, 0.35);
+
+  color: var(--g-text);
+}
+
+.g-card {
+  background: var(--g-surface);
+  border: 1px solid var(--g-border);
+  border-radius: 1rem;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.03) inset,
+    0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+@keyframes g-glow-kf {
+  0%,
+  100% {
+    box-shadow: var(--g-glow-indigo);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(20, 184, 166, 0.75);
+  }
+}
+.tb-glow {
+  animation: g-glow-kf 2.4s ease-in-out infinite;
+}
+
+@keyframes g-flame-kf {
+  0%,
+  100% {
+    transform: scale(1) rotate(0deg);
+  }
+  25% {
+    transform: scale(1.08) rotate(-3deg);
+  }
+  50% {
+    transform: scale(0.96) rotate(2deg);
+  }
+  75% {
+    transform: scale(1.05) rotate(-1deg);
+  }
+}
+.tb-flame {
+  display: inline-block;
+  animation: g-flame-kf 1.8s ease-in-out infinite;
+}
+
+.tb-xpbar {
+  position: relative;
+  overflow: hidden;
+}
+@keyframes g-bar-sheen-kf {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(250%);
+  }
+}
+.tb-xpbar::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  width: 40%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+  animation: g-bar-sheen-kf 2.6s ease-in-out infinite;
+}
+
+.tb-skeleton-dark {
+  position: relative;
+  overflow: hidden;
+  background: var(--g-surface);
+  border: 1px solid var(--g-border);
+}
+.tb-skeleton-dark::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 25%, rgba(255, 255, 255, 0.06) 50%, transparent 75%);
+  background-size: 400px 100%;
+  animation: tb-shimmer-kf 1.4s ease-in-out infinite;
+}
+
+/* Visible focus rings everywhere interactive */
+.fc-event:focus-visible .tb-ev,
+button:focus-visible,
+a:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid #0d9488;
+  outline-offset: 2px;
+}
+
+button,
+a,
+.fc-event,
+.tb-draggable {
+  cursor: pointer;
+}
+
+/* ---------------- FullCalendar theming ---------------- */
+
+.fc {
+  --fc-border-color: #eef2f6 !important;
+  --fc-today-bg-color: #f5f8ff !important;
+  --fc-page-bg-color: transparent !important;
+  --fc-neutral-bg-color: transparent !important;
+  --fc-now-indicator-color: #ef4444 !important;
+  --fc-event-selected-overlay-color: transparent !important;
+  font-family: inherit;
+}
+
+.dark .fc {
+  --fc-border-color: rgba(163, 163, 163, 0.16) !important;
+  --fc-today-bg-color: rgba(20, 184, 166, 0.08) !important;
+  --fc-non-business-color: rgba(10, 10, 10, 0.35) !important;
+}
+
+/* Column headers: roomy weekday + date, sticky so they stay put on scroll */
+.fc .fc-col-header {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  background: #fff;
+}
+.dark .fc .fc-col-header {
+  background: #171717;
+}
+.fc .fc-col-header-cell {
+  padding: 8px 0;
+}
+.fc .fc-col-header-cell-cushion {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  color: #64748b !important;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  padding: 4px 6px;
+  line-height: 1.25;
+}
+.dark .fc .fc-col-header-cell-cushion {
+  color: #a3a3a3 !important;
+}
+/* today: solid teal pill so the current day is unmistakable */
+.fc .fc-day-today .fc-col-header-cell-cushion {
+  color: #fff !important;
+  background: #0d9488 !important;
+  border-radius: 10px;
+  padding: 4px 10px;
+  box-shadow: 0 1px 3px rgba(13, 148, 136, 0.35);
+}
+.dark .fc .fc-day-today .fc-col-header-cell-cushion {
+  color: #f0fdfa !important;
+  background: #0d9488 !important;
+}
+
+/* Time-axis labels — larger, clearer, sitting on the hour line */
+.fc .fc-timegrid-axis-cushion,
+.fc .fc-timegrid-slot-label-cushion {
+  color: #475569 !important;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+.dark .fc .fc-timegrid-axis-cushion,
+.dark .fc .fc-timegrid-slot-label-cushion {
+  color: #a3a3a3 !important;
+}
+/* nudge the hour label up so it reads as a boundary marker, not a row */
+.fc .fc-timegrid-slot-label {
+  vertical-align: top;
+}
+.fc .fc-timegrid-slot-label-cushion {
+  position: relative;
+  top: -0.62em;
+  padding: 0 8px 0 4px;
+}
+
+/* roomy rows */
+.fc .fc-timegrid-slot {
+  height: 3em;
+}
+
+/* Themed scrollbar for the time-grid body (the "slider" used to reach later hours) */
+.fc .fc-scroller {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+.fc .fc-scroller::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.fc .fc-scroller::-webkit-scrollbar-track {
+  background: transparent;
+}
+.fc .fc-scroller::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+.fc .fc-scroller::-webkit-scrollbar-thumb:hover {
+  background-color: #94a3b8;
+}
+.dark .fc .fc-scroller {
+  scrollbar-color: rgba(163, 163, 163, 0.35) transparent;
+}
+.dark .fc .fc-scroller::-webkit-scrollbar-thumb {
+  background-color: rgba(163, 163, 163, 0.35);
+}
+.dark .fc .fc-scroller::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(163, 163, 163, 0.55);
+}
+
+/* Hour lines: clearly visible. Half-hour lines: barely there. */
+.fc .fc-timegrid-slot-lane {
+  border-top-color: #e2e8f0 !important;
+}
+.dark .fc .fc-timegrid-slot-lane {
+  border-top-color: rgba(163, 163, 163, 0.18) !important;
+}
+.fc .fc-timegrid-slot-minor {
+  border-top-style: dashed !important;
+  border-top-color: #f1f5f9 !important;
+}
+.dark .fc .fc-timegrid-slot-minor {
+  border-top-color: rgba(163, 163, 163, 0.07) !important;
+}
+
+/* the left time-axis column: a hair wider + a divider so hours read as a ruler */
+.fc .fc-timegrid-axis,
+.fc .fc-timegrid-slot-label {
+  border-right: 1px solid #eef2f6;
+}
+.dark .fc .fc-timegrid-axis,
+.dark .fc .fc-timegrid-slot-label {
+  border-right-color: rgba(163, 163, 163, 0.16);
+}
+
+/* Toolbar */
+.fc .fc-toolbar.fc-header-toolbar {
+  margin-bottom: 0.75rem;
+}
+.fc .fc-toolbar-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0f172a !important;
+}
+.dark .fc .fc-toolbar-title {
+  color: #e5e5e5 !important;
+}
+.fc .fc-button {
+  background: #fff !important;
+  border: 1px solid #e2e8f0 !important;
+  color: #475569 !important;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0.32rem 0.7rem;
+  border-radius: 8px;
+  box-shadow: 0 1px 1px rgba(15, 23, 42, 0.03);
+  text-transform: capitalize;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+.dark .fc .fc-button {
+  background: #262626 !important;
+  border-color: #404040 !important;
+  color: #d4d4d4 !important;
+}
+.fc .fc-button:hover {
+  background: #f8fafc !important;
+  border-color: #cbd5e1 !important;
+  color: #1e293b !important;
+}
+.dark .fc .fc-button:hover {
+  background: #404040 !important;
+  border-color: #525252 !important;
+  color: #e5e5e5 !important;
+}
+.fc .fc-button:focus {
+  box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.15);
+}
+.fc .fc-button-primary:not(:disabled).fc-button-active,
+.fc .fc-button-primary:not(:disabled):active {
+  background: #0d9488;
+  border-color: #0d9488;
+  color: #fff;
+}
+.fc .fc-today-button:disabled {
+  opacity: 0.4;
+}
+.fc .fc-button .fc-icon {
+  font-size: 1.1em;
+}
+
+/* Now indicator — a bold red line with a dot at the current-time axis */
+.fc .fc-timegrid-now-indicator-line {
+  border-width: 2px 0 0;
+  border-color: #ef4444;
+}
+.fc .fc-timegrid-now-indicator-line::before {
+  content: '';
+  position: absolute;
+  left: -5px;
+  top: -5px;
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
+}
+.fc .fc-timegrid-now-indicator-arrow {
+  display: none;
+}
+
+/* ---------------- Event cards ---------------- */
+
+.fc .fc-timegrid-event,
+.fc .fc-daygrid-event {
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  border-radius: 8px;
+}
+.fc .fc-timegrid-event .fc-event-main {
+  padding: 0;
+  color: inherit;
+}
+.fc .fc-timegrid-event-harness {
+  margin-right: 2px;
+}
+
+/* the inner card we render via eventContent — styled to match the list-view TaskCard:
+   a white surface with a colored left accent, rather than a tinted fill */
+.tb-ev {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  height: 100%;
+  min-height: 0;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  color: #1e293b;
+  padding: 3px 8px 3px 12px;
+  overflow: hidden;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  transition: filter 0.12s, box-shadow 0.12s, transform 0.12s, border-color 0.12s;
+}
+.dark .tb-ev {
+  border-color: rgba(163, 163, 163, 0.16);
+  background: #171717;
+  color: #e5e5e5;
+}
+/* solid vertical color bar down the full left edge — independent of border-radius
+   rounding so it never looks like it fades out partway down the block */
+.tb-ev::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--tb-accent, #6366f1);
+}
+.fc-event:hover .tb-ev {
+  border-color: #99f6e4;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.14);
+  transform: translateY(-1px);
+  z-index: 2;
+}
+.dark .fc-event:hover .tb-ev {
+  border-color: rgba(45, 212, 191, 0.4);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+}
+.tb-ev-title {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.78rem;
+  font-weight: 650;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.tb-ev-title > span.tb-ev-title-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+/* non-short blocks have vertical room to spare: wrap the title across
+   multiple lines instead of clipping it to a handful of characters */
+.tb-ev-title-wrap {
+  align-items: flex-start;
+  white-space: normal;
+}
+.tb-ev-title-wrap > span.tb-ev-title-text {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  white-space: normal;
+}
+.tb-ev-title-wrap > .tb-priority-dot {
+  margin-top: 4px;
+}
+.tb-ev-title-wrap > svg {
+  margin-top: 2px;
+}
+
+/* short blocks (< 45min): single line, title + time share the row */
+.tb-ev-short {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 1px;
+  padding-bottom: 1px;
+}
+.tb-ev-short .tb-ev-title {
+  font-size: 0.74rem;
+  min-width: 0;
+  flex: 1;
+}
+.tb-ev-time-inline {
+  flex: none;
+  margin-left: 4px;
+  font-size: 0.66rem;
+  font-weight: 600;
+  opacity: 0.7;
+  font-variant-numeric: tabular-nums;
+}
+
+/* priority dot shown at the start of an event card title */
+.tb-priority-dot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--dot, var(--tb-p4));
+}
+
+/* at-risk indicator: amber ring around the whole card */
+.tb-ev-atrisk {
+  box-shadow: inset 0 0 0 1.5px #f59e0b;
+}
+
+/* part i of n chunk badge */
+.tb-chunk-badge {
+  flex: none;
+  border-radius: 4px;
+  padding: 0 4px;
+  font-size: 0.6rem;
+  font-weight: 700;
+  background: rgba(15, 23, 42, 0.06);
+  color: inherit;
+  opacity: 0.8;
+}
+.dark .tb-chunk-badge {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* one-shot glow when a block is freshly scheduled/moved */
+@keyframes tb-pulse-kf {
+  0% {
+    box-shadow: 0 0 0 0 rgba(13, 148, 136, 0.45);
+  }
+  100% {
+    box-shadow: 0 0 0 10px rgba(13, 148, 136, 0);
+  }
+}
+.tb-pulse .tb-ev {
+  animation: tb-pulse-kf 600ms ease-out;
+}
+
+@keyframes tb-pop {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* skeleton shimmer for first calendar load */
+@keyframes tb-shimmer-kf {
+  0% {
+    background-position: -200px 0;
+  }
+  100% {
+    background-position: calc(200px + 100%) 0;
+  }
+}
+.tb-skeleton {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 37%, #f1f5f9 63%);
+  background-size: 400px 100%;
+  animation: tb-shimmer-kf 1.4s ease-in-out infinite;
+  border-radius: 12px;
+}
+.dark .tb-skeleton {
+  background: linear-gradient(90deg, #262626 25%, #404040 37%, #262626 63%);
+  background-size: 400px 100%;
+}
+
+/* weekend column shading */
+.fc .fc-day-sat,
+.fc .fc-day-sun {
+  background: #fafbfd !important;
+}
+.dark .fc .fc-day-sat,
+.dark .fc .fc-day-sun {
+  background: rgba(163, 163, 163, 0.04) !important;
+}
+
+.tb-ev-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+  font-size: 0.68rem;
+  font-weight: 500;
+  overflow: hidden;
+}
+
+/* clear "missed" marker — a compact solid-red pill inline in the title row */
+.tb-missed-tag {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 1px;
+  border-radius: 3px;
+  padding: 0 3px;
+  font-size: 0.58rem;
+  font-weight: 800;
+  line-height: 1.55;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  background: #f43f5e;
+  color: #fff;
+}
+.dark .tb-missed-tag {
+  background: #e11d48;
+  color: #fff;
+}
+/* keep the pill top-aligned when the title wraps across multiple lines */
+.tb-ev-title-wrap > .tb-missed-tag {
+  margin-top: 2px;
+}
+.tb-ev-time {
+  flex: none;
+  font-weight: 650;
+  opacity: 0.85;
+  font-variant-numeric: tabular-nums;
+}
+.tb-ev-project {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  opacity: 0.65;
+  font-size: 0.66rem;
+}
+.tb-ev-project::before {
+  content: '·';
+  margin-right: 4px;
+  opacity: 0.6;
+}
+
+/* variants (accent / bg / text set via inline CSS vars from JS) */
+.tb-ev-done .tb-ev-title {
+  text-decoration: line-through;
+  opacity: 0.85;
+}
+.tb-ev-missed::before {
+  background: repeating-linear-gradient(to bottom, var(--tb-accent, #f43f5e) 0 5px, transparent 5px 9px);
+}
+.tb-ev-missed .tb-ev-title-text {
+  text-decoration: line-through;
+  opacity: 0.75;
+}
+/* events that have already ended recede visually so the eye is drawn to what's next */
+.tb-ev-past {
+  opacity: 0.6;
+}
+.fc-event:hover .tb-ev-past {
+  opacity: 0.85;
+}
+.tb-ev-external {
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 5px,
+    rgba(100, 116, 139, 0.07) 5px,
+    rgba(100, 116, 139, 0.07) 10px
+  );
+  cursor: default;
+}
+.fc-event.tb-locked .tb-ev {
+  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.08);
+}
+
+/* External / uneditable events shouldn't look grabbable */
+.fc .fc-timegrid-event.tb-external {
+  cursor: default;
+}
+
+/* Drag mirror when dropping a task from the sidebar */
+.fc .fc-event-dragging .tb-ev {
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.18);
+}

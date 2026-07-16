@@ -1,0 +1,1 @@
+ALTER TABLE `blocks` ADD `reasons` text DEFAULT '[]' NOT NULL;

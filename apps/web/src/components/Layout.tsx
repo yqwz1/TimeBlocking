@@ -1,0 +1,123 @@
+import { AnimatePresence, motion } from 'motion/react';
+import { NavLink, useLocation, useOutlet } from 'react-router-dom';
+import { useLiveSync, useSetupStatus } from '../hooks.js';
+import { useTheme } from '../hooks/useTheme.js';
+import { useUndoRedoShortcuts } from '../lib/undoStack.js';
+import { pageVariants, springs } from '../lib/motion.js';
+import SyncStatusBar from './SyncStatusBar.js';
+import ScheduleStateChip from './ScheduleStateChip.js';
+import UndoRedoControls from './UndoRedoControls.js';
+import CelebrationToasts from './CelebrationToasts.js';
+import ReminderToasts from './ReminderToasts.js';
+import UndoToasts from './UndoToasts.js';
+import ConfettiBurst from './ConfettiBurst.js';
+
+function ThemeToggle({ gameMode }: { gameMode: boolean }) {
+  const { setting, resolved, setSetting } = useTheme();
+  const cycle = () => setSetting(setting === 'system' ? (resolved === 'dark' ? 'light' : 'dark') : setting === 'dark' ? 'light' : 'dark');
+  const icon = setting === 'system' ? '🖥️' : resolved === 'dark' ? '🌙' : '☀️';
+  const label = setting === 'system' ? 'Theme: System' : resolved === 'dark' ? 'Theme: Dark' : 'Theme: Light';
+  return (
+    <motion.button
+      type="button"
+      whileTap={{ scale: 0.88, rotate: -12 }}
+      onClick={cycle}
+      title={`${label} (click to change)`}
+      className={`rounded-md px-2 py-1.5 text-sm ${
+        gameMode ? 'text-slate-300 hover:bg-white/5' : 'text-slate-600 hover:bg-slate-100 dark:text-neutral-300 dark:hover:bg-white/5'
+      }`}
+    >
+      {icon}
+    </motion.button>
+  );
+}
+
+const tabs = [
+  { to: '/tasks', label: 'Tasks' },
+  { to: '/whiteboard', label: 'Whiteboard' },
+];
+
+export default function Layout() {
+  useLiveSync();
+  useUndoRedoShortcuts();
+  const { data: setup } = useSetupStatus();
+  const setupIncomplete = setup && (!setup.google || !setup.calendarChosen);
+  const location = useLocation();
+  const outlet = useOutlet();
+  const gameMode = location.pathname.startsWith('/today');
+  const fullBleed = location.pathname.startsWith('/tasks') || location.pathname.startsWith('/whiteboard');
+
+  return (
+    <div className={`flex h-full min-h-screen flex-col transition-colors duration-300 ${gameMode ? 'bg-[#0b0f1a]' : 'dark:bg-neutral-950'}`}>
+      <header
+        className={`border-b transition-colors duration-300 ${gameMode ? 'border-slate-800/80 bg-[#0e1424]' : 'border-slate-200 bg-white dark:border-neutral-800 dark:bg-neutral-900'}`}
+      >
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3">
+          <div className="flex items-center gap-6">
+            <span className={`text-lg font-semibold ${gameMode ? 'text-slate-100' : 'text-slate-900 dark:text-neutral-100'}`}>
+              ⏱ TimeBlock
+            </span>
+            <nav className="flex gap-1">
+              {tabs.map((t) => (
+                <NavLink
+                  key={t.to}
+                  to={t.to}
+                  className={({ isActive }) =>
+                    `relative rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                      gameMode
+                        ? isActive
+                          ? 'text-teal-300'
+                          : 'text-slate-400 hover:bg-white/5'
+                        : isActive
+                          ? 'text-teal-700 dark:text-teal-300'
+                          : 'text-slate-600 hover:bg-slate-50 dark:text-neutral-400 dark:hover:bg-white/5'
+                    }`
+                  }
+                >
+                  {({ isActive }) => (
+                    <>
+                      {isActive && (
+                        <motion.span
+                          layoutId="nav-active-pill"
+                          transition={springs.snappy}
+                          className={`absolute inset-0 rounded-md ${gameMode ? 'bg-teal-500/15' : 'bg-teal-50 dark:bg-teal-500/15'}`}
+                        />
+                      )}
+                      <span className="relative">{t.label}</span>
+                    </>
+                  )}
+                </NavLink>
+              ))}
+            </nav>
+          </div>
+          <div className={`flex items-center gap-4 ${gameMode ? '[&_*]:text-slate-300' : ''}`}>
+            <UndoRedoControls gameMode={gameMode} />
+            <ScheduleStateChip />
+            <SyncStatusBar />
+            <ThemeToggle gameMode={gameMode} />
+          </div>
+        </div>
+        {setupIncomplete && (
+          <div className="bg-amber-50 px-4 py-2 text-center text-sm text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
+            Setup isn't finished yet.{' '}
+            <NavLink to="/setup" className="font-medium underline">
+              Finish setup
+            </NavLink>{' '}
+            to start syncing with Google Calendar.
+          </div>
+        )}
+      </header>
+      <main className={`relative flex-1 py-6 ${fullBleed ? 'w-full' : 'mx-auto w-full max-w-7xl px-4'}`}>
+        <AnimatePresence initial={false}>
+          <motion.div key={location.pathname} className="min-h-full" variants={pageVariants} initial="initial" animate="animate" exit="exit">
+            {outlet}
+          </motion.div>
+        </AnimatePresence>
+      </main>
+      <CelebrationToasts />
+      <ReminderToasts />
+      <UndoToasts />
+      <ConfettiBurst />
+    </div>
+  );
+}

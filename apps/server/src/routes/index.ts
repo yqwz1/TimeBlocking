@@ -1,0 +1,57 @@
+import type { FastifyInstance } from 'fastify';
+import type { DB } from '../db/client.js';
+import type { SyncManager } from '../sync/manager.js';
+import { registerSetupRoutes } from './setup.js';
+import { registerSyncRoutes } from './sync.js';
+import { registerProposalRoutes } from './proposal.js';
+import { registerScheduleRoutes } from './schedule.js';
+import { registerTaskRoutes } from './tasks.js';
+import { registerEventRoutes } from './events.js';
+import { registerProjectRoutes } from './projects.js';
+import { registerLabelRoutes } from './labels.js';
+import { registerReminderRoutes } from './reminders.js';
+import { registerDependencyRoutes } from './dependencies.js';
+import { registerAttachmentRoutes } from './attachments.js';
+import { registerBlockRoutes } from './blocks.js';
+import { registerSettingsRoutes } from './settings.js';
+import { registerHabitRoutes } from './habits.js';
+import { registerObjectiveRoutes } from './objectives.js';
+import { registerGoalRoutes } from './goals.js';
+import { registerAnalyticsRoutes } from './analytics.js';
+import { registerBriefRoutes } from './brief.js';
+import { registerDailyRoutes } from './daily.js';
+import { registerWeeklyReviewRoutes } from './weeklyReview.js';
+import { registerLearningRoutes } from './learning.js';
+import { registerGamificationRoutes } from './gamification.js';
+import { registerDemoRoutes } from './demo.js';
+import { registerWhiteboardRoutes } from './whiteboards.js';
+import { env } from '../config.js';
+
+export function registerApiRoutes(app: FastifyInstance, db: DB, manager: SyncManager) {
+  app.get('/health', async () => ({ ok: true }));
+
+  registerSetupRoutes(app, db, manager);
+  registerSyncRoutes(app, db, manager);
+  registerProposalRoutes(app, db, manager);
+  registerScheduleRoutes(app, db);
+  registerTaskRoutes(app, db, manager);
+  registerEventRoutes(app, db);
+  registerProjectRoutes(app, db, manager);
+  registerLabelRoutes(app, db);
+  registerReminderRoutes(app, db);
+  registerDependencyRoutes(app, db, manager);
+  registerAttachmentRoutes(app, db);
+  registerBlockRoutes(app, db, manager);
+  registerSettingsRoutes(app, db, manager);
+  registerHabitRoutes(app, db, manager);
+  registerObjectiveRoutes(app, db);
+  registerGoalRoutes(app, db);
+  registerAnalyticsRoutes(app, db);
+  registerBriefRoutes(app, db);
+  registerDailyRoutes(app, db);
+  registerWeeklyReviewRoutes(app, db);
+  registerLearningRoutes(app, db, manager);
+  registerGamificationRoutes(app, db);
+  registerWhiteboardRoutes(app, db);
+  if (!env.isProd) registerDemoRoutes(app, db, manager);
+}

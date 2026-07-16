@@ -1,0 +1,111 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1783651695530,
+      "tag": "0000_rainy_hawkeye",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1783651695531,
+      "tag": "0001_add_block_reasons",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1783651695532,
+      "tag": "0002_add_run_risks",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1783651695533,
+      "tag": "0003_add_learning",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1783689692686,
+      "tag": "0004_add_gamification",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1783748364359,
+      "tag": "0005_motionless_mad_thinker",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1783780694734,
+      "tag": "0006_native_tasks",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1783798430950,
+      "tag": "0007_add_project_icon",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1783820000000,
+      "tag": "0008_add_task_difficulty",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1783830000000,
+      "tag": "0009_add_plan_proposals",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1783840000000,
+      "tag": "0010_add_planned_for",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1783850000000,
+      "tag": "0011_add_events",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1783860000000,
+      "tag": "0012_add_task_dependencies",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "6",
+      "when": 1783870000000,
+      "tag": "0013_add_whiteboards",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "6",
+      "when": 1783880000000,
+      "tag": "0014_add_goals",
+      "breakpoints": true
+    }
+  ]
+}
