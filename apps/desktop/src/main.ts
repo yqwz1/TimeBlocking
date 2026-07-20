@@ -22,6 +22,7 @@ import {
   type WindowState,
 } from './settings.js';
 import { initUpdater } from './updater.js';
+import { createPetWindow, destroyPetWindow, initPetIpc } from './pet.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -53,7 +54,7 @@ let serverProcess: UtilityProcess | null = null;
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let isQuitting = false;
-let settings: DesktopSettings = { closeToTray: true, launchAtStartup: false };
+let settings: DesktopSettings = { closeToTray: true, launchAtStartup: false, showPet: true };
 
 const ICON_PATH = path.join(__dirname, 'icon.ico');
 
@@ -189,6 +190,9 @@ async function createWindow(port: number, startHidden = false) {
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
+      // ESM preload (contextBridge for the update button) needs sandbox off.
+      sandbox: false,
+      preload: path.join(__dirname, 'preload.js'),
     },
   });
   mainWindow = win;
@@ -213,6 +217,10 @@ async function createWindow(port: number, startHidden = false) {
     if (!isQuitting && settings.closeToTray) {
       event.preventDefault();
       win.hide();
+    } else {
+      // The pet window would otherwise keep the app alive after the main
+      // window closes for real (window-all-closed never fires).
+      destroyPetWindow();
     }
   });
 
@@ -251,6 +259,17 @@ function buildTrayMenu(port: number, extra: Electron.MenuItemConstructorOptions[
       click: (item) => {
         settings.closeToTray = item.checked;
         saveSettings(settings);
+      },
+    },
+    {
+      label: 'Desktop pet',
+      type: 'checkbox',
+      checked: settings.showPet,
+      click: (item) => {
+        settings.showPet = item.checked;
+        saveSettings(settings);
+        if (item.checked) createPetWindow();
+        else destroyPetWindow();
       },
     },
     {
@@ -315,7 +334,17 @@ app.whenReady().then(async () => {
   const startHidden = process.argv.includes('--hidden');
   await createWindow(port, startHidden);
   createTray(port);
-  initUpdater(tray, (extra) => buildTrayMenu(port, extra));
+  initPetIpc({
+    onOpenApp: showMainWindow,
+    onHide: () => {
+      settings.showPet = false;
+      saveSettings(settings);
+      destroyPetWindow();
+      tray?.setContextMenu(buildTrayMenu(port));
+    },
+  });
+  if (settings.showPet) createPetWindow();
+  initUpdater(tray, (extra) => buildTrayMenu(port, extra), () => mainWindow);
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) void createWindow(port);

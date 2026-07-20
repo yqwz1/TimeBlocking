@@ -1,11 +1,43 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { Check, Coffee, Pause, Play, RotateCcw, Search, Settings2, SkipForward, Target, X } from 'lucide-react';
+import {
+  AudioLines,
+  Check,
+  CloudDrizzle,
+  CloudLightning,
+  CloudRain,
+  Coffee,
+  Flame,
+  Moon,
+  Music,
+  Pause,
+  Piano,
+  Play,
+  RotateCcw,
+  Search,
+  Settings2,
+  SkipForward,
+  Target,
+  TreePine,
+  Volume2,
+  Waves,
+  Wind,
+  X,
+} from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import type { TaskDTO } from '@timeblock/shared';
 import { useTaskList, useUpdateTask } from '../../hooks.js';
 import { PriorityBadge, formatDuration } from './taskDisplay.js';
 import { popoverVariants, springs } from '../../lib/motion.js';
 import { playTimerDone } from '../../lib/sound.js';
+import {
+  AMBIENCE_META,
+  getAmbienceVolume,
+  setAmbienceVolume,
+  startAmbience,
+  stopAmbience,
+  type AmbienceType,
+} from '../../lib/ambience.js';
 
 type Phase = 'work' | 'short_break' | 'long_break';
 
@@ -29,6 +61,36 @@ interface PersistedState {
 const DEFAULT_SETTINGS: FocusSettings = { workMin: 25, shortMin: 5, longMin: 15, longEvery: 4, autoStart: false };
 const SETTINGS_KEY = 'tb.focus.settings';
 const STATE_KEY = 'tb.focus.state';
+const AMBIENCE_KEY = 'tb.focus.ambience';
+
+const AMBIENCE_ICONS: Record<AmbienceType, LucideIcon> = {
+  rain: CloudRain,
+  thunder: CloudLightning,
+  fireplace: Flame,
+  ocean: Waves,
+  wind: Wind,
+  forest: TreePine,
+  lofi: Music,
+  lofi_jazz: Piano,
+  lofi_sleep: Moon,
+  lofi_rain: CloudDrizzle,
+  white: AudioLines,
+  brown: AudioLines,
+};
+const AMBIENCE_ORDER: AmbienceType[] = [
+  'rain',
+  'thunder',
+  'fireplace',
+  'ocean',
+  'wind',
+  'forest',
+  'lofi',
+  'lofi_jazz',
+  'lofi_sleep',
+  'lofi_rain',
+  'white',
+  'brown',
+];
 
 const PHASE_META: Record<Phase, { label: string; ring: string; soft: string }> = {
   work: { label: 'Focus', ring: '#0d9488', soft: 'text-teal-600 dark:text-teal-300' },
@@ -74,6 +136,15 @@ export default function FocusView({ onOpenTask }: { onOpenTask: (id: string) => 
   const [pickQuery, setPickQuery] = useState('');
   const [tick, setTick] = useState(0); // forces re-render each second while running
   const pickerRef = useRef<HTMLDivElement>(null);
+  const [ambience, setAmbience] = useState<AmbienceType | null>(null);
+  const [ambVolume, setAmbVolume] = useState<number>(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(AMBIENCE_KEY) ?? '{}') as { volume?: number };
+      return typeof saved.volume === 'number' ? saved.volume : getAmbienceVolume();
+    } catch {
+      return getAmbienceVolume();
+    }
+  });
 
   const { data: allTasks } = useTaskList({});
   const update = useUpdateTask();
@@ -90,6 +161,20 @@ export default function FocusView({ onOpenTask }: { onOpenTask: (id: string) => 
   // Persist state & settings.
   useEffect(() => localStorage.setItem(STATE_KEY, JSON.stringify(state)), [state]);
   useEffect(() => localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)), [settings]);
+  useEffect(() => localStorage.setItem(AMBIENCE_KEY, JSON.stringify({ volume: ambVolume })), [ambVolume]);
+
+  // Apply volume and silence the soundscape when leaving the Focus tab.
+  useEffect(() => setAmbienceVolume(ambVolume), [ambVolume]);
+  useEffect(() => () => stopAmbience(), []);
+
+  const toggleAmbience = (type: AmbienceType) => {
+    if (ambience === type) {
+      stopAmbience();
+      setAmbience(null);
+    } else if (startAmbience(type)) {
+      setAmbience(type);
+    }
+  };
 
   // Live tick while running.
   useEffect(() => {
@@ -370,6 +455,71 @@ export default function FocusView({ onOpenTask }: { onOpenTask: (id: string) => 
         >
           <Settings2 size={18} />
         </button>
+      </div>
+
+      {/* Soundscapes */}
+      <div className="w-full rounded-xl border border-slate-200 p-3 dark:border-neutral-800">
+        <div className="mb-2 flex items-center justify-between">
+          <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-400 dark:text-neutral-500">Soundscape</span>
+          {ambience && (
+            <span className="flex items-center gap-1.5 text-xs font-medium text-teal-600 dark:text-teal-300">
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-teal-500 opacity-60" />
+                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-teal-500" />
+              </span>
+              {AMBIENCE_META[ambience].label}
+            </span>
+          )}
+        </div>
+        <div className="flex flex-wrap justify-center gap-1.5">
+          {AMBIENCE_ORDER.map((type) => {
+            const Icon = AMBIENCE_ICONS[type];
+            const active = ambience === type;
+            return (
+              <button
+                key={type}
+                type="button"
+                onClick={() => toggleAmbience(type)}
+                title={active ? `Stop ${AMBIENCE_META[type].label}` : `Play ${AMBIENCE_META[type].label}`}
+                className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-xs font-medium transition-colors ${
+                  active
+                    ? 'border-teal-400 bg-teal-50 text-teal-700 dark:border-teal-500/50 dark:bg-teal-500/15 dark:text-teal-300'
+                    : 'border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-700 dark:border-neutral-700 dark:text-neutral-400 dark:hover:border-neutral-600 dark:hover:text-neutral-200'
+                }`}
+              >
+                <Icon size={13} />
+                {AMBIENCE_META[type].label}
+              </button>
+            );
+          })}
+        </div>
+        <AnimatePresence initial={false}>
+          {ambience && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={springs.gentle}
+              className="overflow-hidden"
+            >
+              <div className="mt-3 flex items-center gap-2 px-1">
+                <Volume2 size={14} className="shrink-0 text-slate-400 dark:text-neutral-500" />
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  value={Math.round(ambVolume * 100)}
+                  onChange={(e) => setAmbVolume(Number(e.target.value) / 100)}
+                  className="w-full accent-teal-600"
+                  aria-label="Soundscape volume"
+                />
+                <span className="w-8 shrink-0 text-right text-[11px] tabular-nums text-slate-400 dark:text-neutral-500">
+                  {Math.round(ambVolume * 100)}%
+                </span>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Settings */}

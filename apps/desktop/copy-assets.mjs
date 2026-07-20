@@ -12,3 +12,6 @@ fs.copyFileSync(src, path.join(destDir, 'index.mjs'));
 
 // Window/tray icon needs to resolve relative to dist/main.js at runtime.
 fs.copyFileSync(path.resolve('build/icon.ico'), path.resolve('dist/icon.ico'));
+
+// The desktop-pet page loads relative to dist/main.js at runtime.
+fs.copyFileSync(path.resolve('src/pet.html'), path.resolve('dist/pet.html'));

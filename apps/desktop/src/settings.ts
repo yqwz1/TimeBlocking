@@ -5,12 +5,14 @@ import path from 'node:path';
 export interface DesktopSettings {
   closeToTray: boolean;
   launchAtStartup: boolean;
+  showPet: boolean;
 }
 
 const DEFAULTS: DesktopSettings = {
   closeToTray: true,
   // Ships on: the app lives in the tray, so starting with the OS is the expected behavior.
   launchAtStartup: true,
+  showPet: true,
 };
 
 const settingsPath = () => path.join(app.getPath('userData'), 'desktop-settings.json');

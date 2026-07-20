@@ -116,7 +116,7 @@ export default function Layout() {
           </div>
         )}
       </header>
-      <main className={`relative flex-1 py-6 ${fullBleed ? 'w-full' : 'mx-auto w-full max-w-7xl px-4'}`}>
+      <main className={`relative flex-1 ${fullBleed ? 'w-full' : 'mx-auto w-full max-w-7xl px-4 py-6'}`}>
         <AnimatePresence initial={false}>
           <motion.div key={location.pathname} className="min-h-full" variants={pageVariants} initial="initial" animate="animate" exit="exit">
             {outlet}

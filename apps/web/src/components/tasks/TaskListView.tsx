@@ -7,6 +7,7 @@ import { listItem } from '../../lib/motion.js';
 import { Bell, BlockedBadge, DifficultyBadge, DueChip, compareTasksBy, formatDuration, LabelChip, Link2, MetaChip, Paperclip, PriorityBadge, TaskTitle } from './taskDisplay.js';
 import type { SortBy } from './types.js';
 import { useTaskHoverPreview } from './TaskHoverPreview.js';
+import { useTaskContextMenu } from './TaskContextMenu.js';
 import QuickAddTask from './QuickAddTask.js';
 import TaskCheckbox from './TaskCheckbox.js';
 
@@ -49,6 +50,7 @@ function TaskRow({
   const del = useDeleteTask();
   const labelColors = useLabelColorMap();
   const hover = useTaskHoverPreview<HTMLSpanElement>(task);
+  const openTaskMenu = useTaskContextMenu();
   const [expanded, setExpanded] = useState(depth === 0);
   const [addingSub, setAddingSub] = useState(false);
   const [dragOver, setDragOver] = useState(false);
@@ -131,6 +133,7 @@ function TaskRow({
             x: swipeX,
           }}
           onPointerDown={(e) => swipeControls.start(e)}
+          onContextMenu={(e) => openTaskMenu(e, task, { onOpen })}
           onDragEnd={(_e, info) => {
             if (info.offset.x <= SWIPE_DELETE_THRESHOLD && window.confirm(`Delete "${task.content}"? This can't be undone.`)) {
               animate(swipeX, -400, { duration: 0.15, ease: 'easeIn' });

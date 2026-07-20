@@ -378,7 +378,7 @@ function Tomorrow({
         slotDuration="00:30:00"
         initialView="timeGridDay"
         initialDate={tomorrowDate}
-        height="480px"
+        height="640px"
         onDatesSet={() => {}}
         railRef={railRef}
         onRailDragActive={() => {}}
@@ -482,48 +482,50 @@ export default function TodayView({
 
           <Missed tasks={missed} />
 
-          <section>
-            <SectionLabel
-              trailing={
-                schedulable.length > 0 && (
-                  <span className="text-xs tabular-nums text-slate-400 dark:text-neutral-500">
-                    {schedulable.length} block{schedulable.length === 1 ? '' : 's'}
-                  </span>
-                )
-              }
-            >
-              Schedule
-            </SectionLabel>
-            <QuickAddTask
-              placeholder="Add a task for today…"
-              defaults={{ dueDate: quickDateOptions()[0].date }}
-              className="mb-3"
-            />
-            <ScheduleCalendar
-              filters={ALL_KINDS}
-              priorities={NO_PRIORITIES}
-              slotDuration="00:30:00"
-              initialView="timeGridDay"
-              height="640px"
-              onDatesSet={() => {}}
-              railRef={railRef}
-              onRailDragActive={() => {}}
-              onOpenTask={onOpenTask}
-            />
-            {blocks.length === 0 && (
-              <div className="mt-3 flex items-center justify-between rounded-xl border border-dashed border-slate-200 px-4 py-3 dark:border-neutral-800">
-                <p className="text-sm text-slate-500 dark:text-neutral-400">Nothing scheduled today.</p>
-                <button
-                  onClick={onPlan}
-                  className="cursor-pointer rounded-md bg-teal-600 px-3.5 py-1.5 text-sm font-medium text-white transition-colors duration-150 hover:bg-teal-500"
-                >
-                  Plan day
-                </button>
-              </div>
-            )}
-          </section>
+          <QuickAddTask
+            placeholder="Add a task for today…"
+            defaults={{ dueDate: quickDateOptions()[0].date }}
+          />
 
-          <Tomorrow blocks={plan.tomorrow} onPlan={onPlan} onOpenTask={onOpenTask} railRef={tomorrowRailRef} />
+          <div className="grid gap-6 md:grid-cols-2">
+            <section>
+              <SectionLabel
+                trailing={
+                  schedulable.length > 0 && (
+                    <span className="text-xs tabular-nums text-slate-400 dark:text-neutral-500">
+                      {schedulable.length} block{schedulable.length === 1 ? '' : 's'}
+                    </span>
+                  )
+                }
+              >
+                Schedule
+              </SectionLabel>
+              <ScheduleCalendar
+                filters={ALL_KINDS}
+                priorities={NO_PRIORITIES}
+                slotDuration="00:30:00"
+                initialView="timeGridDay"
+                height="640px"
+                onDatesSet={() => {}}
+                railRef={railRef}
+                onRailDragActive={() => {}}
+                onOpenTask={onOpenTask}
+              />
+              {blocks.length === 0 && (
+                <div className="mt-3 flex items-center justify-between rounded-xl border border-dashed border-slate-200 px-4 py-3 dark:border-neutral-800">
+                  <p className="text-sm text-slate-500 dark:text-neutral-400">Nothing scheduled today.</p>
+                  <button
+                    onClick={onPlan}
+                    className="cursor-pointer rounded-md bg-teal-600 px-3.5 py-1.5 text-sm font-medium text-white transition-colors duration-150 hover:bg-teal-500"
+                  >
+                    Plan day
+                  </button>
+                </div>
+              )}
+            </section>
+
+            <Tomorrow blocks={plan.tomorrow} onPlan={onPlan} onOpenTask={onOpenTask} railRef={tomorrowRailRef} />
+          </div>
         </main>
 
         <aside className="min-w-0 space-y-4">

@@ -410,7 +410,7 @@ function findCachedTask(qc: ReturnType<typeof useQueryClient>, id: string): Task
   return undefined;
 }
 
-function taskToInput(t: TaskDTO): TaskInput {
+export function taskToInput(t: TaskDTO): TaskInput {
   return {
     content: t.content,
     description: t.description,

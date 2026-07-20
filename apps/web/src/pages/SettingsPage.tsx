@@ -6,6 +6,7 @@ import { useDisconnectGoogle, useGoogleCalendars, useLearningStats, useResetLear
 import { useConceptStatus, useEmbeddingsStatus, useExtractConcepts, useRebuildGraph, useReindexEmbeddings } from '../hooks/notes.js';
 import WorkingHoursEditor from '../components/WorkingHoursEditor.js';
 import EnergyWindowsEditor from '../components/EnergyWindowsEditor.js';
+import DesktopUpdatePanel from '../components/DesktopUpdatePanel.js';
 
 function fmtHour(h: number) {
   const period = h < 12 ? 'am' : 'pm';
@@ -82,6 +83,8 @@ export default function SettingsPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <h1 className="text-lg font-semibold text-slate-900 dark:text-neutral-100">Settings</h1>
+
+      <DesktopUpdatePanel />
 
       <section className="rounded-xl border border-slate-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
         <h3 className="mb-3 font-semibold text-slate-900 dark:text-neutral-100">Timezone & working hours</h3>

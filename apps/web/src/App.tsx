@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import Layout from './components/Layout.js';
+import { TaskContextMenuProvider } from './components/tasks/TaskContextMenu.js';
 import SetupWizard from './pages/SetupWizard.js';
 import TasksPage from './pages/TasksPage.js';
 import WhiteboardPage from './pages/WhiteboardPage.js';
@@ -7,6 +8,7 @@ import SecondBrainPage from './pages/SecondBrainPage.js';
 
 export default function App() {
   return (
+    <TaskContextMenuProvider>
     <Routes>
       <Route path="/setup" element={<SetupWizard />} />
       <Route element={<Layout />}>
@@ -25,5 +27,6 @@ export default function App() {
         <Route path="*" element={<Navigate to="/tasks" replace />} />
       </Route>
     </Routes>
+    </TaskContextMenuProvider>
   );
 }

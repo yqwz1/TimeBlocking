@@ -5,6 +5,7 @@ import { useLabelColorMap, useUpdateTask } from '../../hooks.js';
 import { listItem, springs } from '../../lib/motion.js';
 import { Bell, BlockedBadge, DifficultyBadge, DueChip, formatDuration, LabelChip, Link2, MetaChip, Paperclip, PriorityBadge } from './taskDisplay.js';
 import { useTaskHoverPreview } from './TaskHoverPreview.js';
+import { useTaskContextMenu } from './TaskContextMenu.js';
 
 export default function TaskCard({
   task,
@@ -21,6 +22,7 @@ export default function TaskCard({
   const update = useUpdateTask();
   const isDone = task.status === 'done';
   const hover = useTaskHoverPreview<HTMLParagraphElement>(task);
+  const openTaskMenu = useTaskContextMenu();
   return (
     <>
     <motion.div
@@ -32,6 +34,7 @@ export default function TaskCard({
       whileHover={isDragging ? undefined : { y: -2 }}
       transition={springs.snappy}
       onClick={() => onOpen(task.id)}
+      onContextMenu={(e) => openTaskMenu(e, task, { onOpen })}
       className={`group relative cursor-pointer rounded-lg border bg-white p-3 shadow-sm transition-[border-color,box-shadow] hover:border-teal-300 hover:shadow-md dark:bg-neutral-900 dark:hover:border-teal-500/50 ${
         isDragging ? 'border-teal-300 ring-2 ring-teal-300/50 dark:border-teal-500/50 dark:ring-teal-500/40' : 'border-slate-200 dark:border-neutral-800'
       }`}
