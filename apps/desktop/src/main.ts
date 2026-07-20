@@ -274,13 +274,18 @@ function createTray(port: number) {
   tray.on('double-click', showMainWindow);
 }
 
-if (!app.requestSingleInstanceLock()) {
+// app.quit() is async — the guard below also has to skip startup, otherwise
+// the losing instance briefly boots a server before quitting.
+const hasSingleInstanceLock = app.requestSingleInstanceLock();
+if (!hasSingleInstanceLock) {
   app.quit();
 }
 
 app.on('second-instance', showMainWindow);
 
 app.whenReady().then(async () => {
+  if (!hasSingleInstanceLock) return;
+
   // Must match build.appId so renderer Notifications show as branded Windows toasts.
   app.setAppUserModelId('com.timeblock.desktop');
 
