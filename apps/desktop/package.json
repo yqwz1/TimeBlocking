@@ -1,0 +1,70 @@
+{
+  "name": "@timeblock/desktop",
+  "version": "0.2.0",
+  "private": true,
+  "description": "TimeBlock — personal time-blocking life manager for desktop",
+  "author": "wahib",
+  "type": "module",
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "tsc -p . && node copy-assets.mjs",
+    "dev": "npm run rebuild-native && npm run build && electron .",
+    "dist": "npm run rebuild-native && npm run build && electron-builder",
+    "rebuild-native": "electron-rebuild --force --only=better-sqlite3",
+    "typecheck": "tsc -p . --noEmit"
+  },
+  "dependencies": {
+    "@fastify/cors": "^10.0.1",
+    "@fastify/multipart": "^10.1.0",
+    "@fastify/static": "^8.0.3",
+    "@google/genai": "^1.0.0",
+    "@googleapis/calendar": "^9.7.0",
+    "archiver": "^7.0.1",
+    "better-sqlite3": "^11.10.0",
+    "dotenv": "^16.4.7",
+    "drizzle-orm": "^0.38.3",
+    "fastify": "^5.2.0",
+    "google-auth-library": "^9.15.0",
+    "graphology": "^0.25.4",
+    "graphology-communities-louvain": "^2.0.2",
+    "graphology-metrics": "^2.4.0",
+    "gray-matter": "^4.0.3",
+    "luxon": "^3.5.0",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@electron/rebuild": "^4.2.0",
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/node": "^22.10.2",
+    "electron": "36.9.5",
+    "electron-builder": "^26.0.0",
+    "typescript": "^5.7.2"
+  },
+  "build": {
+    "appId": "com.timeblock.desktop",
+    "productName": "TimeBlock",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "dist/**/*",
+      "node_modules/**/*"
+    ],
+    "extraResources": [
+      { "from": "../server/src/db/migrations", "to": "migrations" },
+      { "from": "../web/dist", "to": "web" }
+    ],
+    "asarUnpack": [
+      "node_modules/better-sqlite3/**/*"
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": "always"
+    }
+  }
+}
