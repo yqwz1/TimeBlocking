@@ -111,7 +111,7 @@
     to { transform: rotate(360deg); }
   }
 
-  /* --- cat --- */
+  /* --- cat (pixel sprite) --- */
   #cat {
     position: absolute;
     bottom: 2px;
@@ -120,8 +120,11 @@
     height: 96px;
     margin-left: -48px;
     z-index: 3;
+    shape-rendering: crispEdges;
   }
   #cat.flip { transform: scaleX(-1); }
+  #cat rect { stroke: #2e2b3d; stroke-width: 1.5; stroke-linejoin: miter; }
+  #cat rect.px-soft { stroke: none; }
 
   #tail {
     transform-origin: 78px 74px;
@@ -289,41 +292,101 @@
   <div id="yarn">🧶</div>
   <svg id="cat" viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg">
     <g id="body-group">
-      <path id="tail" d="M76 74 Q92 68 88 52 Q86 44 80 46 Q84 58 72 66 Z" fill="#e8933a" stroke="#3a3a3a" stroke-width="2.5" stroke-linejoin="round"/>
-      <ellipse cx="48" cy="72" rx="30" ry="20" fill="#f4a950" stroke="#3a3a3a" stroke-width="2.5"/>
-      <ellipse cx="46" cy="79" rx="16" ry="10" fill="#fde8c8"/>
-      <g id="leg-front" class="leg">
-        <rect x="30" y="80" width="9" height="12" rx="4.5" fill="#f4a950" stroke="#3a3a3a" stroke-width="2.5"/>
+      <g id="tail" fill="#d98a3a">
+        <rect x="72" y="68" width="8" height="12"/>
+        <rect x="78" y="58" width="8" height="12"/>
+        <rect x="82" y="48" width="8" height="12"/>
+        <rect x="78" y="44" width="8" height="8"/>
       </g>
-      <g id="leg-back" class="leg">
-        <rect x="56" y="80" width="9" height="12" rx="4.5" fill="#f4a950" stroke="#3a3a3a" stroke-width="2.5"/>
+      <g id="body-shape"></g>
+      <g id="belly-shape"></g>
+      <g id="leg-front" class="leg" fill="#d98a3a">
+        <rect x="28" y="80" width="8" height="12"/>
+        <rect x="28" y="90" width="8" height="2" class="px-soft" fill="#ffe9c5"/>
+      </g>
+      <g id="leg-back" class="leg" fill="#d98a3a">
+        <rect x="60" y="80" width="8" height="12"/>
+        <rect x="60" y="90" width="8" height="2" class="px-soft" fill="#ffe9c5"/>
       </g>
       <g id="head">
-        <g id="ear-l" class="ear">
-          <path d="M22 32 L26 12 L40 24 Z" fill="#f4a950" stroke="#3a3a3a" stroke-width="2.5" stroke-linejoin="round"/>
-          <path d="M27 28 L29 18 L36 24 Z" fill="#f7c8d0"/>
+        <g id="ear-l" class="ear" fill="#d98a3a">
+          <rect x="28" y="12" width="8" height="4"/>
+          <rect x="24" y="16" width="12" height="4"/>
+          <rect x="20" y="20" width="16" height="4"/>
+          <rect x="20" y="24" width="16" height="8"/>
+          <rect x="28" y="15" width="6" height="6" class="px-soft" fill="#f6a3b0"/>
         </g>
-        <g id="ear-r" class="ear">
-          <path d="M62 32 L58 12 L44 24 Z" fill="#f4a950" stroke="#3a3a3a" stroke-width="2.5" stroke-linejoin="round"/>
-          <path d="M57 28 L55 18 L48 24 Z" fill="#f7c8d0"/>
+        <g id="ear-r" class="ear" fill="#d98a3a">
+          <rect x="48" y="12" width="8" height="4"/>
+          <rect x="48" y="16" width="12" height="4"/>
+          <rect x="48" y="20" width="16" height="4"/>
+          <rect x="48" y="24" width="16" height="8"/>
+          <rect x="50" y="15" width="6" height="6" class="px-soft" fill="#f6a3b0"/>
         </g>
-        <circle cx="42" cy="38" r="22" fill="#f4a950" stroke="#3a3a3a" stroke-width="2.5"/>
-        <path d="M38 17 L40 24 M44 16 L44 23 M50 17 L48 24" stroke="#e8933a" stroke-width="2.5" stroke-linecap="round"/>
-        <g class="eye"><ellipse id="eye-l" cx="34" cy="38" rx="3.2" ry="4.4" fill="#3a3a3a"/></g>
-        <g class="eye"><ellipse id="eye-r" cx="50" cy="38" rx="3.2" ry="4.4" fill="#3a3a3a"/></g>
-        <path d="M40.5 45 L43.5 45 L42 47.5 Z" fill="#e2707e"/>
-        <path id="mouth" d="M42 47.5 Q42 50 39 50 M42 47.5 Q42 50 45 50" fill="none" stroke="#3a3a3a" stroke-width="1.8" stroke-linecap="round"/>
-        <path id="mouth-sad" d="M39 51 Q42 48.5 45 51" fill="none" stroke="#3a3a3a" stroke-width="1.8" stroke-linecap="round"/>
-        <ellipse id="yawn" cx="42" cy="49.5" rx="3.4" ry="4.2" fill="#b4565f"/>
-        <path d="M20 40 L28 41 M20 46 L28 45 M64 40 L56 41 M64 46 L56 45" stroke="#3a3a3a" stroke-width="1.5" stroke-linecap="round"/>
-        <ellipse cx="28" cy="45" rx="3.5" ry="2" fill="#f7b2ba" opacity="0.7"/>
-        <ellipse cx="56" cy="45" rx="3.5" ry="2" fill="#f7b2ba" opacity="0.7"/>
+        <g id="head-shape"></g>
+        <rect x="38" y="17" width="3" height="4" class="px-soft" fill="#d98a3a"/>
+        <rect x="43" y="16" width="3" height="5" class="px-soft" fill="#d98a3a"/>
+        <rect x="48" y="17" width="3" height="4" class="px-soft" fill="#d98a3a"/>
+        <rect x="25" y="43" width="6" height="4" class="px-soft" fill="#f6a3b0" opacity="0.6"/>
+        <rect x="53" y="43" width="6" height="4" class="px-soft" fill="#f6a3b0" opacity="0.6"/>
+        <g class="eye"><g id="eye-l" fill="#2e2b3d">
+          <rect x="32" y="36" width="6" height="8"/>
+          <rect x="33" y="37" width="2" height="2" class="px-soft" fill="#ffffff"/>
+        </g></g>
+        <g class="eye"><g id="eye-r" fill="#2e2b3d">
+          <rect x="46" y="36" width="6" height="8"/>
+          <rect x="49" y="37" width="2" height="2" class="px-soft" fill="#ffffff"/>
+        </g></g>
+        <rect x="16" y="39" width="10" height="1.5" class="px-soft" fill="#2e2b3d"/>
+        <rect x="16" y="45" width="10" height="1.5" class="px-soft" fill="#2e2b3d"/>
+        <rect x="58" y="39" width="10" height="1.5" class="px-soft" fill="#2e2b3d"/>
+        <rect x="58" y="45" width="10" height="1.5" class="px-soft" fill="#2e2b3d"/>
+        <rect x="40" y="44" width="4" height="3" class="px-soft" fill="#e8879a"/>
+        <g id="mouth" fill="#2e2b3d">
+          <rect x="36" y="49" width="3" height="2" class="px-soft"/>
+          <rect x="47" y="49" width="3" height="2" class="px-soft"/>
+        </g>
+        <g id="mouth-sad" fill="#2e2b3d">
+          <rect x="40" y="47" width="4" height="2" class="px-soft"/>
+          <rect x="35" y="50" width="3" height="2" class="px-soft"/>
+          <rect x="48" y="50" width="3" height="2" class="px-soft"/>
+        </g>
+        <rect id="yawn" x="39" y="47" width="6" height="5" fill="#c96b7c"/>
       </g>
     </g>
   </svg>
   <div id="zzz"><span>z</span><span>z</span><span>z</span></div>
 </div>
 <script>
+  // ============ pixel-blob generator ============
+  // Builds a blocky, pixel-grid approximation of an ellipse: one wide <rect>
+  // per row, snapped to the cell grid, instead of a smooth curve. Used for
+  // the head/body/belly so they read as pixel art rather than vector blobs.
+  const SVG_NS = 'http://www.w3.org/2000/svg';
+  function pixelBlob(cx, cy, rx, ry, cell, fill) {
+    const g = document.createElementNS(SVG_NS, 'g');
+    g.setAttribute('fill', fill);
+    const rowStart = Math.floor((cy - ry) / cell) * cell;
+    const rowEnd = Math.ceil((cy + ry) / cell) * cell;
+    for (let y = rowStart; y < rowEnd; y += cell) {
+      const dy = (y + cell / 2 - cy) / ry;
+      if (Math.abs(dy) >= 1) continue;
+      const dx = rx * Math.sqrt(1 - dy * dy);
+      const xStart = Math.floor((cx - dx) / cell) * cell;
+      const xEnd = Math.ceil((cx + dx) / cell) * cell;
+      const rect = document.createElementNS(SVG_NS, 'rect');
+      rect.setAttribute('x', xStart);
+      rect.setAttribute('y', y);
+      rect.setAttribute('width', xEnd - xStart);
+      rect.setAttribute('height', cell);
+      g.appendChild(rect);
+    }
+    return g;
+  }
+  document.getElementById('head-shape').appendChild(pixelBlob(42, 38, 22, 22, 4, '#f2a750'));
+  document.getElementById('body-shape').appendChild(pixelBlob(48, 74, 30, 20, 4, '#f2a750'));
+  document.getElementById('belly-shape').appendChild(pixelBlob(46, 80, 15, 9, 4, '#ffe9c5'));
+
   // In Electron the preload exposes window.pet; the no-op fallback keeps the
   // page previewable in a plain browser.
   const petApi = window.pet ?? {
