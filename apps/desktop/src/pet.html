@@ -121,99 +121,102 @@
     margin-left: -48px;
     z-index: 3;
     shape-rendering: crispEdges;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    overflow: visible;
   }
   #cat.flip { transform: scaleX(-1); }
-  #cat rect { stroke: #2e2b3d; stroke-width: 1.5; stroke-linejoin: miter; }
-  #cat rect.px-soft { stroke: none; }
+  #cat rect { shape-rendering: crispEdges; }
 
   #tail {
-    transform-origin: 78px 74px;
-    animation: tail-sway 3s ease-in-out infinite;
+    animation: tail-sway 2.4s steps(1, end) infinite;
   }
   @keyframes tail-sway {
-    0%, 100% { transform: rotate(0deg); }
-    50% { transform: rotate(14deg); }
+    0%, 49%, 100% { transform: translate(0, 0); }
+    50%, 74% { transform: translate(3px, -3px); }
+    75%, 99% { transform: translate(0, -3px); }
   }
-  .walking #tail { animation-duration: 0.9s; }
-  .zoomies #tail { animation-duration: 0.3s; }
+  .walking #tail { animation-duration: 0.6s; }
+  .zoomies #tail { animation-duration: 0.24s; }
 
   .eye {
-    transform-origin: center;
-    transform-box: fill-box;
-    animation: blink 4.5s infinite;
+    animation: eyes-open 4.5s steps(1, end) infinite;
   }
-  @keyframes blink {
-    0%, 94%, 100% { transform: scaleY(1); }
-    96%, 98% { transform: scaleY(0.08); }
+  #blink-lines {
+    opacity: 0;
+    animation: eyes-closed 4.5s steps(1, end) infinite;
   }
-  .sleeping .eye { transform: scaleY(0.08); animation: none; }
+  @keyframes eyes-open {
+    0%, 93%, 98%, 100% { opacity: 1; }
+    94%, 97% { opacity: 0; }
+  }
+  @keyframes eyes-closed {
+    0%, 93%, 98%, 100% { opacity: 0; }
+    94%, 97% { opacity: 1; }
+  }
+  .sleeping .eye { opacity: 0; animation: none; }
+  .sleeping #blink-lines { opacity: 1; animation: none; }
 
   .ear {
-    transform-box: fill-box;
-    transform-origin: bottom center;
-    transition: transform 0.4s;
+    transition: none;
   }
-  .bored #ear-l, .sleeping #ear-l { transform: rotate(-14deg); }
-  .bored #ear-r, .sleeping #ear-r { transform: rotate(14deg); }
+  .bored #ear-l, .sleeping #ear-l { transform: translate(3px, 3px); }
+  .bored #ear-r, .sleeping #ear-r { transform: translate(-3px, 3px); }
 
   #mouth-sad { display: none; }
   .begging #mouth { display: none; }
   .begging #mouth-sad { display: block; }
 
   #yawn { display: none; transform-box: fill-box; transform-origin: center; }
-  .yawning #yawn { display: block; animation: yawn-anim 1.4s ease-in-out; }
+  .yawning #yawn { display: block; animation: yawn-anim 1.4s steps(1, end); }
   @keyframes yawn-anim {
-    0%, 100% { transform: scale(0); }
-    35%, 70% { transform: scale(1); }
+    0%, 24%, 76%, 100% { transform: scaleY(0); }
+    25%, 75% { transform: scaleY(1); }
   }
 
-  #body-group { transform-origin: 48px 78px; }
-  .walking #body-group { animation: walk-bob 0.45s ease-in-out infinite; }
-  .zoomies #body-group { animation: walk-bob 0.16s ease-in-out infinite; }
+  .walking #body-group { animation: walk-bob 0.36s steps(1, end) infinite; }
+  .zoomies #body-group { animation: walk-bob 0.14s steps(1, end) infinite; }
   @keyframes walk-bob {
     0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-2.5px); }
+    50% { transform: translateY(-3px); }
   }
-  .sleeping #body-group { animation: breathe 2.6s ease-in-out infinite; }
+  .sleeping #body-group { animation: breathe 2.6s steps(1, end) infinite; }
   @keyframes breathe {
-    0%, 100% { transform: translateY(4px) scale(1); }
-    50% { transform: translateY(4px) scale(1.03); }
+    0%, 100% { transform: translateY(3px); }
+    50% { transform: translateY(0); }
   }
-  .happy #body-group { animation: wiggle 0.35s ease-in-out 2; }
+  .happy #body-group { animation: wiggle 0.32s steps(1, end) 2; }
   @keyframes wiggle {
-    0%, 100% { transform: rotate(0deg); }
-    25% { transform: rotate(-5deg); }
-    75% { transform: rotate(5deg); }
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-3px); }
+    75% { transform: translateX(3px); }
   }
   .sitting #body-group { transform: translateY(3px); }
   .sitting .leg { opacity: 0; }
-  .sitting #tail { animation: none; transform: rotate(-24deg); }
-  .stretching #body-group { animation: stretchy 1.8s ease-in-out; }
+  .sitting #tail { animation: none; transform: translate(-6px, 6px); }
+  .stretching #body-group { animation: stretchy 1.8s steps(1, end); }
   @keyframes stretchy {
-    0%, 100% { transform: scaleX(1) translateY(0); }
-    40%, 60% { transform: scaleX(1.14) translateY(2px); }
+    0%, 100% { transform: translate(0, 0); }
+    40%, 60% { transform: translate(6px, 3px); }
   }
-  .pouncing #body-group { animation: pounce 0.55s ease-out; }
+  .pouncing #body-group { animation: pounce 0.55s steps(1, end); }
   @keyframes pounce {
-    0% { transform: translateY(0) scale(1); }
-    35% { transform: translateY(-14px) scale(1.05); }
-    100% { transform: translateY(0) scale(1); }
+    0%, 100% { transform: translateY(0); }
+    30%, 65% { transform: translateY(-15px); }
   }
   .eating #head {
-    transform-box: fill-box;
-    transform-origin: 50% 85%;
-    animation: munch 0.7s ease-in-out infinite;
+    animation: munch 0.55s steps(1, end) infinite;
   }
   @keyframes munch {
-    0%, 100% { transform: rotate(0deg); }
-    50% { transform: rotate(13deg); }
+    0%, 100% { transform: translate(0, 0); }
+    50% { transform: translate(-3px, 6px); }
   }
 
-  .leg { transform-origin: center 88px; transition: opacity 0.25s; }
-  .walking #leg-front { animation: step-a 0.45s ease-in-out infinite; }
-  .walking #leg-back { animation: step-b 0.45s ease-in-out infinite; }
-  .zoomies #leg-front { animation: step-a 0.16s ease-in-out infinite; }
-  .zoomies #leg-back { animation: step-b 0.16s ease-in-out infinite; }
+  .leg { transition: none; }
+  .walking #leg-front { animation: step-a 0.36s steps(1, end) infinite; }
+  .walking #leg-back { animation: step-b 0.36s steps(1, end) infinite; }
+  .zoomies #leg-front { animation: step-a 0.14s steps(1, end) infinite; }
+  .zoomies #leg-back { animation: step-b 0.14s steps(1, end) infinite; }
   @keyframes step-a {
     0%, 100% { transform: translateY(0); }
     50% { transform: translateY(-3px); }
@@ -223,13 +226,17 @@
     50% { transform: translateY(0); }
   }
   .playing #leg-front {
-    transform-box: fill-box;
-    transform-origin: top center;
-    animation: bat 0.45s ease-in-out infinite;
+    animation: bat 0.36s steps(1, end) infinite;
   }
   @keyframes bat {
-    0%, 100% { transform: rotate(0deg); }
-    50% { transform: rotate(-35deg) translateY(-2px); }
+    0%, 100% { transform: translate(0, 0); }
+    50% { transform: translate(-6px, -6px); }
+  }
+
+  .walking #shadow, .zoomies #shadow { animation: shadow-hop 0.36s steps(1, end) infinite; }
+  @keyframes shadow-hop {
+    0%, 100% { opacity: 0.24; }
+    50% { opacity: 0.12; }
   }
 
   #zzz {
@@ -290,103 +297,101 @@
   </div>
   <div id="food">🍗</div>
   <div id="yarn">🧶</div>
-  <svg id="cat" viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg">
+  <svg id="cat" viewBox="0 0 32 32" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg">
+    <g id="shadow" fill="#2e2b3d" opacity="0.24">
+      <rect x="6" y="30" width="21" height="1"/>
+      <rect x="9" y="31" width="15" height="1"/>
+    </g>
     <g id="body-group">
-      <g id="tail" fill="#d98a3a">
-        <rect x="72" y="68" width="8" height="12"/>
-        <rect x="78" y="58" width="8" height="12"/>
-        <rect x="82" y="48" width="8" height="12"/>
-        <rect x="78" y="44" width="8" height="8"/>
+      <g id="tail">
+        <rect x="24" y="17" width="4" height="10" fill="#2e2b3d"/>
+        <rect x="27" y="13" width="3" height="8" fill="#2e2b3d"/>
+        <rect x="26" y="11" width="4" height="4" fill="#2e2b3d"/>
+        <rect x="25" y="17" width="2" height="9" fill="#d98236"/>
+        <rect x="27" y="14" width="2" height="6" fill="#f2a750"/>
+        <rect x="27" y="12" width="2" height="3" fill="#f6bd68"/>
       </g>
-      <g id="body-shape"></g>
-      <g id="belly-shape"></g>
-      <g id="leg-front" class="leg" fill="#d98a3a">
-        <rect x="28" y="80" width="8" height="12"/>
-        <rect x="28" y="90" width="8" height="2" class="px-soft" fill="#ffe9c5"/>
+      <g id="body-shape">
+        <rect x="9" y="16" width="15" height="2" fill="#2e2b3d"/>
+        <rect x="7" y="18" width="19" height="2" fill="#2e2b3d"/>
+        <rect x="6" y="20" width="21" height="7" fill="#2e2b3d"/>
+        <rect x="7" y="27" width="19" height="2" fill="#2e2b3d"/>
+        <rect x="9" y="18" width="15" height="1" fill="#f6bd68"/>
+        <rect x="8" y="19" width="17" height="3" fill="#f2a750"/>
+        <rect x="7" y="22" width="19" height="4" fill="#f2a750"/>
+        <rect x="8" y="26" width="17" height="2" fill="#d98236"/>
       </g>
-      <g id="leg-back" class="leg" fill="#d98a3a">
-        <rect x="60" y="80" width="8" height="12"/>
-        <rect x="60" y="90" width="8" height="2" class="px-soft" fill="#ffe9c5"/>
+      <g id="belly-shape">
+        <rect x="11" y="23" width="11" height="4" fill="#ffdca6"/>
+        <rect x="13" y="22" width="7" height="1" fill="#ffe9c5"/>
+      </g>
+      <g id="leg-front" class="leg">
+        <rect x="8" y="26" width="5" height="5" fill="#2e2b3d"/>
+        <rect x="9" y="26" width="3" height="4" fill="#e99542"/>
+        <rect x="9" y="30" width="4" height="1" fill="#ffe9c5"/>
+      </g>
+      <g id="leg-back" class="leg">
+        <rect x="21" y="26" width="5" height="5" fill="#2e2b3d"/>
+        <rect x="22" y="26" width="3" height="4" fill="#d98236"/>
+        <rect x="21" y="30" width="5" height="1" fill="#ffe9c5"/>
       </g>
       <g id="head">
-        <g id="ear-l" class="ear" fill="#d98a3a">
-          <rect x="28" y="12" width="8" height="4"/>
-          <rect x="24" y="16" width="12" height="4"/>
-          <rect x="20" y="20" width="16" height="4"/>
-          <rect x="20" y="24" width="16" height="8"/>
-          <rect x="28" y="15" width="6" height="6" class="px-soft" fill="#f6a3b0"/>
+        <g id="ear-l" class="ear">
+          <rect x="5" y="5" width="5" height="7" fill="#2e2b3d"/>
+          <rect x="6" y="6" width="3" height="5" fill="#f2a750"/>
+          <rect x="7" y="7" width="2" height="3" fill="#ed8f9f"/>
         </g>
-        <g id="ear-r" class="ear" fill="#d98a3a">
-          <rect x="48" y="12" width="8" height="4"/>
-          <rect x="48" y="16" width="12" height="4"/>
-          <rect x="48" y="20" width="16" height="4"/>
-          <rect x="48" y="24" width="16" height="8"/>
-          <rect x="50" y="15" width="6" height="6" class="px-soft" fill="#f6a3b0"/>
+        <g id="ear-r" class="ear">
+          <rect x="16" y="5" width="5" height="7" fill="#2e2b3d"/>
+          <rect x="17" y="6" width="3" height="5" fill="#f2a750"/>
+          <rect x="17" y="7" width="2" height="3" fill="#ed8f9f"/>
         </g>
-        <g id="head-shape"></g>
-        <rect x="38" y="17" width="3" height="4" class="px-soft" fill="#d98a3a"/>
-        <rect x="43" y="16" width="3" height="5" class="px-soft" fill="#d98a3a"/>
-        <rect x="48" y="17" width="3" height="4" class="px-soft" fill="#d98a3a"/>
-        <rect x="25" y="43" width="6" height="4" class="px-soft" fill="#f6a3b0" opacity="0.6"/>
-        <rect x="53" y="43" width="6" height="4" class="px-soft" fill="#f6a3b0" opacity="0.6"/>
-        <g class="eye"><g id="eye-l" fill="#2e2b3d">
-          <rect x="32" y="36" width="6" height="8"/>
-          <rect x="33" y="37" width="2" height="2" class="px-soft" fill="#ffffff"/>
+        <g id="head-shape">
+          <rect x="4" y="9" width="18" height="3" fill="#2e2b3d"/>
+          <rect x="3" y="12" width="20" height="7" fill="#2e2b3d"/>
+          <rect x="4" y="19" width="18" height="3" fill="#2e2b3d"/>
+          <rect x="5" y="10" width="16" height="3" fill="#f6bd68"/>
+          <rect x="4" y="13" width="18" height="6" fill="#f2a750"/>
+          <rect x="5" y="19" width="16" height="2" fill="#e99542"/>
+          <rect x="8" y="10" width="2" height="2" fill="#d98236"/>
+          <rect x="12" y="9" width="2" height="3" fill="#d98236"/>
+          <rect x="16" y="10" width="2" height="2" fill="#d98236"/>
+        </g>
+        <rect x="5" y="17" width="3" height="2" fill="#f59aaa"/>
+        <rect x="18" y="17" width="3" height="2" fill="#f59aaa"/>
+        <g class="eye"><g id="eye-l">
+          <rect x="7" y="13" width="3" height="4" fill="#2e2b3d"/>
+          <rect x="8" y="13" width="1" height="1" fill="#fffdf7"/>
         </g></g>
-        <g class="eye"><g id="eye-r" fill="#2e2b3d">
-          <rect x="46" y="36" width="6" height="8"/>
-          <rect x="49" y="37" width="2" height="2" class="px-soft" fill="#ffffff"/>
+        <g class="eye"><g id="eye-r">
+          <rect x="16" y="13" width="3" height="4" fill="#2e2b3d"/>
+          <rect x="17" y="13" width="1" height="1" fill="#fffdf7"/>
         </g></g>
-        <rect x="16" y="39" width="10" height="1.5" class="px-soft" fill="#2e2b3d"/>
-        <rect x="16" y="45" width="10" height="1.5" class="px-soft" fill="#2e2b3d"/>
-        <rect x="58" y="39" width="10" height="1.5" class="px-soft" fill="#2e2b3d"/>
-        <rect x="58" y="45" width="10" height="1.5" class="px-soft" fill="#2e2b3d"/>
-        <rect x="40" y="44" width="4" height="3" class="px-soft" fill="#e8879a"/>
+        <g id="blink-lines" fill="#2e2b3d">
+          <rect x="7" y="15" width="3" height="1"/>
+          <rect x="16" y="15" width="3" height="1"/>
+        </g>
+        <rect x="1" y="16" width="5" height="1" fill="#2e2b3d"/>
+        <rect x="2" y="19" width="4" height="1" fill="#2e2b3d"/>
+        <rect x="20" y="16" width="5" height="1" fill="#2e2b3d"/>
+        <rect x="20" y="19" width="4" height="1" fill="#2e2b3d"/>
+        <rect x="12" y="17" width="2" height="1" fill="#de7186"/>
         <g id="mouth" fill="#2e2b3d">
-          <rect x="36" y="49" width="3" height="2" class="px-soft"/>
-          <rect x="47" y="49" width="3" height="2" class="px-soft"/>
+          <rect x="10" y="19" width="2" height="1"/>
+          <rect x="14" y="19" width="2" height="1"/>
         </g>
         <g id="mouth-sad" fill="#2e2b3d">
-          <rect x="40" y="47" width="4" height="2" class="px-soft"/>
-          <rect x="35" y="50" width="3" height="2" class="px-soft"/>
-          <rect x="48" y="50" width="3" height="2" class="px-soft"/>
+          <rect x="12" y="19" width="2" height="1"/>
+          <rect x="10" y="20" width="2" height="1"/>
+          <rect x="14" y="20" width="2" height="1"/>
         </g>
-        <rect id="yawn" x="39" y="47" width="6" height="5" fill="#c96b7c"/>
+        <rect id="yawn" x="11" y="19" width="4" height="2" fill="#b9576d"/>
       </g>
     </g>
   </svg>
   <div id="zzz"><span>z</span><span>z</span><span>z</span></div>
 </div>
 <script>
-  // ============ pixel-blob generator ============
-  // Builds a blocky, pixel-grid approximation of an ellipse: one wide <rect>
-  // per row, snapped to the cell grid, instead of a smooth curve. Used for
-  // the head/body/belly so they read as pixel art rather than vector blobs.
-  const SVG_NS = 'http://www.w3.org/2000/svg';
-  function pixelBlob(cx, cy, rx, ry, cell, fill) {
-    const g = document.createElementNS(SVG_NS, 'g');
-    g.setAttribute('fill', fill);
-    const rowStart = Math.floor((cy - ry) / cell) * cell;
-    const rowEnd = Math.ceil((cy + ry) / cell) * cell;
-    for (let y = rowStart; y < rowEnd; y += cell) {
-      const dy = (y + cell / 2 - cy) / ry;
-      if (Math.abs(dy) >= 1) continue;
-      const dx = rx * Math.sqrt(1 - dy * dy);
-      const xStart = Math.floor((cx - dx) / cell) * cell;
-      const xEnd = Math.ceil((cx + dx) / cell) * cell;
-      const rect = document.createElementNS(SVG_NS, 'rect');
-      rect.setAttribute('x', xStart);
-      rect.setAttribute('y', y);
-      rect.setAttribute('width', xEnd - xStart);
-      rect.setAttribute('height', cell);
-      g.appendChild(rect);
-    }
-    return g;
-  }
-  document.getElementById('head-shape').appendChild(pixelBlob(42, 38, 22, 22, 4, '#f2a750'));
-  document.getElementById('body-shape').appendChild(pixelBlob(48, 74, 30, 20, 4, '#f2a750'));
-  document.getElementById('belly-shape').appendChild(pixelBlob(46, 80, 15, 9, 4, '#ffe9c5'));
-
   // In Electron the preload exposes window.pet; the no-op fallback keeps the
   // page previewable in a plain browser.
   const petApi = window.pet ?? {
@@ -465,6 +470,7 @@
   function moveWindow(x, y) {
     if (workArea) {
       x = Math.min(Math.max(x, workArea.x - 30), workArea.x + workArea.width - WIN_W + 30);
+      y = Math.min(Math.max(y, workArea.y), workArea.y + workArea.height - 175);
     }
     winX = x; winY = y;
     petApi.setPosition(Math.round(x), Math.round(y));
@@ -485,6 +491,7 @@
   let facing = 1; // 1 = right, -1 = left
   let stateTimer = null;
   let moveTimer = null;
+  let fallTimer = null;
   let busy = false;       // interactive sequence (eat/play) in progress
   let afkSleeping = false;
   let dragging = false;
@@ -496,6 +503,36 @@
 
   function clearMovement() {
     if (moveTimer) { clearInterval(moveTimer); moveTimer = null; }
+  }
+
+  function clearFalling() {
+    if (fallTimer) { clearInterval(fallTimer); fallTimer = null; }
+  }
+
+  // The pet window is normally grounded at the bottom of its display. When
+  // the user lets go after moving it higher, apply a small gravity simulation
+  // rather than snapping it down, so it visibly falls back to the desktop.
+  function startFalling() {
+    clearFalling();
+    if (!ready || !workArea) return;
+
+    const groundY = workArea.y + workArea.height - 175;
+    if (winY >= groundY - 1) return;
+
+    let velocity = 0;
+    let last = performance.now();
+    fallTimer = setInterval(() => {
+      if (dragging) { last = performance.now(); return; }
+
+      const now = performance.now();
+      const dt = Math.min((now - last) / 1000, 0.1);
+      last = now;
+      velocity = Math.min(velocity + 1900 * dt, 1500);
+      const nextY = Math.min(winY + velocity * dt, groundY);
+      moveWindow(winX, nextY);
+
+      if (nextY >= groundY) clearFalling();
+    }, 16);
   }
 
   function setState(next) {
@@ -577,11 +614,11 @@
     const dx = cursor.x - cx;
     const dy = cursor.y - cy;
     const len = Math.hypot(dx, dy) || 1;
-    // Eyes glance up to ~1.8px toward the cursor. The cat svg flips via
-    // scaleX(-1), which mirrors the offset, so compensate when facing left.
-    const px = (dx / len) * 1.8 * (cat.classList.contains('flip') ? -1 : 1);
-    const py = (dy / len) * 1.4;
-    const t = `translate(${px.toFixed(2)} ${py.toFixed(2)})`;
+    // Eye tracking also stays on the sprite grid: pupils can move exactly one
+    // source pixel in each direction, never onto a blurry sub-pixel.
+    const px = Math.round(dx / len) * (cat.classList.contains('flip') ? -1 : 1);
+    const py = Math.round(dy / len);
+    const t = `translate(${px} ${py})`;
     eyeL.setAttribute('transform', t);
     eyeR.setAttribute('transform', t);
   }
@@ -807,6 +844,7 @@
 
   stage.addEventListener('mousedown', async (e) => {
     if (e.button !== 0) return;
+    clearFalling();
     await refreshBounds();
     dragging = true; dragMoved = false;
     startCursorX = e.screenX; startCursorY = e.screenY;
@@ -825,7 +863,9 @@
     dragging = false;
     stage.classList.remove('dragging');
     if (dragMoved) {
-      refreshBounds(); // pick up clamped position + possibly a new display's work area
+      // Pick up the final, clamped position (and a possible new display) before
+      // calculating the floor for gravity.
+      void refreshBounds().then(startFalling);
     } else {
       petTheCat(e.clientX, e.clientY);
     }
