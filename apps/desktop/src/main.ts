@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const PORT = 4141;
+const PREFERRED_PORT = 4141;
 const REPO_ROOT = path.resolve(__dirname, '..', '..', '..');
 
 const isPackaged = app.isPackaged;
@@ -33,18 +33,31 @@ const APP_DATA_DIR = app.getPath('userData');
 let serverProcess: UtilityProcess | null = null;
 let mainWindow: BrowserWindow | null = null;
 
-function isPortInUse(port: number): Promise<boolean> {
+// Listen-probe: actually binding catches non-connectable listeners that a
+// connect-probe would miss. Returns the bound port (useful for port 0).
+function tryListen(port: number): Promise<number | null> {
   return new Promise((resolve) => {
-    const socket = net.createConnection({ port, host: '127.0.0.1' });
-    const finish = (inUse: boolean) => {
-      socket.removeAllListeners();
-      socket.destroy();
-      resolve(inUse);
-    };
-    socket.once('connect', () => finish(true));
-    socket.once('error', () => finish(false));
-    socket.setTimeout(1000, () => finish(false));
+    const server = net.createServer();
+    server.unref();
+    server.once('error', () => resolve(null));
+    server.listen(port, '127.0.0.1', () => {
+      const bound = (server.address() as net.AddressInfo).port;
+      server.close(() => resolve(bound));
+    });
   });
+}
+
+// Prefer 4141; scan 4142-4144 so a running `npm run dev` server doesn't block
+// the app. Ports past 4144 fall back to an OS-assigned port — Google OAuth
+// with a "Web application" client only works on pre-registered redirect URIs,
+// so off-range ports lose Google connect until the dev server is closed.
+async function findFreePort(): Promise<number> {
+  for (let port = PREFERRED_PORT; port <= PREFERRED_PORT + 3; port++) {
+    if ((await tryListen(port)) !== null) return port;
+  }
+  const fallback = await tryListen(0);
+  if (fallback === null) throw new Error('No free port available for the TimeBlock server.');
+  return fallback;
 }
 
 function copyRecursiveSync(src: string, dest: string) {
@@ -75,13 +88,13 @@ function bootstrapData() {
   fs.writeFileSync(marker, new Date().toISOString());
 }
 
-function startServer(): Promise<void> {
+function startServer(port: number): Promise<number> {
   return new Promise((resolve, reject) => {
     const child = utilityProcess.fork(SERVER_ENTRY, [], {
       env: {
         ...process.env,
         NODE_ENV: 'production',
-        PORT: String(PORT),
+        PORT: String(port),
         TB_DATA_DIR: APP_DATA_DIR,
         TB_WEB_DIST: WEB_DIST,
         TB_MIGRATIONS_DIR: MIGRATIONS_DIR,
@@ -97,7 +110,8 @@ function startServer(): Promise<void> {
     child.on('message', (message: unknown) => {
       if (message && typeof message === 'object' && (message as { type?: string }).type === 'ready') {
         clearTimeout(timeout);
-        resolve();
+        const readyPort = (message as { port?: number }).port;
+        resolve(typeof readyPort === 'number' ? readyPort : port);
       }
     });
 
@@ -113,7 +127,7 @@ function startServer(): Promise<void> {
   });
 }
 
-async function createWindow() {
+async function createWindow(port: number) {
   mainWindow = new BrowserWindow({
     width: 1440,
     height: 900,
@@ -130,7 +144,7 @@ async function createWindow() {
     return { action: 'deny' };
   });
 
-  await mainWindow.loadURL(`http://127.0.0.1:${PORT}`);
+  await mainWindow.loadURL(`http://127.0.0.1:${port}`);
 }
 
 if (!app.requestSingleInstanceLock()) {
@@ -145,30 +159,28 @@ app.on('second-instance', () => {
 });
 
 app.whenReady().then(async () => {
-  const busy = await isPortInUse(PORT);
-  if (busy) {
-    dialog.showErrorBox(
-      'TimeBlock is already running',
-      `Port ${PORT} is already in use, likely by a "npm run dev" server. Close it and relaunch TimeBlock.`,
-    );
-    app.quit();
-    return;
-  }
-
   bootstrapData();
 
+  let port: number;
   try {
-    await startServer();
+    port = await findFreePort();
+    if (port !== PREFERRED_PORT) {
+      console.warn(
+        `[desktop] Port ${PREFERRED_PORT} is busy (dev server?). Using port ${port}. ` +
+          'Google OAuth needs this redirect URI registered unless the client is a "Desktop app" type.',
+      );
+    }
+    port = await startServer(port);
   } catch (err) {
     dialog.showErrorBox('TimeBlock failed to start', err instanceof Error ? err.message : String(err));
     app.quit();
     return;
   }
 
-  await createWindow();
+  await createWindow(port);
 
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) void createWindow();
+    if (BrowserWindow.getAllWindows().length === 0) void createWindow(port);
   });
 });
 
