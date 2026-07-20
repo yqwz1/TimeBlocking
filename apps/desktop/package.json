@@ -71,8 +71,8 @@
     "publish": [
       {
         "provider": "github",
-        "owner": "GITHUB_OWNER_PLACEHOLDER",
-        "repo": "GITHUB_REPO_PLACEHOLDER"
+        "owner": "yqwz1",
+        "repo": "TimeBlocking"
       }
     ],
     "nsis": {
