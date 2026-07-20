@@ -1,13 +1,16 @@
+import { useEffect } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { NavLink, useLocation, useOutlet } from 'react-router-dom';
-import { useLiveSync, useSetupStatus } from '../hooks.js';
+import { useLiveSync, useSettings, useSetupStatus } from '../hooks.js';
 import { useTheme } from '../hooks/useTheme.js';
 import { useUndoRedoShortcuts } from '../lib/undoStack.js';
 import { pageVariants, springs } from '../lib/motion.js';
+import { setSoundEnabled } from '../lib/sound.js';
 import SyncStatusBar from './SyncStatusBar.js';
 import ScheduleStateChip from './ScheduleStateChip.js';
 import UndoRedoControls from './UndoRedoControls.js';
 import CelebrationToasts from './CelebrationToasts.js';
+import NotificationCenter from './NotificationCenter.js';
 import ReminderToasts from './ReminderToasts.js';
 import UndoToasts from './UndoToasts.js';
 import ConfettiBurst from './ConfettiBurst.js';
@@ -35,17 +38,22 @@ function ThemeToggle({ gameMode }: { gameMode: boolean }) {
 const tabs = [
   { to: '/tasks', label: 'Tasks' },
   { to: '/whiteboard', label: 'Whiteboard' },
+  { to: '/notes', label: 'Second Brain' },
 ];
 
 export default function Layout() {
   useLiveSync();
   useUndoRedoShortcuts();
+  const { data: settings } = useSettings();
+  useEffect(() => {
+    if (settings) setSoundEnabled(settings.soundEffects);
+  }, [settings?.soundEffects]);
   const { data: setup } = useSetupStatus();
   const setupIncomplete = setup && (!setup.google || !setup.calendarChosen);
   const location = useLocation();
   const outlet = useOutlet();
   const gameMode = location.pathname.startsWith('/today');
-  const fullBleed = location.pathname.startsWith('/tasks') || location.pathname.startsWith('/whiteboard');
+  const fullBleed = location.pathname.startsWith('/tasks') || location.pathname.startsWith('/whiteboard') || location.pathname.startsWith('/notes');
 
   return (
     <div className={`flex h-full min-h-screen flex-col transition-colors duration-300 ${gameMode ? 'bg-[#0b0f1a]' : 'dark:bg-neutral-950'}`}>
@@ -94,6 +102,7 @@ export default function Layout() {
             <UndoRedoControls gameMode={gameMode} />
             <ScheduleStateChip />
             <SyncStatusBar />
+            <NotificationCenter gameMode={gameMode} />
             <ThemeToggle gameMode={gameMode} />
           </div>
         </div>

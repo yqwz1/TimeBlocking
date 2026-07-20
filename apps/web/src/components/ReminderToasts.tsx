@@ -5,6 +5,8 @@ import type { ReminderFiredEventDTO } from '@timeblock/shared';
 import { Link } from 'react-router-dom';
 import { REMINDER_FIRED_EVENT } from '../hooks.js';
 import { toast as toastVariants } from '../lib/motion.js';
+import { addNotification } from '../lib/notifications.js';
+import { playNotificationPing } from '../lib/sound.js';
 
 let notificationRequested = false;
 
@@ -15,6 +17,14 @@ export default function ReminderToasts() {
     const handler = (ev: Event) => {
       const dto = (ev as CustomEvent<ReminderFiredEventDTO>).detail;
       setToasts((t) => [...t, dto]);
+      playNotificationPing();
+      addNotification({
+        id: dto.reminderId,
+        kind: 'reminder',
+        title: dto.taskContent,
+        body: dto.message || 'Reminder',
+        link: `/tasks?task=${dto.taskId}`,
+      });
 
       if (!notificationRequested) {
         notificationRequested = true;

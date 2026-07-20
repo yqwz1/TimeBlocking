@@ -175,7 +175,7 @@ function currentWindowState(win: BrowserWindow): WindowState {
   return { ...bounds, isMaximized: win.isMaximized() };
 }
 
-async function createWindow(port: number) {
+async function createWindow(port: number, startHidden = false) {
   const state = restoredBounds();
 
   const win = new BrowserWindow({
@@ -185,13 +185,15 @@ async function createWindow(port: number) {
     height: state.height ?? 900,
     icon: ICON_PATH,
     autoHideMenuBar: true,
+    show: !startHidden,
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
     },
   });
   mainWindow = win;
-  if (state.isMaximized) win.maximize();
+  // maximize() would force a hidden window visible, so only restore it when showing.
+  if (state.isMaximized && !startHidden) win.maximize();
 
   win.webContents.setWindowOpenHandler(({ url }) => {
     void shell.openExternal(url);
@@ -227,7 +229,8 @@ function showMainWindow() {
 function syncLoginItem() {
   // In dev this would register electron.exe as a startup app — packaged only.
   if (!app.isPackaged) return;
-  app.setLoginItemSettings({ openAtLogin: settings.launchAtStartup });
+  // --hidden makes the login-time launch start in the tray instead of popping a window.
+  app.setLoginItemSettings({ openAtLogin: settings.launchAtStartup, args: ['--hidden'] });
 }
 
 function buildTrayMenu(port: number, extra: Electron.MenuItemConstructorOptions[] = []) {
@@ -309,7 +312,8 @@ app.whenReady().then(async () => {
     return;
   }
 
-  await createWindow(port);
+  const startHidden = process.argv.includes('--hidden');
+  await createWindow(port, startHidden);
   createTray(port);
   initUpdater(tray, (extra) => buildTrayMenu(port, extra));
 

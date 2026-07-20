@@ -9,7 +9,8 @@ export interface DesktopSettings {
 
 const DEFAULTS: DesktopSettings = {
   closeToTray: true,
-  launchAtStartup: false,
+  // Ships on: the app lives in the tray, so starting with the OS is the expected behavior.
+  launchAtStartup: true,
 };
 
 const settingsPath = () => path.join(app.getPath('userData'), 'desktop-settings.json');

@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { RefreshCw } from 'lucide-react';
 import type { Settings } from '@timeblock/shared';
 import { useDisconnectGoogle, useGoogleCalendars, useLearningStats, useResetLearning, useSettings, useSetupStatus, useUpdateSettings } from '../hooks.js';
+import { useConceptStatus, useEmbeddingsStatus, useExtractConcepts, useRebuildGraph, useReindexEmbeddings } from '../hooks/notes.js';
 import WorkingHoursEditor from '../components/WorkingHoursEditor.js';
 import EnergyWindowsEditor from '../components/EnergyWindowsEditor.js';
 
@@ -63,6 +65,11 @@ export default function SettingsPage() {
   const [form, setForm] = useState<Settings | null>(null);
   const [saved, setSaved] = useState(false);
   const [disconnected, setDisconnected] = useState(false);
+  const { data: embeddingsStatus } = useEmbeddingsStatus();
+  const reindexEmbeddings = useReindexEmbeddings();
+  const rebuildGraph = useRebuildGraph();
+  const conceptStatus = useConceptStatus();
+  const extractConcepts = useExtractConcepts();
 
   useEffect(() => {
     if (settings && !form) setForm(settings);
@@ -263,6 +270,17 @@ export default function SettingsPage() {
       </section>
 
       <section className="rounded-xl border border-slate-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
+        <h3 className="mb-1 font-semibold text-slate-900 dark:text-neutral-100">Sounds</h3>
+        <p className="mb-3 text-sm text-slate-400 dark:text-neutral-500">
+          Short synthesized chimes — task completed, reminder fired, level-up, achievement, focus timer done.
+        </p>
+        <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-neutral-400">
+          <input type="checkbox" checked={form.soundEffects} onChange={(e) => set('soundEffects', e.target.checked)} />
+          Play sound effects
+        </label>
+      </section>
+
+      <section className="rounded-xl border border-slate-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
         <h3 className="mb-3 font-semibold text-slate-900 dark:text-neutral-100">Completion behavior</h3>
         <div className="grid grid-cols-2 gap-3">
           <label className="text-sm text-slate-500 dark:text-neutral-400">
@@ -283,11 +301,213 @@ export default function SettingsPage() {
       </section>
 
       <section className="rounded-xl border border-slate-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
-        <h3 className="mb-3 font-semibold text-slate-900 dark:text-neutral-100">AI daily brief</h3>
+        <h3 className="mb-1 font-semibold text-slate-900 dark:text-neutral-100">AI features</h3>
+        <p className="mb-3 text-sm text-slate-400 dark:text-neutral-500">
+          One switch for every outbound AI call this app makes — the daily brief, Second Brain semantic search, related notes, Vault chat, link/tag
+          suggestions, and weekly digests. Off means nothing ever leaves your machine. Requires <code>GEMINI_API_KEY</code> in <code>.env</code>.
+        </p>
         <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-neutral-400">
           <input type="checkbox" checked={form.aiEnabled} onChange={(e) => set('aiEnabled', e.target.checked)} />
-          Enable the AI daily brief (requires GEMINI_API_KEY in .env)
+          Enable AI features
         </label>
+
+        {form.aiEnabled && (
+          <div className="mt-4 space-y-3 border-t border-slate-100 pt-4 dark:border-neutral-800">
+            <label className="block text-sm text-slate-500 dark:text-neutral-400">
+              About me — seeds Vault Chat's system prompt so answers are framed the way you'd want
+              <textarea
+                value={form.aiAboutMe}
+                dir="auto"
+                onChange={(e) => set('aiAboutMe', e.target.value)}
+                rows={4}
+                className="mt-1 block w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
+              />
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="text-sm text-slate-500 dark:text-neutral-400">
+                Embedding model
+                <input
+                  value={form.aiEmbeddingModel}
+                  onChange={(e) => set('aiEmbeddingModel', e.target.value)}
+                  className="mt-1 block w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
+                />
+              </label>
+              <label className="text-sm text-slate-500 dark:text-neutral-400">
+                Digests folder
+                <input
+                  value={form.notesDigestFolder}
+                  onChange={(e) => set('notesDigestFolder', e.target.value)}
+                  className="mt-1 block w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
+                />
+              </label>
+            </div>
+            <div className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 text-sm dark:bg-neutral-800">
+              <span className="text-slate-500 dark:text-neutral-400">
+                Semantic index: {embeddingsStatus ? `${embeddingsStatus.count} chunks embedded` : '…'}
+                {embeddingsStatus && !embeddingsStatus.aiEnabled && ' (AI off or unconfigured)'}
+              </span>
+              <button
+                type="button"
+                onClick={() => reindexEmbeddings.mutate()}
+                disabled={reindexEmbeddings.isPending}
+                className="flex items-center gap-1 rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-600 hover:bg-white disabled:opacity-50 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-900"
+              >
+                <RefreshCw size={12} className={reindexEmbeddings.isPending ? 'animate-spin' : ''} />
+                {reindexEmbeddings.isPending ? 'Reindexing…' : 'Reindex embeddings'}
+              </button>
+            </div>
+          </div>
+        )}
+      </section>
+
+      <section className="rounded-xl border border-slate-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
+        <h3 className="mb-1 font-semibold text-slate-900 dark:text-neutral-100">Second Brain vault</h3>
+        <p className="mb-3 text-sm text-slate-400 dark:text-neutral-500">
+          Where your notes live as plain markdown files on disk. Leave blank to use the default (<code>data/vault</code>).
+        </p>
+        <label className="mb-3 block text-sm text-slate-500 dark:text-neutral-400">
+          Vault folder (absolute path)
+          <input
+            value={form.notesVaultPath ?? ''}
+            onChange={(e) => set('notesVaultPath', e.target.value.trim() ? e.target.value : null)}
+            placeholder="C:\Users\you\Notes"
+            className="mt-1 block w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
+          />
+        </label>
+        <div className="grid grid-cols-2 gap-3">
+          <label className="text-sm text-slate-500 dark:text-neutral-400">
+            Trash retention (days)
+            <input
+              type="number"
+              value={form.notesTrashRetentionDays}
+              onChange={(e) => set('notesTrashRetentionDays', Number(e.target.value))}
+              className="mt-1 block w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
+            />
+          </label>
+          <label className="text-sm text-slate-500 dark:text-neutral-400">
+            Snapshots kept per note
+            <input
+              type="number"
+              value={form.notesSnapshotRetention}
+              onChange={(e) => set('notesSnapshotRetention', Number(e.target.value))}
+              className="mt-1 block w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
+            />
+          </label>
+          <label className="text-sm text-slate-500 dark:text-neutral-400">
+            Daily notes folder
+            <input
+              value={form.notesDailyFolder}
+              onChange={(e) => set('notesDailyFolder', e.target.value)}
+              className="mt-1 block w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
+            />
+          </label>
+          <label className="text-sm text-slate-500 dark:text-neutral-400">
+            Templates folder
+            <input
+              value={form.notesTemplatesFolder}
+              onChange={(e) => set('notesTemplatesFolder', e.target.value)}
+              className="mt-1 block w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
+            />
+          </label>
+        </div>
+      </section>
+
+      <section className="rounded-xl border border-slate-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
+        <div className="mb-1 flex items-center justify-between">
+          <h3 className="font-semibold text-slate-900 dark:text-neutral-100">Graph</h3>
+          <button
+            type="button"
+            onClick={() => rebuildGraph.mutate()}
+            disabled={rebuildGraph.isPending}
+            className="flex items-center gap-1 rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-600 hover:bg-slate-50 disabled:opacity-50 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"
+          >
+            <RefreshCw size={12} className={rebuildGraph.isPending ? 'animate-spin' : ''} />
+            {rebuildGraph.isPending ? 'Rebuilding…' : 'Rebuild graph index'}
+          </button>
+        </div>
+        <p className="mb-3 text-sm text-slate-400 dark:text-neutral-500">
+          Tunes how the flagship graph connects and encodes your notes. Metrics and edges are a rebuildable cache over your files.
+        </p>
+        <div className="grid grid-cols-2 gap-3">
+          <label className="text-sm text-slate-500 dark:text-neutral-400">
+            Semantic edge threshold (0–1)
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              max="1"
+              value={form.graphSemanticThreshold}
+              onChange={(e) => set('graphSemanticThreshold', Number(e.target.value))}
+              className="mt-1 block w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
+            />
+          </label>
+          <label className="text-sm text-slate-500 dark:text-neutral-400">
+            Semantic edges per note (0 = off)
+            <input
+              type="number"
+              min="0"
+              max="20"
+              value={form.graphSemanticTopK}
+              onChange={(e) => set('graphSemanticTopK', Number(e.target.value))}
+              className="mt-1 block w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
+            />
+          </label>
+          <label className="text-sm text-slate-500 dark:text-neutral-400">
+            Min shared tags for a tag edge
+            <input
+              type="number"
+              min="1"
+              max="10"
+              value={form.graphTagCoocMin}
+              onChange={(e) => set('graphTagCoocMin', Number(e.target.value))}
+              className="mt-1 block w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
+            />
+          </label>
+          <label className="text-sm text-slate-500 dark:text-neutral-400">
+            Freshness fade (days)
+            <input
+              type="number"
+              min="1"
+              max="3650"
+              value={form.graphFreshnessFadeDays}
+              onChange={(e) => set('graphFreshnessFadeDays', Number(e.target.value))}
+              className="mt-1 block w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
+            />
+          </label>
+          <label className="text-sm text-slate-500 dark:text-neutral-400">
+            Suggested-link threshold
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              max="1"
+              value={form.graphSuggestThreshold}
+              onChange={(e) => set('graphSuggestThreshold', Number(e.target.value))}
+              className="mt-1 block w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
+            />
+          </label>
+        </div>
+        <p className="mt-2 text-xs text-slate-400 dark:text-neutral-500">Rebuild after changing thresholds to apply them to existing notes.</p>
+
+        <div className="mt-4 flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 text-sm dark:bg-neutral-800">
+          <span className="text-slate-500 dark:text-neutral-400">
+            Concepts (AI):{' '}
+            {conceptStatus.data
+              ? `${conceptStatus.data.conceptCount} extracted from ${conceptStatus.data.extractedNotes}/${conceptStatus.data.totalNotes} notes`
+              : '…'}
+            {conceptStatus.data && !conceptStatus.data.aiEnabled && ' (AI off or unconfigured)'}
+            {conceptStatus.data?.running && ' · running…'}
+          </span>
+          <button
+            type="button"
+            onClick={() => extractConcepts.mutate()}
+            disabled={extractConcepts.isPending || conceptStatus.data?.running || !conceptStatus.data?.aiEnabled}
+            className="flex items-center gap-1 rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-600 hover:bg-white disabled:opacity-50 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-900"
+          >
+            <RefreshCw size={12} className={extractConcepts.isPending || conceptStatus.data?.running ? 'animate-spin' : ''} />
+            Extract concepts
+          </button>
+        </div>
       </section>
 
       <section className="rounded-xl border border-slate-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">

@@ -5,6 +5,7 @@ import type { TaskDTO } from '@timeblock/shared';
 import { useTaskList, useUpdateTask } from '../../hooks.js';
 import { PriorityBadge, formatDuration } from './taskDisplay.js';
 import { popoverVariants, springs } from '../../lib/motion.js';
+import { playTimerDone } from '../../lib/sound.js';
 
 type Phase = 'work' | 'short_break' | 'long_break';
 
@@ -56,31 +57,6 @@ function loadState(settings: FocusSettings): PersistedState {
     /* fall through */
   }
   return { phase: 'work', running: false, endsAt: null, remainingMs: phaseMs('work', settings), completedWork: 0, selectedTaskId: null };
-}
-
-/** A short two-tone chime via the Web Audio API so a finished phase is noticeable without an asset. */
-function playChime() {
-  try {
-    const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-    const ctx = new Ctx();
-    const now = ctx.currentTime;
-    [880, 1320].forEach((freq, i) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.frequency.value = freq;
-      osc.type = 'sine';
-      const start = now + i * 0.18;
-      gain.gain.setValueAtTime(0, start);
-      gain.gain.linearRampToValueAtTime(0.25, start + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.35);
-      osc.connect(gain).connect(ctx.destination);
-      osc.start(start);
-      osc.stop(start + 0.4);
-    });
-    setTimeout(() => ctx.close(), 900);
-  } catch {
-    /* audio not available — silent */
-  }
 }
 
 function fmt(ms: number): string {
@@ -167,7 +143,7 @@ export default function FocusView({ onOpenTask }: { onOpenTask: (id: string) => 
   // Detect phase completion. `tick` drives the check while running.
   useEffect(() => {
     if (state.running && state.endsAt != null && Date.now() >= state.endsAt) {
-      playChime();
+      playTimerDone();
       if ('Notification' in window && Notification.permission === 'granted') {
         const done = state.phase === 'work' ? 'Focus session done — time for a break.' : 'Break over — back to it.';
         new Notification('TimeBlock Focus', { body: done });

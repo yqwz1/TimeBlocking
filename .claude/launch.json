@@ -13,6 +13,51 @@
       "runtimeArgs": ["run", "dev:web"],
       "port": 5173,
       "autoPort": true
+    },
+    {
+      "name": "server-alt",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev:server"],
+      "port": 4142,
+      "env": { "PORT": "4142" }
+    },
+    {
+      "name": "web-alt",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev:web"],
+      "port": 5175,
+      "autoPort": true,
+      "env": { "PORT": "5175", "TB_API_PORT": "4142" }
+    },
+    {
+      "name": "server-alt2",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev:server"],
+      "port": 4143,
+      "env": { "PORT": "4143" }
+    },
+    {
+      "name": "web-alt2",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev:web"],
+      "port": 5176,
+      "autoPort": true,
+      "env": { "PORT": "5176", "TB_API_PORT": "4141" }
+    },
+    {
+      "name": "server-mine",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev:server"],
+      "port": 4144,
+      "env": { "PORT": "4144" }
+    },
+    {
+      "name": "web-mine",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev:web"],
+      "port": 5177,
+      "autoPort": true,
+      "env": { "PORT": "5177", "TB_API_PORT": "4144" }
     }
   ]
 }

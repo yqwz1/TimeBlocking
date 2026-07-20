@@ -4,6 +4,8 @@ import type { XpEventDTO } from '@timeblock/shared';
 import { api } from '../api.js';
 import { useGamificationSummary, useSettings } from '../hooks.js';
 import { toast as toastVariants } from '../lib/motion.js';
+import { addNotification } from '../lib/notifications.js';
+import { playAchievement, playLevelUp } from '../lib/sound.js';
 
 interface Toast {
   id: string;
@@ -37,6 +39,8 @@ export default function CelebrationToasts() {
 
     if (lastLevel.current !== null && summary.level > lastLevel.current) {
       setToasts((t) => [...t, { id: `level-${summary.level}-${Date.now()}`, text: `Level ${summary.level}!`, icon: '⬆️', levelUp: true }]);
+      playLevelUp();
+      addNotification({ id: `level-${summary.level}`, kind: 'levelup', title: `Level ${summary.level}!`, body: 'Keep the streak going.' });
     }
     lastLevel.current = summary.level;
 
@@ -52,6 +56,13 @@ export default function CelebrationToasts() {
             icon: e.kind === 'achievement' ? '🏅' : e.amount < 0 ? '🧊' : '✨',
           }));
           if (next.length) setToasts((t) => [...t, ...next]);
+          const achievements = events.filter((e) => e.kind === 'achievement');
+          if (achievements.length) {
+            playAchievement();
+            for (const e of achievements) {
+              addNotification({ id: `ev-${e.seq}`, kind: 'achievement', title: e.title ?? 'Achievement unlocked!' });
+            }
+          }
         })
         .catch(() => {});
     }
