@@ -44,6 +44,7 @@ export const tasks = sqliteTable(
     sortOrder: real('sort_order').notNull().default(0),
     completedAtUtc: text('completed_at_utc'),
     updatedAtUtc: text('updated_at_utc'),
+    pinned: integer('pinned').notNull().default(0),
   },
   (t) => [index('idx_tasks_parent').on(t.parentId), index('idx_tasks_status').on(t.status)],
 );
@@ -77,6 +78,7 @@ export const projects = sqliteTable('projects', {
   sortOrder: integer('sort_order').notNull().default(0),
   archived: integer('archived').notNull().default(0),
   createdAtUtc: text('created_at_utc'),
+  pinned: integer('pinned').notNull().default(0),
 });
 
 /** Label registry (colors, rename). `tasks.labels` stores names, not ids. */
@@ -218,6 +220,8 @@ export const objectives = sqliteTable('objectives', {
   linkValue: text('link_value'),
   status: text('status').notNull().default('active'), // active|done|dropped
   notes: text('notes').notNull().default(''),
+  manualMinutes: integer('manual_minutes').notNull().default(0),
+  manualCount: integer('manual_count').notNull().default(0),
 });
 
 /** Quarterly SMART goal. Milestones live in `goalMilestones`; optional project/label link auto-tracks progress. */
@@ -425,6 +429,178 @@ export const whiteboardFiles = sqliteTable(
     createdAtUtc: text('created_at_utc'),
   },
   (t) => [index('idx_wb_files_board').on(t.boardId)],
+);
+
+/**
+ * Second Brain vault cache. `id` is the vault-relative file path — the markdown
+ * file itself is the source of truth; this table (plus `note_links` and the
+ * `notes_fts` virtual table below) is a rebuildable index over it.
+ */
+export const notes = sqliteTable(
+  'notes',
+  {
+    id: text('id').primaryKey(), // vault-relative path, e.g. "Projects/Foo.md"
+    title: text('title').notNull(),
+    tags: text('tags').notNull().default('[]'), // JSON string[]
+    frontmatter: text('frontmatter').notNull().default('{}'), // JSON object, cached for display only
+    contentHash: text('content_hash').notNull(),
+    createdAtUtc: text('created_at_utc'),
+    updatedAtUtc: text('updated_at_utc'),
+  },
+  (t) => [index('idx_notes_title').on(t.title)],
+);
+
+/** One row per `[[wikilink]]` found in a note. `targetId` is resolved by title match; null until a matching note exists. */
+export const noteLinks = sqliteTable(
+  'note_links',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    sourceId: text('source_id').notNull(),
+    targetTitle: text('target_title').notNull(),
+    targetId: text('target_id'),
+    snippet: text('snippet').notNull().default(''), // context around the [[wikilink]] occurrence, for the backlinks panel
+  },
+  (t) => [
+    index('idx_note_links_source').on(t.sourceId),
+    index('idx_note_links_target').on(t.targetId),
+    index('idx_note_links_target_title').on(t.targetTitle),
+  ],
+);
+
+/**
+ * Chunk-level embedding cache for the Second Brain intelligence layer (Phase 3), rebuildable
+ * from the vault files at any time. `contentHash` is a hash of the note's BODY only (frontmatter
+ * excluded), so a note is only re-chunked/re-embedded (a paid API call) when its actual content
+ * changed — not on frontmatter-only edits like pinning.
+ */
+export const noteChunks = sqliteTable(
+  'note_chunks',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    noteId: text('note_id').notNull(),
+    chunkIndex: integer('chunk_index').notNull(),
+    text: text('text').notNull(),
+    embedding: text('embedding').notNull(), // JSON number[]
+    contentHash: text('content_hash').notNull(),
+  },
+  (t) => [index('idx_note_chunks_note').on(t.noteId)],
+);
+
+/**
+ * The Graph (G2) — cached per-note metrics over the explicit-link graph. Rebuildable from
+ * `note_links` + the vault at any time. `communityId`/`timeSpentMin` are reserved for G4.
+ */
+export const nodeMetrics = sqliteTable('node_metrics', {
+  noteId: text('note_id').primaryKey(),
+  degree: integer('degree').notNull().default(0),
+  pagerank: real('pagerank').notNull().default(0),
+  betweenness: real('betweenness').notNull().default(0),
+  communityId: text('community_id'),
+  openTasks: integer('open_tasks').notNull().default(0),
+  timeSpentMin: integer('time_spent_min').notNull().default(0),
+  updatedAtUtc: text('updated_at_utc'),
+});
+
+/**
+ * The Graph (G2) — cached typed edges. `type` is explicit|semantic|tag (concept/temporal/suggested
+ * arrive in later phases); `status` is reserved for the G6 suggested-edge lifecycle
+ * (explicit|suggested|accepted|dismissed). One row per (source, target, type).
+ */
+export const graphEdges = sqliteTable(
+  'graph_edges',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    source: text('source').notNull(),
+    target: text('target').notNull(),
+    type: text('type').notNull(),
+    weight: real('weight').notNull().default(1),
+    status: text('status').notNull().default('explicit'),
+  },
+  (t) => [
+    uniqueIndex('idx_graph_edges_unique').on(t.source, t.target, t.type),
+    index('idx_graph_edges_source').on(t.source),
+    index('idx_graph_edges_target').on(t.target),
+  ],
+);
+
+/**
+ * The Graph (G3) — canonical AI-extracted concepts (people/projects/technologies/ideas). `normKey`
+ * (`type|lower(name)`) is the auto-dedup key; `aliases` (JSON) holds names merged into this concept.
+ */
+export const concepts = sqliteTable(
+  'concepts',
+  {
+    id: text('id').primaryKey(), // uuid
+    name: text('name').notNull(),
+    type: text('type').notNull(),
+    aliases: text('aliases').notNull().default('[]'), // JSON string[]
+    normKey: text('norm_key').notNull(),
+    createdAtUtc: text('created_at_utc'),
+  },
+  (t) => [uniqueIndex('idx_concepts_norm').on(t.normKey)],
+);
+
+/** One row per (concept, note) mention. `count` = occurrences in that note. */
+export const conceptMentions = sqliteTable(
+  'concept_mentions',
+  {
+    conceptId: text('concept_id').notNull(),
+    noteId: text('note_id').notNull(),
+    count: integer('count').notNull().default(1),
+  },
+  (t) => [
+    primaryKey({ columns: [t.conceptId, t.noteId] }),
+    index('idx_concept_mentions_note').on(t.noteId),
+    index('idx_concept_mentions_concept').on(t.conceptId),
+  ],
+);
+
+/** Per-note extraction staleness — body hash last extracted, so only changed notes are re-extracted. */
+export const conceptExtractions = sqliteTable('concept_extractions', {
+  noteId: text('note_id').primaryKey(),
+  contentHash: text('content_hash').notNull(),
+});
+
+/** Concept normKeys the user has blacklisted — never recreated on extraction. */
+export const conceptBlacklist = sqliteTable('concept_blacklist', {
+  normKey: text('norm_key').primaryKey(),
+});
+
+/**
+ * The Graph (G4) — hierarchical communities over the combined document + concept graph (Louvain at three
+ * resolutions, `level` 0 = coarse .. 2 = fine). `id` is a content hash of `level`+sorted member note ids,
+ * so an unchanged community keeps its id — and thus its AI-generated `label`/`summary` — across recomputes.
+ * `parent_id` links each community to its coarser parent (majority membership). Fully rebuildable cache.
+ */
+export const communities = sqliteTable(
+  'communities',
+  {
+    id: text('id').primaryKey(),
+    level: integer('level').notNull(),
+    parentId: text('parent_id'),
+    label: text('label').notNull(),
+    summary: text('summary').notNull().default(''),
+    members: text('members').notNull().default('[]'), // JSON note-id string[]
+    memberCount: integer('member_count').notNull().default(0),
+    aiGenerated: integer('ai_generated').notNull().default(0), // 0 = deterministic fallback label, 1 = AI-named
+    updatedAtUtc: text('updated_at_utc'),
+  },
+  (t) => [index('idx_communities_level').on(t.level)],
+);
+
+/**
+ * The Graph (G6 §7) — note pairs the user dismissed as suggested links, so they are never re-proposed.
+ * Persistent (unlike `graph_edges`, which is rebuilt each recompute). Accepted suggestions instead become
+ * real `[[wikilinks]]` in the note, so they need no row here. Stored order-independent (min id, max id).
+ */
+export const suggestedEdgeDismissals = sqliteTable(
+  'suggested_edge_dismissals',
+  {
+    source: text('source').notNull(),
+    target: text('target').notNull(),
+    dismissedAtUtc: text('dismissed_at_utc'),
+  },
+  (t) => [primaryKey({ columns: [t.source, t.target] })],
 );
 
 /** One row per local week (Monday) holding the weekly review ritual. */

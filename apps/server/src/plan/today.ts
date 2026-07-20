@@ -7,7 +7,7 @@ import type { TaskRisk } from '../scheduler/feasibility.js';
 import { buildDayWindows } from '../scheduler/slots.js';
 import { weekStartOf } from '../scheduler/habits.js';
 import { blockToItem, eventToItem, taskToView } from './mappers.js';
-import { computeObjectiveProgress } from './objectives.js';
+import { objectiveToDTO } from './objectives.js';
 
 const LIVE_STATUSES: string[] = ['scheduled', 'pending_create', 'done'];
 
@@ -38,22 +38,6 @@ function latestWarnings(db: DB): { warnings: PlanWarningDTO[]; atRiskTaskIds: st
     return t && !t.isCompleted && !t.isDeleted;
   });
   return { warnings: live, atRiskTaskIds: [...new Set(live.map((w) => w.taskId))] };
-}
-
-function objectiveToDTO(db: DB, o: typeof objectives.$inferSelect, tz: string): ObjectiveDTO {
-  const progress = computeObjectiveProgress(db, o, tz);
-  return {
-    id: o.id,
-    weekStart: o.weekStart,
-    title: o.title,
-    targetMinutes: o.targetMinutes,
-    targetCount: o.targetCount,
-    linkKind: o.linkKind as ObjectiveDTO['linkKind'],
-    linkValue: o.linkValue,
-    notes: o.notes,
-    status: o.status as ObjectiveDTO['status'],
-    ...progress,
-  };
 }
 
 export function buildTodayPlan(db: DB, settings: Settings): TodayPlanDTO {

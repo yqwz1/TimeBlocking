@@ -120,6 +120,7 @@ export default function TasksPage() {
         onSelectProject={selectProjectAndLeaveFocus}
         activeLabel={filters.label}
         onSelectLabel={(label) => setFilters((f) => ({ ...f, label }))}
+        onOpenTask={openTask}
         hiddenProjects={hiddenProjects}
         onToggleProjectVisibility={toggleProjectVisibility}
         focusActive={view === 'focus'}

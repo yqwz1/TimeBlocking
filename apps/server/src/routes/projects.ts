@@ -20,6 +20,7 @@ function toDetail(db: DB, p: typeof projects.$inferSelect): ProjectDetailDTO {
     createdAt: p.createdAtUtc,
     taskCount: openTasks.length,
     doneCount: openTasks.filter((t) => t.status === 'done').length,
+    pinned: !!p.pinned,
   };
 }
 
@@ -44,6 +45,7 @@ export function registerProjectRoutes(app: FastifyInstance, db: DB, manager: Syn
         sortOrder: input.sortOrder ?? 0,
         archived: input.archived ? 1 : 0,
         createdAtUtc: nowUtcIso(),
+        pinned: input.pinned ? 1 : 0,
       })
       .run();
     return reply.code(201).send(toDetail(db, db.select().from(projects).where(eq(projects.id, id)).get()!));
@@ -63,6 +65,7 @@ export function registerProjectRoutes(app: FastifyInstance, db: DB, manager: Syn
     if (input.icon !== undefined) patch.icon = input.icon;
     if (input.sortOrder !== undefined) patch.sortOrder = input.sortOrder;
     if (input.archived !== undefined) patch.archived = input.archived ? 1 : 0;
+    if (input.pinned !== undefined) patch.pinned = input.pinned ? 1 : 0;
 
     if (Object.keys(patch).length) db.update(projects).set(patch).where(eq(projects.id, p.id)).run();
     // projectName is denormalized onto every task row — keep it in sync on rename.

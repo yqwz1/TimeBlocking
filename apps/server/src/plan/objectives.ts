@@ -1,5 +1,6 @@
 import { DateTime } from 'luxon';
 import { eq, inArray } from 'drizzle-orm';
+import type { ObjectiveDTO } from '@timeblock/shared';
 import { blocks, habitInstances, habits, objectives, tasks } from '../db/schema.js';
 import type { DB } from '../db/client.js';
 
@@ -10,6 +11,27 @@ export interface ObjectiveProgress {
 }
 
 const ZERO: ObjectiveProgress = { progressMinutes: 0, plannedMinutes: 0, progressCount: 0 };
+
+/** Single source of truth for objective row -> DTO, so every route reports the same totals. */
+export function objectiveToDTO(db: DB, o: typeof objectives.$inferSelect, tz: string): ObjectiveDTO {
+  const auto = computeObjectiveProgress(db, o, tz);
+  return {
+    id: o.id,
+    weekStart: o.weekStart,
+    title: o.title,
+    targetMinutes: o.targetMinutes,
+    targetCount: o.targetCount,
+    linkKind: o.linkKind as ObjectiveDTO['linkKind'],
+    linkValue: o.linkValue,
+    notes: o.notes,
+    status: o.status as ObjectiveDTO['status'],
+    progressMinutes: auto.progressMinutes + o.manualMinutes,
+    plannedMinutes: auto.plannedMinutes + o.manualMinutes,
+    progressCount: auto.progressCount + o.manualCount,
+    manualMinutes: o.manualMinutes,
+    manualCount: o.manualCount,
+  };
+}
 
 /** [weekStart 00:00, +7d) in the given timezone, as epoch ms. */
 function weekRangeMs(weekStart: string, tz: string): { startMs: number; endMs: number } {

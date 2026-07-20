@@ -354,6 +354,7 @@ export interface TaskListFilters {
   dueTo?: string;
   parentId?: string;
   includeClosed?: boolean;
+  pinned?: boolean;
 }
 
 function taskListQuery(filters: TaskListFilters): string {
@@ -369,6 +370,13 @@ export const useTaskList = (filters: TaskListFilters = {}) =>
   useQuery({
     queryKey: ['tasks', 'all', filters],
     queryFn: () => api.get<TaskDTO[]>(`/tasks/all${taskListQuery(filters) ? `?${taskListQuery(filters)}` : ''}`),
+  });
+
+/** Pinned tasks (favorites), shown in the sidebar. */
+export const usePinnedTasks = () =>
+  useQuery({
+    queryKey: ['tasks', 'all', { pinned: true, includeClosed: false }],
+    queryFn: () => api.get<TaskDTO[]>('/tasks/all?pinned=1'),
   });
 
 export const useUpcomingTasks = (days = 7) =>
@@ -418,6 +426,7 @@ function taskToInput(t: TaskDTO): TaskInput {
     color: t.color,
     status: t.status,
     skipScheduling: t.skipScheduling,
+    pinned: t.pinned,
   };
 }
 

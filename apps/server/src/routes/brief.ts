@@ -5,7 +5,8 @@ import { eq } from 'drizzle-orm';
 import type { DB } from '../db/client.js';
 import { getSettings } from '../settings.js';
 import { buildTodayPlan } from '../plan/today.js';
-import { aiConfigured, generateBrief } from '../ai/brief.js';
+import { aiConfigured } from '../ai/client.js';
+import { generateBrief } from '../ai/brief.js';
 import { isOfflineError } from '../integrations/google/client.js';
 import { nowUtcIso } from '../config.js';
 

@@ -1,7 +1,7 @@
 ﻿import { motion } from 'motion/react';
-import { CheckSquare, Clock, CornerDownRight } from 'lucide-react';
+import { CheckSquare, Clock, CornerDownRight, Pin } from 'lucide-react';
 import type { TaskDTO } from '@timeblock/shared';
-import { useLabelColorMap } from '../../hooks.js';
+import { useLabelColorMap, useUpdateTask } from '../../hooks.js';
 import { listItem, springs } from '../../lib/motion.js';
 import { Bell, BlockedBadge, DifficultyBadge, DueChip, formatDuration, LabelChip, Link2, MetaChip, Paperclip, PriorityBadge } from './taskDisplay.js';
 import { useTaskHoverPreview } from './TaskHoverPreview.js';
@@ -18,6 +18,7 @@ export default function TaskCard({
   parentContent?: string | null;
 }) {
   const labelColors = useLabelColorMap();
+  const update = useUpdateTask();
   const isDone = task.status === 'done';
   const hover = useTaskHoverPreview<HTMLParagraphElement>(task);
   return (
@@ -31,11 +32,25 @@ export default function TaskCard({
       whileHover={isDragging ? undefined : { y: -2 }}
       transition={springs.snappy}
       onClick={() => onOpen(task.id)}
-      className={`cursor-pointer rounded-lg border bg-white p-3 shadow-sm transition-[border-color,box-shadow] hover:border-teal-300 hover:shadow-md dark:bg-neutral-900 dark:hover:border-teal-500/50 ${
+      className={`group relative cursor-pointer rounded-lg border bg-white p-3 shadow-sm transition-[border-color,box-shadow] hover:border-teal-300 hover:shadow-md dark:bg-neutral-900 dark:hover:border-teal-500/50 ${
         isDragging ? 'border-teal-300 ring-2 ring-teal-300/50 dark:border-teal-500/50 dark:ring-teal-500/40' : 'border-slate-200 dark:border-neutral-800'
       }`}
       style={task.color ? { borderLeftColor: task.color, borderLeftWidth: 3 } : undefined}
     >
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          update.mutate({ id: task.id, patch: { pinned: !task.pinned } });
+        }}
+        aria-label={task.pinned ? 'Unpin task' : 'Pin task'}
+        title={task.pinned ? 'Unpin task' : 'Pin task'}
+        className={`absolute right-2 top-2 rounded p-0.5 transition-opacity ${
+          task.pinned ? 'text-amber-500 opacity-100' : 'text-slate-300 opacity-0 hover:text-amber-500 group-hover:opacity-100 dark:text-neutral-600'
+        }`}
+      >
+        <Pin size={13} fill={task.pinned ? 'currentColor' : 'none'} />
+      </button>
       {parentContent && (
         <p className="mb-1 flex items-center gap-1 truncate text-[10px] font-medium uppercase tracking-wide text-teal-500/80 dark:text-teal-400/70">
           <CornerDownRight size={10} className="shrink-0" />

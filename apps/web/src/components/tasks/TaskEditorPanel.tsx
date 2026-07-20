@@ -15,6 +15,7 @@ import {
   Lock,
   Paintbrush,
   Paperclip,
+  Pin,
   Plus,
   Tag,
   Trash2,
@@ -400,6 +401,15 @@ export default function TaskEditorPanel({ taskId, onClose, onOpen }: { taskId: s
               <span />
             )}
             <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => patch({ pinned: !task.pinned })}
+                className={`rounded p-1.5 ${task.pinned ? 'text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-500/10' : 'text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5'}`}
+                aria-label={task.pinned ? 'Unpin task' : 'Pin task'}
+                title={task.pinned ? 'Unpin task' : 'Pin task'}
+              >
+                <Pin size={14} fill={task.pinned ? 'currentColor' : 'none'} />
+              </button>
               <button
                 type="button"
                 onClick={() => confirm(`Delete "${task.content}"? This can't be undone.`) && del.mutate(task.id, { onSuccess: onClose })}

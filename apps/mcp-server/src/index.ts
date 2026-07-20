@@ -49,6 +49,38 @@ const taskFields = {
   color: z.string().nullable().optional(),
   status: z.enum(['backlog', 'todo', 'in_progress', 'done', 'cancelled']).optional(),
   skipScheduling: z.boolean().optional().describe('If true, the auto-scheduler will not place this task on the calendar'),
+  plannedForDate: z.string().nullable().optional().describe('Local YYYY-MM-DD — "picked for today/tomorrow" in the Plan Day ritual'),
+};
+
+const WEEKDAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const;
+const HHMM = z.string().regex(/^\d{2}:\d{2}$/);
+
+const habitFields = {
+  name: z.string().min(1),
+  durationMin: z.number().int().min(5).max(480),
+  days: z.array(z.enum(WEEKDAYS)).min(1).describe('Weekdays the habit recurs on; all 7 = daily'),
+  preferredStart: HHMM.nullable(),
+  windowStart: HHMM,
+  windowEnd: HHMM,
+  priority: z.number().int().min(1).max(4),
+  kind: z.enum(['habit', 'learning']),
+  weeklyTargetMin: z.number().int().positive().nullable().describe('Learning goals: extra sessions are added until this many minutes/week are planned'),
+  notes: z.string(),
+  active: z.boolean(),
+};
+
+const goalFields = {
+  title: z.string().min(1),
+  description: z.string(),
+  targetValue: z.number().int().positive().nullable(),
+  targetUnit: z.string().nullable(),
+  achievable: z.string().describe('Achievable rationale'),
+  relevance: z.string().describe('Why this goal matters'),
+  year: z.number().int().min(2020).max(2100),
+  quarter: z.number().int().min(1).max(4),
+  customDeadline: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
+  linkKind: z.enum(['project', 'label']).nullable(),
+  linkValue: z.string().nullable(),
 };
 
 server.registerTool(
@@ -252,6 +284,114 @@ server.registerTool(
     inputSchema: { name: z.string().min(1), color: z.string().nullable().optional() },
   },
   async (input) => tool(() => api('POST', '/labels', input)),
+);
+
+server.registerTool(
+  'list_habits',
+  { title: 'List habits', description: 'List all habits/learning routines with this week\'s progress, streaks, and today\'s status.', inputSchema: {} },
+  async () => tool(() => api('GET', '/habits')),
+);
+
+server.registerTool(
+  'create_habit',
+  { title: 'Create habit', description: 'Create a new recurring habit or learning routine.', inputSchema: habitFields },
+  async (input) => tool(() => api('POST', '/habits', input)),
+);
+
+server.registerTool(
+  'update_habit',
+  {
+    title: 'Update habit',
+    description: 'Edit fields on an existing habit. Only pass the fields you want to change.',
+    inputSchema: { id: z.string(), ...Object.fromEntries(Object.entries(habitFields).map(([k, v]) => [k, v.optional()])) },
+  },
+  async ({ id, ...patch }) => tool(() => api('PATCH', `/habits/${id}`, patch)),
+);
+
+server.registerTool(
+  'delete_habit',
+  { title: 'Delete habit', description: 'Permanently delete a habit and its scheduled instances.', inputSchema: { id: z.string() } },
+  async ({ id }) => tool(() => api('DELETE', `/habits/${id}`)),
+);
+
+server.registerTool(
+  'complete_habit_today',
+  { title: 'Complete habit for today', description: "Mark today's occurrence of a habit as done.", inputSchema: { id: z.string() } },
+  async ({ id }) => tool(() => api('POST', `/habits/${id}/complete-today`)),
+);
+
+server.registerTool(
+  'skip_habit_today',
+  { title: 'Skip habit for today', description: "Mark today's occurrence of a habit as skipped.", inputSchema: { id: z.string() } },
+  async ({ id }) => tool(() => api('POST', `/habits/${id}/skip-today`)),
+);
+
+server.registerTool(
+  'list_goals',
+  {
+    title: 'List quarterly SMART goals',
+    description: 'List goals for a year/quarter, with computed progress. Defaults to the current quarter.',
+    inputSchema: {
+      year: z.number().int().min(2020).max(2100).optional(),
+      quarter: z.union([z.number().int().min(1).max(4), z.literal('all')]).optional(),
+    },
+  },
+  async ({ year, quarter }) =>
+    tool(() => {
+      const params = new URLSearchParams();
+      if (year !== undefined) params.set('year', String(year));
+      if (quarter !== undefined) params.set('quarter', String(quarter));
+      return api('GET', `/goals?${params.toString()}`);
+    }),
+);
+
+server.registerTool(
+  'create_goal',
+  { title: 'Create SMART goal', description: 'Create a new quarterly SMART goal.', inputSchema: goalFields },
+  async (input) => tool(() => api('POST', '/goals', input)),
+);
+
+server.registerTool(
+  'update_goal',
+  {
+    title: 'Update goal',
+    description: 'Edit fields on an existing goal, including its status or current progress value. Only pass the fields you want to change.',
+    inputSchema: {
+      id: z.string(),
+      ...Object.fromEntries(Object.entries(goalFields).map(([k, v]) => [k, v.optional()])),
+      currentValue: z.number().optional(),
+      status: z.enum(['active', 'achieved', 'dropped']).optional(),
+    },
+  },
+  async ({ id, ...patch }) => tool(() => api('PATCH', `/goals/${id}`, patch)),
+);
+
+server.registerTool(
+  'delete_goal',
+  { title: 'Delete goal', description: 'Delete a goal and its milestones.', inputSchema: { id: z.string() } },
+  async ({ id }) => tool(() => api('DELETE', `/goals/${id}`)),
+);
+
+server.registerTool(
+  'add_goal_milestone',
+  { title: 'Add goal milestone', description: 'Add a milestone to a goal.', inputSchema: { goalId: z.string(), title: z.string().min(1) } },
+  async ({ goalId, title }) => tool(() => api('POST', `/goals/${goalId}/milestones`, { title })),
+);
+
+server.registerTool(
+  'update_goal_milestone',
+  {
+    title: 'Update goal milestone',
+    description: 'Rename a milestone or mark it done/undone.',
+    inputSchema: { goalId: z.string(), milestoneId: z.string(), title: z.string().min(1).optional(), done: z.boolean().optional() },
+  },
+  async ({ goalId, milestoneId, ...patch }) => tool(() => api('PATCH', `/goals/${goalId}/milestones/${milestoneId}`, patch)),
+);
+
+server.registerTool(
+  'delete_goal_milestone',
+  { title: 'Delete goal milestone', description: 'Remove a milestone from a goal.', inputSchema: { goalId: z.string(), milestoneId: z.string() } },
+  async ({ goalId, milestoneId }) => tool(() => api('DELETE', `/goals/${goalId}/milestones/${milestoneId}`)),
 );
 
 const transport = new StdioServerTransport();

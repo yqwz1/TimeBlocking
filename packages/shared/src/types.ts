@@ -88,6 +88,34 @@ export const SettingsSchema = z.object({
   /** one_block: any completed block/habit holds the streak; half_planned: need >=50% of planned blocks done. */
   streakRule: z.enum(['one_block', 'half_planned']),
   celebrationToasts: z.boolean(),
+  /** UI sound effects: completion chime, reminder ping, level-up fanfare, focus-timer done. */
+  soundEffects: z.boolean(),
+  /** Second Brain vault folder, absolute path. null = default `data/vault`. */
+  notesVaultPath: z.string().nullable(),
+  /** Days a deleted note sits in `.trash` before it's eligible for auto-purge. */
+  notesTrashRetentionDays: z.number().int().min(1).max(365),
+  /** Snapshots kept per note (written before each overwrite) before the oldest is pruned. */
+  notesSnapshotRetention: z.number().int().min(0).max(200),
+  /** Vault-relative folder daily notes are created in, e.g. "Daily". */
+  notesDailyFolder: z.string().min(1),
+  /** Vault-relative folder templates are read from, e.g. "Templates". A file named "Daily.md" in here overrides the built-in daily-note template. */
+  notesTemplatesFolder: z.string().min(1),
+  /** Vault-relative folder weekly digests are written to, e.g. "Digests". */
+  notesDigestFolder: z.string().min(1),
+  /** System-prompt seed for Vault Chat — who you are, so answers are framed the way you'd want. */
+  aiAboutMe: z.string(),
+  /** Gemini embedding model used for the Second Brain semantic index. */
+  aiEmbeddingModel: z.string().min(1),
+  /** Graph: min cosine similarity for a semantic edge between two notes. */
+  graphSemanticThreshold: z.number().min(0).max(1),
+  /** Graph: max semantic edges kept per note (top-K by similarity), 0 disables the layer. */
+  graphSemanticTopK: z.number().int().min(0).max(20),
+  /** Graph: min number of shared tags for a tag-co-occurrence edge. */
+  graphTagCoocMin: z.number().int().min(1).max(10),
+  /** Graph: a node untouched for this many days fades to minimum opacity (freshness encoding). */
+  graphFreshnessFadeDays: z.number().int().min(1).max(3650),
+  /** Graph: min cosine similarity for a note pair to be proposed as a suggested [[wikilink]] (G6 §7 ghost edges). */
+  graphSuggestThreshold: z.number().min(0).max(1),
 });
 export type Settings = z.infer<typeof SettingsSchema>;
 export type StreakRule = Settings['streakRule'];
@@ -134,6 +162,21 @@ export const DEFAULT_SETTINGS: Settings = {
   gamificationEnabled: true,
   streakRule: 'one_block',
   celebrationToasts: true,
+  soundEffects: true,
+  notesVaultPath: null,
+  notesTrashRetentionDays: 30,
+  notesSnapshotRetention: 20,
+  notesDailyFolder: 'Daily',
+  notesTemplatesFolder: 'Templates',
+  notesDigestFolder: 'Digests',
+  aiAboutMe:
+    'Software engineering student and game developer (Unity/C#), also works with web stacks. Juggles university, a co-op placement, side projects, community leadership, and content creation. Notes mix project logs, university material, game design ideas, career/job-hunt notes, and daily planning — in both Arabic and English. Prefers direct, practical answers and step-by-step breakdowns.',
+  aiEmbeddingModel: 'gemini-embedding-001',
+  graphSemanticThreshold: 0.78,
+  graphSemanticTopK: 5,
+  graphTagCoocMin: 1,
+  graphFreshnessFadeDays: 45,
+  graphSuggestThreshold: 0.82,
 };
 
 // ---------- Habits ----------
@@ -193,12 +236,23 @@ export const ObjectiveInputSchema = z.object({
 });
 export type ObjectiveInput = z.infer<typeof ObjectiveInputSchema>;
 
+export const ObjectivePatchSchema = ObjectiveInputSchema.extend({
+  status: z.enum(['active', 'done', 'dropped']),
+  manualMinutes: z.number().int().min(0),
+  manualCount: z.number().int().min(0),
+}).partial();
+export type ObjectivePatch = z.infer<typeof ObjectivePatchSchema>;
+
 export interface ObjectiveDTO extends ObjectiveInput {
   id: string;
   status: 'active' | 'done' | 'dropped';
+  /** total progress: link-derived + manually logged */
   progressMinutes: number;
   plannedMinutes: number;
   progressCount: number;
+  /** manually logged portion of the totals above */
+  manualMinutes: number;
+  manualCount: number;
 }
 
 // ---------- Goals (quarterly SMART goals) ----------
@@ -281,6 +335,8 @@ export const TaskInputSchema = z.object({
   skipScheduling: z.boolean().optional(),
   /** local YYYY-MM-DD — "picked for today/tomorrow" in the Plan Day ritual. */
   plannedForDate: z.string().nullable().optional(),
+  /** Favorited — surfaced in the sidebar's Favorites section. */
+  pinned: z.boolean().optional(),
 });
 export type TaskInput = z.infer<typeof TaskInputSchema>;
 
@@ -344,6 +400,8 @@ export interface TaskDTO {
   view: TaskScheduleView | null;
   /** True while any dependency this task waits on isn't done/cancelled yet — the scheduler won't place it. */
   isBlocked: boolean;
+  /** Favorited — surfaced in the sidebar's Favorites section. */
+  pinned: boolean;
 }
 
 export interface TaskDetailDTO extends TaskDTO {
@@ -363,6 +421,8 @@ export const ProjectInputSchema = z.object({
   icon: z.string().nullable().optional(),
   sortOrder: z.number().int().optional(),
   archived: z.boolean().optional(),
+  /** Favorited — surfaced in the sidebar's Favorites section. */
+  pinned: z.boolean().optional(),
 });
 export type ProjectInput = z.infer<typeof ProjectInputSchema>;
 
@@ -377,6 +437,8 @@ export interface ProjectDetailDTO {
   createdAt: string | null;
   taskCount: number;
   doneCount: number;
+  /** Favorited — surfaced in the sidebar's Favorites section. */
+  pinned: boolean;
 }
 
 export const LabelInputSchema = z.object({
@@ -925,3 +987,363 @@ export const BoardFileInputSchema = z.object({
   dataUrl: z.string().min(1),
 });
 export type BoardFileInput = z.infer<typeof BoardFileInputSchema>;
+
+// ---------- Notes (Second Brain vault) ----------
+
+/**
+ * A markdown note in the vault. `id` is the vault-relative path (forward-slash
+ * separated, e.g. "Projects/Foo.md") — the file itself is the identity, per the
+ * files-first principle. The SQLite `notes` table is just a rebuildable cache.
+ */
+export interface NoteSummaryDTO {
+  id: string;
+  title: string;
+  tags: string[];
+  pinned: boolean;
+  createdAt: string | null;
+  updatedAt: string | null;
+}
+
+export interface NoteDTO extends NoteSummaryDTO {
+  /** Raw file content, frontmatter included verbatim — never parsed apart from the editable text. */
+  content: string;
+}
+
+export const NoteCreateSchema = z.object({
+  /** Vault-relative path; ".md" is appended if missing. */
+  path: z.string().min(1),
+  content: z.string().optional(),
+});
+export type NoteCreateInput = z.infer<typeof NoteCreateSchema>;
+
+export const NoteSaveSchema = z.object({
+  content: z.string(),
+  /** The updatedAt the client last loaded — mismatch means someone else saved first (stale-write conflict). */
+  expectedUpdatedAt: z.string().nullable().optional(),
+});
+export type NoteSaveInput = z.infer<typeof NoteSaveSchema>;
+
+export const NoteMoveSchema = z.object({
+  /** New vault-relative path (rename and/or move — same operation). */
+  path: z.string().min(1),
+});
+export type NoteMoveInput = z.infer<typeof NoteMoveSchema>;
+
+export interface NoteConflictDTO {
+  error: 'conflict';
+  serverContent: string;
+  serverUpdatedAt: string | null;
+}
+
+export interface BacklinkDTO {
+  id: string;
+  title: string;
+  snippet: string;
+}
+
+export interface UnlinkedMentionDTO {
+  id: string;
+  title: string;
+  snippet: string;
+}
+
+export interface OutgoingLinkDTO {
+  /** The raw `[[Target]]` text. */
+  title: string;
+  /** Resolved note id, or null if no note with that title exists yet. */
+  id: string | null;
+}
+
+export interface NoteDetailDTO extends NoteDTO {
+  backlinks: BacklinkDTO[];
+  unlinkedMentions: UnlinkedMentionDTO[];
+  outgoingLinks: OutgoingLinkDTO[];
+}
+
+export interface NoteSearchResultDTO {
+  id: string;
+  title: string;
+  snippet: string;
+  /** How this result was found. "both" ranks highest — keyword and meaning agree. */
+  matchType: 'keyword' | 'semantic' | 'both';
+}
+
+export interface RelatedNoteDTO {
+  id: string;
+  title: string;
+  /** Cosine similarity, 0..1, between the open note and this one's closest chunk. */
+  score: number;
+}
+
+export const NoteChatSchema = z.object({
+  message: z.string().min(1),
+  history: z
+    .array(
+      z.object({
+        role: z.enum(['user', 'assistant']),
+        content: z.string(),
+      }),
+    )
+    .optional(),
+});
+export type NoteChatInput = z.infer<typeof NoteChatSchema>;
+
+export interface NoteChatCitationDTO {
+  id: string;
+  title: string;
+}
+
+export interface NoteChatResponseDTO {
+  answer: string;
+  citations: NoteChatCitationDTO[];
+  /** G4 (GraphRAG): 'local' = retrieved matching notes + their 1-hop neighbourhood; 'global' = answered from community summaries. */
+  scope: 'local' | 'global';
+  /** G4: note ids of the retrieved subgraph — the client flies the graph to and highlights these ("spatial citations"). */
+  focusNoteIds: string[];
+}
+
+export interface NoteSuggestionsDTO {
+  /** Suggested wikilink targets — existing note titles or new ones, never auto-inserted. */
+  links: string[];
+  /** Suggested #tags, without the leading "#". */
+  tags: string[];
+}
+
+/** person / project / technology / idea — the categories the concept extractor assigns (G3). */
+export type ConceptType = 'person' | 'project' | 'technology' | 'idea';
+
+/** note = a vault file (circle); concept = an AI-extracted entity bridging notes (diamond, G3). */
+export type NoteGraphNodeKind = 'note' | 'concept';
+
+export interface NoteGraphNodeDTO {
+  id: string;
+  title: string;
+  tags: string[];
+  /** Vault-relative folder the note lives in, "" for the vault root. */
+  folder: string;
+  pinned: boolean;
+  /** Number of explicit wikilink connections (G2 encoding); for a concept, its distinct-note mention count. */
+  degree: number;
+  /** PageRank over the explicit-link graph, 0..1-ish, normalized so the max node ≈ 1. */
+  pagerank: number;
+  /** Betweenness centrality over the explicit-link graph (bridge detection). */
+  betweenness: number;
+  /** Count of open `- [ ]` checkbox tasks in the note body. */
+  openTasks: number;
+  /** Whole days since the note was last modified — drives the freshness/opacity encoding. */
+  freshnessDays: number;
+  /** Node kind (G3). Concept nodes carry the entity name in `title` and a `conceptType`. */
+  kind: NoteGraphNodeKind;
+  /** Set only on concept nodes — the extractor category. */
+  conceptType: ConceptType | null;
+  /** G4: the note's coarse (top-level) community id, for the "color by community" mode. Null on concepts / before detection. */
+  communityId: string | null;
+  /** G4: the coarse community's label (AI or fallback), for legends and the G6 §5 "cluster" filter. */
+  communityLabel: string | null;
+}
+
+/** explicit = [[wikilink]]; semantic = embedding similarity; tag = shared tags; concept = note↔extracted-entity; suggested = AI-proposed link (G6 §7 ghost edge). */
+export type NoteGraphEdgeType = 'explicit' | 'semantic' | 'tag' | 'concept' | 'suggested';
+
+export interface ConceptDTO {
+  id: string;
+  name: string;
+  type: ConceptType;
+  aliases: string[];
+  /** Distinct notes mentioning this concept. */
+  mentionCount: number;
+}
+
+/** Progress for the Settings "extract concepts" backfill. */
+export interface ConceptStatusDTO {
+  totalNotes: number;
+  extractedNotes: number;
+  conceptCount: number;
+  aiEnabled: boolean;
+  running: boolean;
+}
+
+export interface NoteGraphEdgeDTO {
+  source: string;
+  target: string;
+  type: NoteGraphEdgeType;
+  /** Type-specific strength: explicit = link count, semantic = cosine, tag = shared-tag count. */
+  weight: number;
+}
+
+/** The flagship graph feature. G2: metrics-encoded nodes + typed (explicit/semantic/tag) edges. */
+export interface NoteGraphDTO {
+  nodes: NoteGraphNodeDTO[];
+  edges: NoteGraphEdgeDTO[];
+  /** Whether the cached metrics/edges index is populated (false = a recompute was just triggered). */
+  indexReady: boolean;
+}
+
+// ── G6 §5 — Ask the graph in natural language ────────────────────────────────
+
+/**
+ * A compiled graph query (G6 §5): the AI turns a natural-language ask into these concrete filters, which the
+ * client shows as editable chips and applies to the visible node set. All fields are optional/additive.
+ */
+export interface GraphQueryFilterDTO {
+  tags: string[];
+  folders: string[];
+  /** Community labels (matched case-insensitively against detected community names). */
+  communityLabels: string[];
+  edgeTypes: NoteGraphEdgeType[];
+  /** Keep only notes untouched for at least this many days (the "haven't touched in 3 months" case). */
+  untouchedMinDays: number | null;
+  minPagerank: number | null;
+  minDegree: number | null;
+  minBetweenness: number | null;
+  /** True = only notes with open tasks. */
+  hasOpenTasks: boolean;
+  /** Free-text substring to match in title/tags. */
+  text: string | null;
+}
+
+export const GraphQuerySchema = z.object({ message: z.string().min(1) });
+export type GraphQueryInput = z.infer<typeof GraphQuerySchema>;
+
+export interface GraphQueryResponseDTO {
+  filter: GraphQueryFilterDTO;
+  /** Short human echo of what the AI understood, e.g. "gamedev notes untouched for 90+ days". */
+  interpretation: string;
+}
+
+// ── G6 §6 — Connection explorer ──────────────────────────────────────────────
+
+export interface GraphPathStepDTO {
+  /** Node id at this step (note id or "concept:<id>"). */
+  id: string;
+  title: string;
+  kind: NoteGraphNodeKind;
+  /** Edge type joining this node to the previous step (null on the first node). */
+  viaType: NoteGraphEdgeType | null;
+}
+
+export interface GraphPathResultDTO {
+  /** Fewest-hops path (or [] if the two nodes are disconnected). */
+  shortest: GraphPathStepDTO[];
+  /** Strongest-connection path (weighted); may equal `shortest`. */
+  strongest: GraphPathStepDTO[];
+  /** One-line narration of the strongest path (AI, or a deterministic fallback). */
+  narration: string;
+}
+
+export const GraphPathSchema = z.object({ source: z.string().min(1), target: z.string().min(1) });
+export type GraphPathInput = z.infer<typeof GraphPathSchema>;
+
+/** "Why related?" evidence between two notes (G6 §6). */
+export interface GraphWhyDTO {
+  kind: 'semantic' | 'tag' | 'concept' | 'explicit' | 'none';
+  /** For semantic/suggested pairs: the best-matching passage from each note. */
+  sourcePassage: string | null;
+  targetPassage: string | null;
+  score: number | null;
+  /** For tag/concept: the shared tags / concept names. */
+  shared: string[];
+}
+
+export const GraphWhySchema = z.object({ source: z.string().min(1), target: z.string().min(1) });
+export type GraphWhyInput = z.infer<typeof GraphWhySchema>;
+
+// ── G6 §7 — Suggested edges ──────────────────────────────────────────────────
+
+/** An AI/embedding-proposed link the user can Accept (writes a real [[wikilink]]) or Dismiss (persisted). */
+export interface SuggestedEdgeDTO {
+  source: string;
+  sourceTitle: string;
+  target: string;
+  targetTitle: string;
+  /** Model/embedding confidence (cosine similarity). */
+  confidence: number;
+}
+
+export const SuggestedEdgeActionSchema = z.object({ source: z.string().min(1), target: z.string().min(1) });
+export type SuggestedEdgeActionInput = z.infer<typeof SuggestedEdgeActionSchema>;
+
+// ── G6 §8 — Insights panel (always actionable) ────────────────────────────────
+
+/** A semantically-near note surfaced as a link candidate for an orphan. */
+export interface InsightNeighborDTO {
+  id: string;
+  title: string;
+  /** Cosine similarity of the closest chunk pair. */
+  score: number;
+}
+
+/** An unlinked note (degree 0) with its top semantic neighbours — one click links it. */
+export interface OrphanInsightDTO {
+  id: string;
+  title: string;
+  neighbors: InsightNeighborDTO[];
+}
+
+/** A concept mentioned across many notes but with no dedicated note of its own. */
+export interface BlindSpotInsightDTO {
+  conceptId: string;
+  name: string;
+  type: ConceptType;
+  /** Number of notes that mention this concept. */
+  noteCount: number;
+}
+
+/** A high-betweenness note whose links span two or more detected communities. */
+export interface BridgeInsightDTO {
+  id: string;
+  title: string;
+  betweenness: number;
+  /** Labels of the distinct communities this note connects. */
+  communities: string[];
+}
+
+/** A central note (high PageRank) left untouched past the staleness cutoff. */
+export interface StaleCentralInsightDTO {
+  id: string;
+  title: string;
+  pagerank: number;
+  freshnessDays: number;
+}
+
+/** A note pair whose embeddings are near-identical — a likely duplicate. */
+export interface DuplicateInsightDTO {
+  source: string;
+  sourceTitle: string;
+  target: string;
+  targetTitle: string;
+  similarity: number;
+}
+
+export interface GraphInsightsDTO {
+  orphans: OrphanInsightDTO[];
+  blindSpots: BlindSpotInsightDTO[];
+  bridges: BridgeInsightDTO[];
+  staleCentral: StaleCentralInsightDTO[];
+  duplicates: DuplicateInsightDTO[];
+  /** Orphan neighbours + duplicates need embeddings; false ⇒ AI index not built yet. */
+  embeddingsReady: boolean;
+  /** The staleness cutoff (days) used for stale-but-central, echoed for the UI copy. */
+  staleDays: number;
+}
+
+export interface TemplateSummaryDTO {
+  /** Vault-relative path within the templates folder, e.g. "Templates/Meeting.md". */
+  id: string;
+  title: string;
+}
+
+export const NoteFromTemplateSchema = z.object({
+  path: z.string().min(1),
+  /** Vault-relative path of the template to instantiate from. */
+  templateId: z.string().min(1),
+});
+export type NoteFromTemplateInput = z.infer<typeof NoteFromTemplateSchema>;
+
+export interface NoteTrashEntryDTO {
+  /** The dated trash folder name — pass back to restore/purge. */
+  trashId: string;
+  /** Original vault-relative path before deletion. */
+  originalPath: string;
+  deletedAt: string;
+}

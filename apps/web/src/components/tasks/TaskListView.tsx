@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { AnimatePresence, animate, motion, useDragControls, useMotionValue, useTransform } from 'motion/react';
-import { CheckSquare, ChevronDown, ChevronRight, ChevronsDown, ChevronsUp, ChevronUp, Clock, GripVertical, Plus, Trash2 } from 'lucide-react';
+import { CheckSquare, ChevronDown, ChevronRight, ChevronsDown, ChevronsUp, ChevronUp, Clock, GripVertical, Pin, Plus, Trash2 } from 'lucide-react';
 import type { TaskDTO } from '@timeblock/shared';
 import { useDeleteTask, useLabelColorMap, useReorderTasks, useUpdateTask } from '../../hooks.js';
 import { listItem } from '../../lib/motion.js';
@@ -241,6 +241,19 @@ function TaskRow({
           </div>
           {/* action buttons, revealed on hover */}
           <div className="flex shrink-0 items-center gap-1 pl-0.5">
+            <button
+              type="button"
+              onClick={() => update.mutate({ id: task.id, patch: { pinned: !task.pinned } })}
+              aria-label={task.pinned ? 'Unpin task' : 'Pin task'}
+              title={task.pinned ? 'Unpin task' : 'Pin task'}
+              className={`rounded p-1 transition-opacity ${
+                task.pinned
+                  ? 'text-amber-500 opacity-100'
+                  : 'text-slate-400 opacity-0 hover:bg-slate-200 hover:text-amber-500 focus-visible:opacity-100 group-hover:opacity-100 dark:hover:bg-neutral-700'
+              }`}
+            >
+              <Pin size={14} fill={task.pinned ? 'currentColor' : 'none'} />
+            </button>
             <button
               type="button"
               onClick={() => setAddingSub((v) => !v)}

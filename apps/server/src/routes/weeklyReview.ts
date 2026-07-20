@@ -11,28 +11,13 @@ import { analyticsDaily, dayResults, objectives, weeklyReviews } from '../db/sch
 import type { DB } from '../db/client.js';
 import { getSettings } from '../settings.js';
 import { nowUtcIso } from '../config.js';
-import { computeObjectiveProgress } from '../plan/objectives.js';
+import { objectiveToDTO } from '../plan/objectives.js';
 import { awardXp } from '../gamification/engine.js';
 
 type Row = typeof weeklyReviews.$inferSelect;
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const REVIEW_XP = 60;
-
-function objectiveToDTO(db: DB, o: typeof objectives.$inferSelect, tz: string): ObjectiveDTO {
-  return {
-    id: o.id,
-    weekStart: o.weekStart,
-    title: o.title,
-    targetMinutes: o.targetMinutes,
-    targetCount: o.targetCount,
-    linkKind: o.linkKind as ObjectiveDTO['linkKind'],
-    linkValue: o.linkValue,
-    notes: o.notes,
-    status: o.status as ObjectiveDTO['status'],
-    ...computeObjectiveProgress(db, o, tz),
-  };
-}
 
 function weekObjectives(db: DB, weekStart: string, tz: string): ObjectiveDTO[] {
   return db.select().from(objectives).where(eq(objectives.weekStart, weekStart)).all().map((o) => objectiveToDTO(db, o, tz));

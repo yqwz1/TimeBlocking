@@ -25,6 +25,7 @@ import {
   type LucideIcon,
   Music,
   Palette,
+  Pin,
   Plane,
   Plus,
   Repeat,
@@ -39,7 +40,18 @@ import {
   Users,
   Zap,
 } from 'lucide-react';
-import { useCreateLabel, useCreateProject, useDeleteLabel, useDeleteProject, useLabels, useProjects, useUpdateLabel, useUpdateProject } from '../../hooks.js';
+import {
+  useCreateLabel,
+  useCreateProject,
+  useDeleteLabel,
+  useDeleteProject,
+  useLabels,
+  usePinnedTasks,
+  useProjects,
+  useUpdateLabel,
+  useUpdateProject,
+  useUpdateTask,
+} from '../../hooks.js';
 import { springs } from '../../lib/motion.js';
 import { useResizableSidebar } from '../../hooks/useResizableSidebar.js';
 
@@ -126,6 +138,7 @@ export default function ProjectSidebar({
   onSelectProject,
   activeLabel,
   onSelectLabel,
+  onOpenTask,
   hiddenProjects,
   onToggleProjectVisibility,
   focusActive,
@@ -151,6 +164,7 @@ export default function ProjectSidebar({
   onSelectProject: (id: string | null) => void;
   activeLabel: string | null;
   onSelectLabel: (name: string | null) => void;
+  onOpenTask: (id: string) => void;
   hiddenProjects: Set<string>;
   onToggleProjectVisibility: (id: string) => void;
   focusActive: boolean;
@@ -174,13 +188,16 @@ export default function ProjectSidebar({
 }) {
   const { data: projects } = useProjects();
   const { data: labels } = useLabels();
+  const { data: pinnedTasks } = usePinnedTasks();
   const createProject = useCreateProject();
   const updateProject = useUpdateProject();
+  const updateTask = useUpdateTask();
   const createLabel = useCreateLabel();
   const updateLabel = useUpdateLabel();
   const deleteLabel = useDeleteLabel();
   const deleteProject = useDeleteProject();
   const [addingProject, setAddingProject] = useState(false);
+  const [favoritesCollapsed, setFavoritesCollapsed] = useState(() => localStorage.getItem('tb.sidebar.favoritesCollapsed') === '1');
   const [newName, setNewName] = useState('');
   const [newColor, setNewColor] = useState<string>(SWATCHES[4]);
   const [newIcon, setNewIcon] = useState<string | null>(null);
@@ -218,8 +235,15 @@ export default function ProjectSidebar({
       localStorage.setItem('tb.sidebar.labelsCollapsed', v ? '0' : '1');
       return !v;
     });
+  const toggleFavoritesCollapsed = () =>
+    setFavoritesCollapsed((v) => {
+      localStorage.setItem('tb.sidebar.favoritesCollapsed', v ? '0' : '1');
+      return !v;
+    });
 
   const active = projects?.filter((p) => !p.archived) ?? [];
+  const pinnedProjects = active.filter((p) => p.pinned);
+  const openPinnedTasks = (pinnedTasks ?? []).filter((t) => t.status !== 'done' && t.status !== 'cancelled');
   const { width, collapsed, dragging, toggleCollapsed, startDrag } = useResizableSidebar('tb.taskSidebar');
   const otherViewActive =
     focusActive || todayActive || calendarActive || habitsActive || objectivesActive || goalsActive || reviewActive || analyticsActive || settingsActive;
@@ -455,6 +479,83 @@ export default function ProjectSidebar({
         <div className="mb-1 flex items-center justify-between px-2">
           <button
             type="button"
+            onClick={toggleFavoritesCollapsed}
+            className="flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-neutral-500"
+          >
+            <ChevronDown size={12} className={`transition-transform ${favoritesCollapsed ? '-rotate-90' : ''}`} />
+            Favorites
+          </button>
+        </div>
+        {!favoritesCollapsed && (
+          <ul className="space-y-0.5">
+            {pinnedProjects.length === 0 && openPinnedTasks.length === 0 ? (
+              <li className="px-2 py-1 text-xs text-slate-400 dark:text-neutral-500">Pin a project or task to see it here.</li>
+            ) : (
+              <>
+                {pinnedProjects.map((p) => (
+                  <li key={`fav-project-${p.id}`} className="group">
+                    <div className="flex items-center">
+                      <button
+                        type="button"
+                        onClick={() => onSelectProject(p.id)}
+                        className={`flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors ${
+                          activeProject === p.id ? 'bg-teal-50 text-teal-700 dark:bg-teal-500/15 dark:text-teal-300' : 'text-slate-600 hover:bg-slate-100 dark:text-neutral-300 dark:hover:bg-white/5'
+                        }`}
+                      >
+                        <ProjectIcon icon={p.icon} color={p.color} />
+                        <span className="min-w-0 flex-1 truncate">{p.name}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          updateProject.mutate({ id: p.id, patch: { pinned: false } });
+                        }}
+                        aria-label={`Unpin ${p.name}`}
+                        title="Unpin"
+                        className="shrink-0 rounded p-1 text-amber-500 opacity-0 group-hover:opacity-100"
+                      >
+                        <Pin size={12} fill="currentColor" />
+                      </button>
+                    </div>
+                  </li>
+                ))}
+                {openPinnedTasks.map((t) => (
+                  <li key={`fav-task-${t.id}`} className="group">
+                    <div className="flex items-center">
+                      <button
+                        type="button"
+                        onClick={() => onOpenTask(t.id)}
+                        className="flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-slate-600 transition-colors hover:bg-slate-100 dark:text-neutral-300 dark:hover:bg-white/5"
+                      >
+                        <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: t.color ?? '#94a3b8' }} />
+                        <span className="min-w-0 flex-1 truncate">{t.content}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          updateTask.mutate({ id: t.id, patch: { pinned: false } });
+                        }}
+                        aria-label={`Unpin ${t.content}`}
+                        title="Unpin"
+                        className="shrink-0 rounded p-1 text-amber-500 opacity-0 group-hover:opacity-100"
+                      >
+                        <Pin size={12} fill="currentColor" />
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </>
+            )}
+          </ul>
+        )}
+      </div>
+
+      <div>
+        <div className="mb-1 flex items-center justify-between px-2">
+          <button
+            type="button"
             onClick={toggleProjectsCollapsed}
             className="flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-neutral-500"
           >
@@ -525,6 +626,20 @@ export default function ProjectSidebar({
                 <ProjectIcon icon={p.icon} color={p.color} />
                 <span className={`min-w-0 flex-1 truncate ${hiddenProjects.has(p.id) ? 'opacity-50' : ''}`}>{p.name}</span>
                 <span className="text-xs text-slate-400 dark:text-neutral-500">{p.taskCount - p.doneCount}</span>
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  updateProject.mutate({ id: p.id, patch: { pinned: !p.pinned } });
+                }}
+                aria-label={p.pinned ? `Unpin ${p.name}` : `Pin ${p.name}`}
+                title={p.pinned ? 'Unpin' : 'Pin to favorites'}
+                className={`shrink-0 rounded p-1 ${
+                  p.pinned ? 'block text-amber-500' : 'hidden text-slate-300 hover:text-amber-500 group-hover:block dark:text-neutral-600'
+                }`}
+              >
+                <Pin size={12} fill={p.pinned ? 'currentColor' : 'none'} />
               </button>
               <button
                 type="button"

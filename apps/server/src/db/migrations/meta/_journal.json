@@ -106,6 +106,69 @@
       "when": 1783880000000,
       "tag": "0014_add_goals",
       "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "6",
+      "when": 1783890000000,
+      "tag": "0015_add_objective_manual_progress",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "6",
+      "when": 1783900000000,
+      "tag": "0016_add_pinned",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "6",
+      "when": 1783910000000,
+      "tag": "0017_add_notes",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "6",
+      "when": 1783920000000,
+      "tag": "0018_add_note_links_snippet",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "6",
+      "when": 1783930000000,
+      "tag": "0019_add_note_chunks",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "6",
+      "when": 1783940000000,
+      "tag": "0020_add_graph_cache",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "6",
+      "when": 1783950000000,
+      "tag": "0021_add_concepts",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "6",
+      "when": 1783960000000,
+      "tag": "0022_add_communities",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "6",
+      "when": 1783970000000,
+      "tag": "0023_add_suggested_edge_dismissals",
+      "breakpoints": true
     }
   ]
 }

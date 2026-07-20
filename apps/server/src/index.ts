@@ -8,10 +8,13 @@ import { ensureTimezoneDefault } from './settings.js';
 import { SyncManager } from './sync/manager.js';
 import { registerApiRoutes } from './routes/index.js';
 import { handleOAuthCallback } from './integrations/google/auth.js';
+import { getVaultRoot } from './notes/vault.js';
+import { reindexAll } from './notes/indexer.js';
 
 async function main() {
   const db = createDb();
   ensureTimezoneDefault(db);
+  await reindexAll(db, getVaultRoot(db));
 
   const manager = new SyncManager(db);
 
@@ -52,6 +55,10 @@ async function main() {
 
   await app.listen({ port: env.port, host: '127.0.0.1' });
   console.log(`TimeBlock server listening on http://127.0.0.1:${env.port}`);
+  (process as unknown as { parentPort?: { postMessage(msg: unknown): void } }).parentPort?.postMessage({
+    type: 'ready',
+    port: env.port,
+  });
 }
 
 main().catch((err) => {

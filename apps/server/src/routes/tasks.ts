@@ -58,7 +58,7 @@ export function registerTaskRoutes(app: FastifyInstance, db: DB, manager: SyncMa
     return view === 'all' ? out : out.filter((t) => t.view === view);
   });
 
-  app.get<{ Querystring: { q?: string; projectId?: string; label?: string; status?: string; priority?: string; dueFrom?: string; dueTo?: string; parentId?: string; includeClosed?: string } }>(
+  app.get<{ Querystring: { q?: string; projectId?: string; label?: string; status?: string; priority?: string; dueFrom?: string; dueTo?: string; parentId?: string; includeClosed?: string; pinned?: string } }>(
     '/tasks/all',
     async (req): Promise<TaskDTO[]> => {
       const q = req.query;
@@ -67,6 +67,7 @@ export function registerTaskRoutes(app: FastifyInstance, db: DB, manager: SyncMa
       if (!q.includeClosed || q.includeClosed === '0' || q.includeClosed === 'false') {
         rows = rows.filter((t) => t.status !== 'cancelled');
       }
+      if (q.pinned === '1' || q.pinned === 'true') rows = rows.filter((t) => !!t.pinned);
       if (q.status) rows = rows.filter((t) => t.status === q.status);
       if (q.priority) rows = rows.filter((t) => t.priority === Number(q.priority));
       if (q.projectId !== undefined) {
@@ -165,6 +166,7 @@ export function registerTaskRoutes(app: FastifyInstance, db: DB, manager: SyncMa
         isCompleted: input.status === 'done' ? 1 : 0,
         skipScheduling: input.skipScheduling ? 1 : 0,
         plannedForDate: input.plannedForDate ?? null,
+        pinned: input.pinned ? 1 : 0,
         createdAtUtc: now,
         updatedAtUtc: now,
         completedAtUtc: input.status === 'done' ? now : null,
@@ -210,6 +212,7 @@ export function registerTaskRoutes(app: FastifyInstance, db: DB, manager: SyncMa
     if (input.color !== undefined) patch.color = input.color;
     if (input.skipScheduling !== undefined) patch.skipScheduling = input.skipScheduling ? 1 : 0;
     if (input.plannedForDate !== undefined) patch.plannedForDate = input.plannedForDate;
+    if (input.pinned !== undefined) patch.pinned = input.pinned ? 1 : 0;
     if (input.status !== undefined && !wantsDone) patch.status = input.status; // 'done' handled via completeTask below
 
     if (input.projectId !== undefined) {

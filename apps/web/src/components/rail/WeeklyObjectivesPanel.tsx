@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { Link } from 'react-router-dom';
 import { Check, FolderGit2, Hash, Repeat, Target } from 'lucide-react';
 import type { ObjectiveDTO } from '@timeblock/shared';
-import { useObjectives } from '../../hooks.js';
+import { useHabits, useObjectives, useProjects } from '../../hooks.js';
 import { listItem, springs } from '../../lib/motion.js';
 
 export function formatMinutes(min: number): string {
@@ -17,7 +17,7 @@ export function formatMinutes(min: number): string {
 
 export const LINK_ICON = { project: FolderGit2, label: Hash, habit: Repeat } as const;
 
-function ObjectiveRow({ o }: { o: ObjectiveDTO }) {
+function ObjectiveRow({ o, linkLabel }: { o: ObjectiveDTO; linkLabel: string | null }) {
   const usesCount = !o.targetMinutes && !!o.targetCount;
   const target = usesCount ? o.targetCount! : o.targetMinutes ?? 0;
   const progress = usesCount ? o.progressCount : o.progressMinutes;
@@ -56,7 +56,7 @@ function ObjectiveRow({ o }: { o: ObjectiveDTO }) {
           {o.linkKind && LinkIcon && (
             <span className="mt-1 inline-flex max-w-full items-center gap-1 truncate text-[11px] text-slate-400 dark:text-neutral-500">
               <LinkIcon size={11} className="shrink-0" />
-              <span className="truncate">{o.linkValue ?? o.linkKind}</span>
+              <span className="truncate">{linkLabel ?? o.linkValue ?? o.linkKind}</span>
             </span>
           )}
         </div>
@@ -111,7 +111,16 @@ function ObjectiveRow({ o }: { o: ObjectiveDTO }) {
 export default function WeeklyObjectivesPanel() {
   const weekStart = DateTime.now().startOf('week').toISODate() ?? undefined;
   const { data: objectives } = useObjectives(weekStart);
+  const { data: projects } = useProjects();
+  const { data: habits } = useHabits();
   const all = objectives ?? [];
+
+  const linkLabelFor = (o: ObjectiveDTO): string | null => {
+    if (!o.linkKind || !o.linkValue) return null;
+    if (o.linkKind === 'project') return (projects ?? []).find((p) => p.id === o.linkValue)?.name ?? o.linkValue;
+    if (o.linkKind === 'habit') return (habits ?? []).find((h) => h.id === o.linkValue)?.name ?? o.linkValue;
+    return o.linkValue;
+  };
   const active = all.filter((o) => o.status === 'active');
   const completed = all.filter((o) => o.status === 'done').length;
 
@@ -144,7 +153,7 @@ export default function WeeklyObjectivesPanel() {
       <ul className="space-y-2.5">
         <AnimatePresence initial={false}>
           {active.map((o) => (
-            <ObjectiveRow key={o.id} o={o} />
+            <ObjectiveRow key={o.id} o={o} linkLabel={linkLabelFor(o)} />
           ))}
         </AnimatePresence>
       </ul>

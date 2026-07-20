@@ -240,6 +240,7 @@ export function taskToDTO(db: DB, t: TaskRow, view: TaskScheduleView | null = nu
     scheduledMin,
     view,
     isBlocked: hasIncompleteBlocker(db, t.id),
+    pinned: !!t.pinned,
   };
 }
 

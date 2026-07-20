@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import dotenv from 'dotenv';
@@ -5,12 +6,13 @@ import dotenv from 'dotenv';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export const ROOT_DIR = path.resolve(__dirname, '..', '..', '..');
-export const DATA_DIR = path.join(ROOT_DIR, 'data');
+export const DATA_DIR = process.env.TB_DATA_DIR || path.join(ROOT_DIR, 'data');
 export const DB_PATH = path.join(DATA_DIR, 'timeblock.db');
-export const WEB_DIST = path.join(ROOT_DIR, 'apps', 'web', 'dist');
-export const MIGRATIONS_DIR = path.join(__dirname, 'db', 'migrations');
+export const WEB_DIST = process.env.TB_WEB_DIST || path.join(ROOT_DIR, 'apps', 'web', 'dist');
+export const MIGRATIONS_DIR = process.env.TB_MIGRATIONS_DIR || path.join(__dirname, 'db', 'migrations');
 
-dotenv.config({ path: path.join(ROOT_DIR, '.env') });
+const dataEnvPath = path.join(DATA_DIR, '.env');
+dotenv.config({ path: fs.existsSync(dataEnvPath) ? dataEnvPath : path.join(ROOT_DIR, '.env') });
 
 export const env = {
   port: Number(process.env.PORT || 4141),

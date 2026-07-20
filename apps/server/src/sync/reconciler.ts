@@ -153,7 +153,7 @@ export function buildPlanInput(
     .filter((o) => o.targetMinutes && (o.linkKind === 'project' || o.linkKind === 'label'))
     .map((o) => {
       const progress = computeObjectiveProgress(db, o, tz);
-      const committed = progress.progressMinutes + progress.plannedMinutes;
+      const committed = progress.progressMinutes + progress.plannedMinutes + o.manualMinutes;
       const expected = (o.targetMinutes ?? 0) * elapsedFraction;
       const behind = Math.min(1, Math.max(0, (expected - committed) / (o.targetMinutes || 1)));
       return { linkKind: o.linkKind as 'project' | 'label', linkValue: o.linkValue!, behind };

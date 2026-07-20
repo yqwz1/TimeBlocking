@@ -3,6 +3,7 @@ import Layout from './components/Layout.js';
 import SetupWizard from './pages/SetupWizard.js';
 import TasksPage from './pages/TasksPage.js';
 import WhiteboardPage from './pages/WhiteboardPage.js';
+import SecondBrainPage from './pages/SecondBrainPage.js';
 
 export default function App() {
   return (
@@ -13,6 +14,7 @@ export default function App() {
         <Route path="/today" element={<Navigate to="/tasks?view=today" replace />} />
         <Route path="/tasks" element={<TasksPage />} />
         <Route path="/whiteboard" element={<WhiteboardPage />} />
+        <Route path="/notes" element={<SecondBrainPage />} />
         <Route path="/calendar" element={<Navigate to="/tasks?view=calendar" replace />} />
         <Route path="/habits" element={<Navigate to="/tasks?view=habits" replace />} />
         <Route path="/objectives" element={<Navigate to="/tasks?view=objectives" replace />} />

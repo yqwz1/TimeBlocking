@@ -25,6 +25,7 @@ import { registerLearningRoutes } from './learning.js';
 import { registerGamificationRoutes } from './gamification.js';
 import { registerDemoRoutes } from './demo.js';
 import { registerWhiteboardRoutes } from './whiteboards.js';
+import { registerNoteRoutes } from './notes.js';
 import { env } from '../config.js';
 
 export function registerApiRoutes(app: FastifyInstance, db: DB, manager: SyncManager) {
@@ -53,5 +54,6 @@ export function registerApiRoutes(app: FastifyInstance, db: DB, manager: SyncMan
   registerLearningRoutes(app, db, manager);
   registerGamificationRoutes(app, db);
   registerWhiteboardRoutes(app, db);
+  registerNoteRoutes(app, db);
   if (!env.isProd) registerDemoRoutes(app, db, manager);
 }
