@@ -72,7 +72,8 @@
       {
         "provider": "github",
         "owner": "yqwz1",
-        "repo": "TimeBlocking"
+        "repo": "TimeBlocking",
+        "releaseType": "release"
       }
     ],
     "nsis": {
