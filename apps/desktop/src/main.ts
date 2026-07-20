@@ -1,8 +1,26 @@
-import { app, BrowserWindow, dialog, shell, utilityProcess, type UtilityProcess } from 'electron';
+import {
+  app,
+  BrowserWindow,
+  dialog,
+  Menu,
+  screen,
+  shell,
+  Tray,
+  utilityProcess,
+  type UtilityProcess,
+} from 'electron';
 import fs from 'node:fs';
 import net from 'node:net';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  loadSettings,
+  loadWindowState,
+  saveSettings,
+  saveWindowState,
+  type DesktopSettings,
+  type WindowState,
+} from './settings.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -32,6 +50,11 @@ const APP_DATA_DIR = app.getPath('userData');
 
 let serverProcess: UtilityProcess | null = null;
 let mainWindow: BrowserWindow | null = null;
+let tray: Tray | null = null;
+let isQuitting = false;
+let settings: DesktopSettings = { closeToTray: true, launchAtStartup: false };
+
+const ICON_PATH = path.join(__dirname, 'icon.ico');
 
 // Listen-probe: actually binding catches non-connectable listeners that a
 // connect-probe would miss. Returns the bound port (useful for port 0).
@@ -127,39 +150,141 @@ function startServer(port: number): Promise<number> {
   });
 }
 
+function restoredBounds(): Partial<WindowState> {
+  const state = loadWindowState();
+  if (!state) return {};
+  // Discard saved bounds that no longer intersect any display (unplugged monitor).
+  if (state.x !== undefined && state.y !== undefined) {
+    const display = screen.getDisplayMatching({
+      x: state.x,
+      y: state.y,
+      width: state.width,
+      height: state.height,
+    });
+    const d = display.workArea;
+    const intersects =
+      state.x < d.x + d.width && state.x + state.width > d.x && state.y < d.y + d.height && state.y + state.height > d.y;
+    if (!intersects) return { width: state.width, height: state.height, isMaximized: state.isMaximized };
+  }
+  return state;
+}
+
+function currentWindowState(win: BrowserWindow): WindowState {
+  const bounds = win.getNormalBounds();
+  return { ...bounds, isMaximized: win.isMaximized() };
+}
+
 async function createWindow(port: number) {
-  mainWindow = new BrowserWindow({
-    width: 1440,
-    height: 900,
-    icon: path.join(__dirname, 'icon.ico'),
+  const state = restoredBounds();
+
+  const win = new BrowserWindow({
+    x: state.x,
+    y: state.y,
+    width: state.width ?? 1440,
+    height: state.height ?? 900,
+    icon: ICON_PATH,
     autoHideMenuBar: true,
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
     },
   });
+  mainWindow = win;
+  if (state.isMaximized) win.maximize();
 
-  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+  win.webContents.setWindowOpenHandler(({ url }) => {
     void shell.openExternal(url);
     return { action: 'deny' };
   });
 
-  await mainWindow.loadURL(`http://127.0.0.1:${port}`);
+  let saveTimer: NodeJS.Timeout | null = null;
+  const debouncedSave = () => {
+    if (saveTimer) clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => saveWindowState(currentWindowState(win)), 500);
+  };
+  win.on('resize', debouncedSave);
+  win.on('move', debouncedSave);
+
+  win.on('close', (event) => {
+    saveWindowState(currentWindowState(win));
+    if (!isQuitting && settings.closeToTray) {
+      event.preventDefault();
+      win.hide();
+    }
+  });
+
+  await win.loadURL(`http://127.0.0.1:${port}`);
+}
+
+function showMainWindow() {
+  if (!mainWindow) return;
+  if (mainWindow.isMinimized()) mainWindow.restore();
+  mainWindow.show();
+  mainWindow.focus();
+}
+
+function syncLoginItem() {
+  // In dev this would register electron.exe as a startup app — packaged only.
+  if (!app.isPackaged) return;
+  app.setLoginItemSettings({ openAtLogin: settings.launchAtStartup });
+}
+
+function buildTrayMenu(port: number) {
+  return Menu.buildFromTemplate([
+    { label: 'Open TimeBlock', click: showMainWindow },
+    {
+      label: 'New Task',
+      click: () => {
+        showMainWindow();
+        void mainWindow?.loadURL(`http://127.0.0.1:${port}/tasks`);
+      },
+    },
+    { type: 'separator' },
+    {
+      label: 'Close to tray',
+      type: 'checkbox',
+      checked: settings.closeToTray,
+      click: (item) => {
+        settings.closeToTray = item.checked;
+        saveSettings(settings);
+      },
+    },
+    {
+      label: 'Launch at startup',
+      type: 'checkbox',
+      checked: app.isPackaged ? app.getLoginItemSettings().openAtLogin : settings.launchAtStartup,
+      enabled: app.isPackaged,
+      click: (item) => {
+        settings.launchAtStartup = item.checked;
+        saveSettings(settings);
+        syncLoginItem();
+      },
+    },
+    { type: 'separator' },
+    { label: 'Quit TimeBlock', click: () => app.quit() },
+  ]);
+}
+
+function createTray(port: number) {
+  tray = new Tray(ICON_PATH);
+  tray.setToolTip('TimeBlock');
+  tray.setContextMenu(buildTrayMenu(port));
+  tray.on('double-click', showMainWindow);
 }
 
 if (!app.requestSingleInstanceLock()) {
   app.quit();
 }
 
-app.on('second-instance', () => {
-  if (!mainWindow) return;
-  if (mainWindow.isMinimized()) mainWindow.restore();
-  mainWindow.show();
-  mainWindow.focus();
-});
+app.on('second-instance', showMainWindow);
 
 app.whenReady().then(async () => {
+  // Must match build.appId so renderer Notifications show as branded Windows toasts.
+  app.setAppUserModelId('com.timeblock.desktop');
+
   bootstrapData();
+  settings = loadSettings();
+  syncLoginItem();
 
   let port: number;
   try {
@@ -178,6 +303,7 @@ app.whenReady().then(async () => {
   }
 
   await createWindow(port);
+  createTray(port);
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) void createWindow(port);
@@ -189,5 +315,6 @@ app.on('window-all-closed', () => {
 });
 
 app.on('before-quit', () => {
+  isQuitting = true;
   serverProcess?.kill();
 });
