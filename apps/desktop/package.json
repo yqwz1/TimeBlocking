@@ -23,6 +23,7 @@
     "better-sqlite3": "^11.10.0",
     "dotenv": "^16.4.7",
     "drizzle-orm": "^0.38.3",
+    "electron-updater": "^6.8.9",
     "fastify": "^5.2.0",
     "google-auth-library": "^9.15.0",
     "graphology": "^0.25.4",
@@ -52,8 +53,14 @@
       "node_modules/**/*"
     ],
     "extraResources": [
-      { "from": "../server/src/db/migrations", "to": "migrations" },
-      { "from": "../web/dist", "to": "web" }
+      {
+        "from": "../server/src/db/migrations",
+        "to": "migrations"
+      },
+      {
+        "from": "../web/dist",
+        "to": "web"
+      }
     ],
     "asarUnpack": [
       "node_modules/better-sqlite3/**/*"
@@ -61,6 +68,13 @@
     "win": {
       "target": "nsis"
     },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "GITHUB_OWNER_PLACEHOLDER",
+        "repo": "GITHUB_REPO_PLACEHOLDER"
+      }
+    ],
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,

@@ -21,6 +21,7 @@ import {
   type DesktopSettings,
   type WindowState,
 } from './settings.js';
+import { initUpdater } from './updater.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -229,7 +230,7 @@ function syncLoginItem() {
   app.setLoginItemSettings({ openAtLogin: settings.launchAtStartup });
 }
 
-function buildTrayMenu(port: number) {
+function buildTrayMenu(port: number, extra: Electron.MenuItemConstructorOptions[] = []) {
   return Menu.buildFromTemplate([
     { label: 'Open TimeBlock', click: showMainWindow },
     {
@@ -260,6 +261,7 @@ function buildTrayMenu(port: number) {
         syncLoginItem();
       },
     },
+    ...extra,
     { type: 'separator' },
     { label: 'Quit TimeBlock', click: () => app.quit() },
   ]);
@@ -304,6 +306,7 @@ app.whenReady().then(async () => {
 
   await createWindow(port);
   createTray(port);
+  initUpdater(tray, (extra) => buildTrayMenu(port, extra));
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) void createWindow(port);
