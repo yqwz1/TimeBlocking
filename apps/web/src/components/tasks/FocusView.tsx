@@ -517,6 +517,18 @@ export default function FocusView({ onOpenTask }: { onOpenTask: (id: string) => 
                   {Math.round(ambVolume * 100)}%
                 </span>
               </div>
+              <div className="mt-2 text-center text-[11px] text-slate-400 dark:text-neutral-500">
+                {AMBIENCE_META[ambience].sourceUrl ? (
+                  <a
+                    href={AMBIENCE_META[ambience].sourceUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="underline decoration-slate-300 underline-offset-2 hover:text-slate-600 dark:decoration-neutral-700 dark:hover:text-neutral-300"
+                  >
+                    {AMBIENCE_META[ambience].credit}
+                  </a>
+                ) : AMBIENCE_META[ambience].credit}
+              </div>
             </motion.div>
           )}
         </AnimatePresence>

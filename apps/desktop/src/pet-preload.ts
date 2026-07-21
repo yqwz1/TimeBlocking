@@ -6,6 +6,7 @@ export interface PetBounds {
   width: number;
   height: number;
   workArea: { x: number; y: number; width: number; height: number };
+  platforms: Array<{ x: number; y: number; width: number; height: number }>;
 }
 
 export interface PetCursor {
@@ -14,9 +15,20 @@ export interface PetCursor {
   idle: number;
 }
 
+export interface PetAppContext {
+  process: string;
+  title: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  media?: { process: string; title: string } | null;
+}
+
 contextBridge.exposeInMainWorld('pet', {
   getBounds: (): Promise<PetBounds | null> => ipcRenderer.invoke('pet:bounds'),
-  setPosition: (x: number, y: number): void => ipcRenderer.send('pet:set-position', x, y),
+  setPosition: (x: number, y: number, crossDisplays = false): void =>
+    ipcRenderer.send('pet:set-position', x, y, crossDisplays),
   openApp: (): void => ipcRenderer.send('pet:open-app'),
   showMenu: (): void => ipcRenderer.send('pet:menu'),
   onDo: (cb: (action: string) => void): void => {
@@ -24,5 +36,8 @@ contextBridge.exposeInMainWorld('pet', {
   },
   onCursor: (cb: (cursor: PetCursor) => void): void => {
     ipcRenderer.on('pet:cursor', (_event, cursor: PetCursor) => cb(cursor));
+  },
+  onContext: (cb: (context: PetAppContext | null) => void): void => {
+    ipcRenderer.on('pet:context', (_event, context: PetAppContext | null) => cb(context));
   },
 });

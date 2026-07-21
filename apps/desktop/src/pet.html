@@ -23,23 +23,55 @@
 
   #bubble {
     position: absolute;
-    top: 2px;
+    top: 3px;
     left: 50%;
     transform: translateX(-50%) scale(0);
-    max-width: 180px;
-    background: #fffdf7;
-    border: 2px solid #3a3a3a;
-    border-radius: 10px;
-    padding: 4px 8px;
+    width: max-content;
+    max-width: 174px;
+    box-sizing: border-box;
+    background: #fff8d8;
+    border: 3px solid #2e2b3d;
+    border-radius: 0;
+    padding: 5px 8px 4px;
+    box-shadow: 3px 3px 0 rgba(46, 43, 61, 0.42), inset 0 0 0 1px #f0c96c;
+    font-family: Consolas, 'Courier New', monospace;
     font-size: 11px;
-    font-weight: 600;
-    color: #3a3a3a;
+    font-weight: 700;
+    line-height: 1.25;
+    color: #2e2b3d;
     text-align: center;
     white-space: normal;
     opacity: 0;
-    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s;
+    transition: transform 0.18s steps(3, end), opacity 0.12s;
     pointer-events: none;
-    z-index: 6;
+    z-index: 8;
+    image-rendering: pixelated;
+  }
+  #stage.context-music #name-tag { border-color: #66e39b; box-shadow: 0 2px 0 #176b43; }
+  #stage.context-youtube #name-tag { border-color: #ff6b62; box-shadow: 0 2px 0 #8c211c; }
+  #stage.context-gaming #name-tag { border-color: #72d7ff; box-shadow: 0 2px 0 #185b76; }
+  #stage.context-coding #name-tag { border-color: #f2d25e; box-shadow: 0 2px 0 #786619; }
+  #stage.context-music #tail { animation-duration: 0.55s; }
+  #bubble::before,
+  #bubble::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    width: 0;
+    height: 0;
+    transform: translateX(-50%);
+  }
+  #bubble::before {
+    bottom: -12px;
+    border-left: 9px solid transparent;
+    border-right: 9px solid transparent;
+    border-top: 11px solid #2e2b3d;
+  }
+  #bubble::after {
+    bottom: -7px;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 7px solid #fff8d8;
   }
   #bubble.show {
     transform: translateX(-50%) scale(1);
@@ -124,6 +156,7 @@
     image-rendering: pixelated;
     image-rendering: crisp-edges;
     overflow: visible;
+    transform-origin: 50% 100%;
   }
   #cat.flip { transform: scaleX(-1); }
   #cat rect { shape-rendering: crispEdges; }
@@ -174,35 +207,120 @@
     25%, 75% { transform: scaleY(1); }
   }
 
-  .walking #body-group { animation: walk-bob 0.36s steps(1, end) infinite; }
-  .zoomies #body-group { animation: walk-bob 0.14s steps(1, end) infinite; }
+  .walking #pose-group { animation: walk-bob 0.36s steps(1, end) infinite; }
+  .zoomies #pose-group { animation: walk-bob 0.14s steps(1, end) infinite; }
   @keyframes walk-bob {
     0%, 100% { transform: translateY(0); }
     50% { transform: translateY(-3px); }
   }
-  .sleeping #body-group { animation: breathe 2.6s steps(1, end) infinite; }
+  .sleeping #pose-group { animation: breathe 2.6s steps(1, end) infinite; }
   @keyframes breathe {
     0%, 100% { transform: translateY(3px); }
     50% { transform: translateY(0); }
   }
-  .happy #body-group { animation: wiggle 0.32s steps(1, end) 2; }
+  .happy #pose-group { animation: wiggle 0.32s steps(1, end) 2; }
   @keyframes wiggle {
     0%, 100% { transform: translateX(0); }
     25% { transform: translateX(-3px); }
     75% { transform: translateX(3px); }
   }
-  .sitting #body-group { transform: translateY(3px); }
+  .petted #pose-group {
+    transform-box: fill-box;
+    transform-origin: center bottom;
+    animation: pet-squash-stretch 0.62s steps(1, end);
+  }
+  @keyframes pet-squash-stretch {
+    0%, 100% { transform: translate(0, 0) scale(1, 1); }
+    18%, 36% { transform: translate(-2px, 4px) scale(1.18, 0.76); }
+    54%, 72% { transform: translate(2px, -5px) scale(0.84, 1.22); }
+    86% { transform: translate(0, 1px) scale(1.07, 0.94); }
+  }
+
+  .mouse-playing #leg-front { animation: mouse-bat 0.32s steps(1, end) infinite; }
+  .mouse-playing #head { animation: mouse-look 0.64s steps(1, end) infinite; }
+  @keyframes mouse-bat {
+    0%, 100% { transform: translate(0, 0); }
+    50% { transform: translate(-7px, -8px); }
+  }
+  @keyframes mouse-look {
+    0%, 100% { transform: translate(0, 0); }
+    50% { transform: translate(2px, -2px); }
+  }
+
+  #name-tag {
+    position: absolute;
+    left: 50%;
+    bottom: 103px;
+    transform: translateX(-50%);
+    padding: 3px 7px 2px;
+    color: #fff;
+    background: rgba(15, 15, 18, 0.72);
+    border: 1px solid rgba(255, 255, 255, 0.38);
+    box-shadow: 0 2px 0 rgba(0, 0, 0, 0.42);
+    font-family: Consolas, 'Courier New', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 4;
+    image-rendering: pixelated;
+  }
+
+  #cursor-toy {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    margin: -4px 0 0 -4px;
+    background: #ffe067;
+    border: 2px solid #6b4d10;
+    box-sizing: border-box;
+    transform: rotate(45deg) scale(0);
+    transition: transform 0.14s steps(2, end);
+    pointer-events: none;
+    z-index: 7;
+  }
+  #cursor-toy.show { transform: rotate(45deg) scale(1); }
+  .sitting #pose-group { transform: translateY(3px); }
   .sitting .leg { opacity: 0; }
   .sitting #tail { animation: none; transform: translate(-6px, 6px); }
-  .stretching #body-group { animation: stretchy 1.8s steps(1, end); }
+  .stretching #pose-group { animation: stretchy 1.8s steps(1, end); }
   @keyframes stretchy {
     0%, 100% { transform: translate(0, 0); }
     40%, 60% { transform: translate(6px, 3px); }
   }
-  .pouncing #body-group { animation: pounce 0.55s steps(1, end); }
+  .pouncing #pose-group { animation: pounce 0.55s steps(1, end); }
   @keyframes pounce {
     0%, 100% { transform: translateY(0); }
     30%, 65% { transform: translateY(-15px); }
+  }
+
+  /* While carried, the scruff stays under the pointer and the rest of the cat
+     behaves like a loose, springy weight hanging from that point. */
+  #body-group {
+    transform-box: view-box;
+    transform-origin: 13px 18px;
+  }
+  #head {
+    transform-box: view-box;
+    transform-origin: 13px 18px;
+  }
+  #stage.dragging #pose-group { animation: none; transform: none; }
+  #stage.dragging #body-group {
+    transform: translate(var(--carry-x, 0px), var(--carry-y, 2px)) rotate(var(--carry-rotate, 0deg));
+  }
+  #stage.dragging #head { animation: none; transform: translateY(-1px); }
+  #stage.dragging #ear-l { transform: translate(2px, 2px) rotate(5deg); }
+  #stage.dragging #ear-r { transform: translate(-2px, 2px) rotate(-5deg); }
+  #stage.dragging #tail { animation: none; transform: translate(-2px, 2px) rotate(var(--tail-rotate, 0deg)); }
+  #stage.dragging .leg { animation: carry-paws 0.5s ease-in-out infinite alternate; opacity: 1; }
+  #stage.dragging #leg-back { animation-delay: -0.25s; }
+  #stage.dragging #shadow { opacity: 0; }
+  #stage.dragging #name-tag { opacity: 0; }
+  @keyframes carry-paws {
+    from { transform: translateY(0); }
+    to { transform: translateY(2px); }
   }
   .eating #head {
     animation: munch 0.55s steps(1, end) infinite;
@@ -270,6 +388,23 @@
     z-index: 6;
     animation: heart-up 1.1s ease-out forwards;
   }
+  .expression {
+    position: absolute;
+    font-family: 'Segoe UI Emoji', sans-serif;
+    font-size: 17px;
+    line-height: 1;
+    pointer-events: none;
+    z-index: 7;
+    filter: drop-shadow(1px 2px 0 rgba(46, 43, 61, 0.28));
+    animation: expression-pop 1.25s cubic-bezier(0.2, 0.75, 0.25, 1) forwards;
+  }
+  @keyframes expression-pop {
+    0% { transform: translate(0, 0) scale(0.08, 0.72) rotate(0deg); opacity: 0; }
+    12% { transform: translate(var(--dx1), var(--dy1)) scale(1.1, 0.25); opacity: 1; }
+    32% { transform: translate(var(--dx3), var(--dy3)) scale(1); opacity: 1; }
+    76% { transform: translate(var(--dx8), var(--dy8)) scale(0.7); opacity: 0.9; }
+    100% { transform: translate(var(--dx), var(--dy)) scale(0.08) rotate(var(--spin)); opacity: 0; }
+  }
   @keyframes heart-up {
     0% { transform: translateY(0) scale(0.6); opacity: 1; }
     100% { transform: translateY(-42px) scale(1.15); opacity: 0; }
@@ -297,21 +432,24 @@
   </div>
   <div id="food">🍗</div>
   <div id="yarn">🧶</div>
+  <div id="name-tag">MILO</div>
+  <div id="cursor-toy"></div>
   <svg id="cat" viewBox="0 0 32 32" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg">
     <g id="shadow" fill="#2e2b3d" opacity="0.24">
       <rect x="6" y="30" width="21" height="1"/>
       <rect x="9" y="31" width="15" height="1"/>
     </g>
-    <g id="body-group">
-      <g id="tail">
+    <g id="pose-group">
+      <g id="body-group">
+        <g id="tail">
         <rect x="24" y="17" width="4" height="10" fill="#2e2b3d"/>
         <rect x="27" y="13" width="3" height="8" fill="#2e2b3d"/>
         <rect x="26" y="11" width="4" height="4" fill="#2e2b3d"/>
         <rect x="25" y="17" width="2" height="9" fill="#d98236"/>
         <rect x="27" y="14" width="2" height="6" fill="#f2a750"/>
         <rect x="27" y="12" width="2" height="3" fill="#f6bd68"/>
-      </g>
-      <g id="body-shape">
+        </g>
+        <g id="body-shape">
         <rect x="9" y="16" width="15" height="2" fill="#2e2b3d"/>
         <rect x="7" y="18" width="19" height="2" fill="#2e2b3d"/>
         <rect x="6" y="20" width="21" height="7" fill="#2e2b3d"/>
@@ -320,20 +458,21 @@
         <rect x="8" y="19" width="17" height="3" fill="#f2a750"/>
         <rect x="7" y="22" width="19" height="4" fill="#f2a750"/>
         <rect x="8" y="26" width="17" height="2" fill="#d98236"/>
-      </g>
-      <g id="belly-shape">
+        </g>
+        <g id="belly-shape">
         <rect x="11" y="23" width="11" height="4" fill="#ffdca6"/>
         <rect x="13" y="22" width="7" height="1" fill="#ffe9c5"/>
-      </g>
-      <g id="leg-front" class="leg">
+        </g>
+        <g id="leg-front" class="leg">
         <rect x="8" y="26" width="5" height="5" fill="#2e2b3d"/>
         <rect x="9" y="26" width="3" height="4" fill="#e99542"/>
         <rect x="9" y="30" width="4" height="1" fill="#ffe9c5"/>
-      </g>
-      <g id="leg-back" class="leg">
+        </g>
+        <g id="leg-back" class="leg">
         <rect x="21" y="26" width="5" height="5" fill="#2e2b3d"/>
         <rect x="22" y="26" width="3" height="4" fill="#d98236"/>
         <rect x="21" y="30" width="5" height="1" fill="#ffe9c5"/>
+        </g>
       </g>
       <g id="head">
         <g id="ear-l" class="ear">
@@ -401,6 +540,7 @@
     showMenu: () => {},
     onDo: () => {},
     onCursor: () => {},
+    onContext: () => {},
   };
 
   const stage = document.getElementById('stage');
@@ -410,11 +550,14 @@
   const meters = document.getElementById('meters');
   const food = document.getElementById('food');
   const yarn = document.getElementById('yarn');
+  const cursorToy = document.getElementById('cursor-toy');
   const eyeL = document.getElementById('eye-l');
   const eyeR = document.getElementById('eye-r');
 
   const WIN_W = 200;
   const CAT_CENTER = WIN_W / 2;
+  const CARRY_ANCHOR_X = 92;
+  const CARRY_ANCHOR_Y = 131;
 
   const MESSAGES = [
     'You got this! 💪',
@@ -428,6 +571,46 @@
     'Small steps count 🐾',
   ];
   const PET_REACTIONS = ['Purrrr 💛', 'Meow! 😺', '*happy wiggle*', 'More pets pls', 'I caught you a bug! 🐛'];
+
+  const CONTEXT_CLASSES = ['context-music', 'context-youtube', 'context-gaming', 'context-coding', 'context-work', 'context-meeting'];
+  const BROWSERS = ['chrome', 'msedge', 'firefox', 'brave', 'opera', 'vivaldi'];
+  const GAME_APPS = [
+    'steam', 'steamwebhelper', 'epicgameslauncher', 'riotclientservices', 'battle.net',
+    'minecraft', 'robloxplayerbeta', 'valorant', 'fortniteclient-win64-shipping',
+    'leagueclient', 'overwatch', 'cs2', 'gta5', 'eldenring', 'rocketleague',
+  ];
+
+  function cleanMediaTitle(title) {
+    return title
+      .replace(/\s*[-|–—]\s*(YouTube Music|YouTube|Spotify|VLC media player).*$/i, '')
+      .replace(/^Spotify(?: Premium)?$/i, '')
+      .trim()
+      .slice(0, 34);
+  }
+
+  function classifyApp(context) {
+    if (!context) return { type: 'other', label: '' };
+    const processName = context.process.toLowerCase();
+    const title = context.title.toLowerCase();
+    const label = cleanMediaTitle(context.title);
+    const fullscreen = workArea && context.width >= workArea.width && context.height >= workArea.height;
+
+    if (processName.includes('spotify') || /youtube music|tidal|deezer|apple music/.test(title) || ['musicbee', 'vlc', 'foobar2000'].includes(processName)) {
+      return { type: 'music', label };
+    }
+    if (title.includes('youtube') || title.includes('twitch')) return { type: 'youtube', label };
+    if (GAME_APPS.some((game) => processName.includes(game)) || /minecraft|roblox|valorant|fortnite|league of legends/.test(title) || (fullscreen && !BROWSERS.includes(processName))) {
+      return { type: 'gaming', label };
+    }
+    if (context.media?.process === 'spotify') return { type: 'music', label: cleanMediaTitle(context.media.title) };
+    if (['code', 'cursor', 'devenv', 'idea64', 'webstorm64', 'pycharm64', 'rider64'].some((app) => processName.includes(app))) {
+      return { type: 'coding', label };
+    }
+    if (/timeblock/i.test(context.title)) return { type: 'work', label: 'TimeBlock' };
+    if (['zoom', 'teams', 'discord', 'slack'].some((app) => processName.includes(app))) return { type: 'meeting', label };
+    if (['winword', 'excel', 'powerpnt', 'onenote', 'notion'].some((app) => processName.includes(app))) return { type: 'work', label };
+    return { type: 'other', label };
+  }
 
   // ============ needs ============
   // hunger/energy/fun: 100 = fully satisfied. Persisted across restarts.
@@ -456,24 +639,24 @@
   renderMeters();
 
   // ============ window position (the pet walks by moving its own window) ============
-  let winX = 0, winY = 0, workArea = null;
+  let winX = 0, winY = 0, workArea = null, platforms = [];
   let ready = false;
 
   async function refreshBounds() {
     const b = await petApi.getBounds();
     if (!b) return;
-    winX = b.x; winY = b.y; workArea = b.workArea;
+    winX = b.x; winY = b.y; workArea = b.workArea; platforms = b.platforms || [];
     ready = true;
   }
   refreshBounds();
 
-  function moveWindow(x, y) {
-    if (workArea) {
+  function moveWindow(x, y, crossDisplays = false) {
+    if (workArea && !crossDisplays) {
       x = Math.min(Math.max(x, workArea.x - 30), workArea.x + workArea.width - WIN_W + 30);
       y = Math.min(Math.max(y, workArea.y), workArea.y + workArea.height - 175);
     }
     winX = x; winY = y;
-    petApi.setPosition(Math.round(x), Math.round(y));
+    petApi.setPosition(Math.round(x), Math.round(y), crossDisplays);
   }
 
   // ============ speech bubble ============
@@ -486,7 +669,7 @@
   }
 
   // ============ state machine ============
-  const VISUAL_CLASSES = ['walking', 'sleeping', 'sitting', 'bored', 'begging', 'eating', 'playing', 'zoomies', 'stretching'];
+  const VISUAL_CLASSES = ['walking', 'sleeping', 'sitting', 'bored', 'begging', 'eating', 'playing', 'zoomies', 'stretching', 'mouse-playing'];
   let state = 'idle';
   let facing = 1; // 1 = right, -1 = left
   let stateTimer = null;
@@ -495,6 +678,20 @@
   let busy = false;       // interactive sequence (eat/play) in progress
   let afkSleeping = false;
   let dragging = false;
+  let carryFrame = null;
+  let carryLastTime = 0;
+  let carryLastPointerTime = 0;
+  let carryLastCursorX = 0;
+  let carryLastCursorY = 0;
+  let carryTargetX = 0;
+  let carryTargetY = 2;
+  let carryTargetRotate = 0;
+  let carryX = 0;
+  let carryY = 2;
+  let carryRotate = 0;
+  let carryVelocityX = 0;
+  let carryVelocityY = 0;
+  let carryAngularVelocity = 0;
 
   function setFacing(dir) {
     facing = dir;
@@ -509,6 +706,82 @@
     if (fallTimer) { clearInterval(fallTimer); fallTimer = null; }
   }
 
+  function clamp(value, min, max) {
+    return Math.min(max, Math.max(min, value));
+  }
+
+  function renderCarryPose() {
+    // The entire SVG may be mirrored, so compensate here to keep the visible
+    // body lag opposite to the actual pointer movement in either direction.
+    cat.style.setProperty('--carry-x', `${(carryX * facing).toFixed(2)}px`);
+    cat.style.setProperty('--carry-y', `${carryY.toFixed(2)}px`);
+    cat.style.setProperty('--carry-rotate', `${(carryRotate * facing).toFixed(2)}deg`);
+    cat.style.setProperty('--tail-rotate', `${(-carryRotate * 0.7 * facing).toFixed(2)}deg`);
+  }
+
+  function runCarryPhysics(now) {
+    const dt = Math.min((now - (carryLastTime || now)) / 1000, 0.034);
+    carryLastTime = now;
+    const spring = dragging ? 92 : 135;
+    const damping = dragging ? 15 : 19;
+
+    carryVelocityX += (carryTargetX - carryX) * spring * dt;
+    carryVelocityY += (carryTargetY - carryY) * spring * dt;
+    carryAngularVelocity += (carryTargetRotate - carryRotate) * spring * dt;
+    const decay = Math.exp(-damping * dt);
+    carryVelocityX *= decay;
+    carryVelocityY *= decay;
+    carryAngularVelocity *= decay;
+    carryX += carryVelocityX * dt;
+    carryY += carryVelocityY * dt;
+    carryRotate += carryAngularVelocity * dt;
+    renderCarryPose();
+
+    const settled = !dragging
+      && Math.abs(carryX) < 0.05 && Math.abs(carryY) < 0.05 && Math.abs(carryRotate) < 0.1
+      && Math.abs(carryVelocityX) < 0.1 && Math.abs(carryVelocityY) < 0.1;
+    if (settled) {
+      carryFrame = null;
+      carryX = 0; carryY = 0; carryRotate = 0;
+      renderCarryPose();
+      return;
+    }
+    carryFrame = requestAnimationFrame(runCarryPhysics);
+  }
+
+  function startCarryPhysics(cursorX, cursorY) {
+    if (carryFrame) cancelAnimationFrame(carryFrame);
+    carryLastCursorX = cursorX;
+    carryLastCursorY = cursorY;
+    carryLastTime = performance.now();
+    carryLastPointerTime = carryLastTime;
+    carryTargetX = 0;
+    carryTargetY = 3;
+    carryTargetRotate = 0;
+    carryFrame = requestAnimationFrame(runCarryPhysics);
+  }
+
+  function aimCarryPhysics(cursorX, cursorY) {
+    const now = performance.now();
+    const dt = Math.max((now - carryLastPointerTime) / 1000, 1 / 120);
+    const pointerVX = (cursorX - carryLastCursorX) / dt;
+    const pointerVY = (cursorY - carryLastCursorY) / dt;
+    carryLastCursorX = cursorX;
+    carryLastCursorY = cursorY;
+    carryLastPointerTime = now;
+    carryTargetX = clamp(-pointerVX * 0.012, -7, 7);
+    carryTargetY = clamp(3 - pointerVY * 0.008, -1, 8);
+    carryTargetRotate = clamp(-pointerVX * 0.03, -17, 17);
+  }
+
+  function releaseCarryPhysics() {
+    carryTargetX = 0;
+    carryTargetY = 0;
+    carryTargetRotate = 0;
+    carryLastTime = performance.now();
+    if (!carryFrame) carryFrame = requestAnimationFrame(runCarryPhysics);
+  }
+
   // The pet window is normally grounded at the bottom of its display. When
   // the user lets go after moving it higher, apply a small gravity simulation
   // rather than snapping it down, so it visibly falls back to the desktop.
@@ -516,8 +789,19 @@
     clearFalling();
     if (!ready || !workArea) return;
 
-    const groundY = workArea.y + workArea.height - 175;
-    if (winY >= groundY - 1) return;
+    const desktopGroundY = workArea.y + workArea.height - 175;
+    const footX1 = winX + 60;
+    const footX2 = winX + 140;
+    const currentFeetY = winY + 175;
+    const platformTops = platforms
+      .filter((rect) => rect.y >= currentFeetY - 18 && rect.y < workArea.y + workArea.height)
+      .filter((rect) => footX2 > rect.x + 8 && footX1 < rect.x + rect.width - 8)
+      .map((rect) => rect.y - 175);
+    const groundY = Math.min(desktopGroundY, ...platformTops);
+    if (winY >= groundY - 1) {
+      if (groundY < winY) moveWindow(winX, groundY);
+      return;
+    }
 
     let velocity = 0;
     let last = performance.now();
@@ -547,21 +831,25 @@
         break;
       case 'zoomies':
         cat.classList.add('zoomies');
+        spawnExpressions(['⚡', '✨'], 3);
         startRoaming(170);
         break;
       case 'sleep':
         cat.classList.add('sleeping');
         zzz.classList.add('show');
+        spawnExpressions(['💤', '🌙'], 2);
         break;
       case 'sit':
         cat.classList.add('sitting');
         break;
       case 'bored':
         cat.classList.add('bored');
+        spawnExpressions(['🥱', '💭'], 2);
         yawnOnce();
         break;
       case 'beg':
         cat.classList.add('begging');
+        spawnExpressions(['🍗', '🥺'], 2);
         break;
       case 'stretch':
         cat.classList.add('stretching');
@@ -607,10 +895,66 @@
     updatePupils();
   });
 
+  // ============ foreground app awareness ============
+  let activeContext = { type: 'other', label: '' };
+  let contextReactionTimer = null;
+  let lastContextKey = '';
+  let lastContextType = 'other';
+  let lastContextReactionAt = 0;
+
+  function reactToContext(context) {
+    activeContext = context;
+    for (const className of CONTEXT_CLASSES) stage.classList.remove(className);
+    if (context.type !== 'other') stage.classList.add(`context-${context.type}`);
+
+    const key = `${context.type}:${context.label}`;
+    const categoryChanged = context.type !== lastContextType;
+    if (context.type === 'other' || key === lastContextKey) return;
+    if (!categoryChanged && Date.now() - lastContextReactionAt < 30000) return;
+
+    lastContextKey = key;
+    lastContextType = context.type;
+    lastContextReactionAt = Date.now();
+    const label = context.label || '';
+    if (context.type === 'music') {
+      say(label ? `Now playing: ${label} 🎵` : 'Music time! I can feel the beat 🎵', 4200);
+      spawnExpressions(['🎵', '🎶', '💿'], 5);
+    } else if (context.type === 'youtube') {
+      say(label ? `Watching ${label}? I’ll guard the controls!` : 'YouTube time! 🍿', 4200);
+      spawnExpressions(['🍿', '▶️', '✨'], 4);
+    } else if (context.type === 'gaming') {
+      say('Game mode! I’ve got your back 🎮', 3600);
+      spawnExpressions(['🎮', '🔥', '⚡'], 5);
+    } else if (context.type === 'coding') {
+      say('Coding time. Tiny paws, big focus! 💻', 3600);
+      spawnExpressions(['💻', '⌨️', '✨'], 3);
+    } else if (context.type === 'meeting') {
+      say('Shh... meeting mode 🤫', 3000);
+      spawnExpressions(['🤫', '💬'], 2);
+    } else if (context.type === 'work') {
+      say('Focus mode! One step at a time 🐾', 3400);
+      spawnExpressions(['✅', '🐾'], 3);
+    }
+  }
+
+  petApi.onContext((app) => {
+    if (contextReactionTimer) clearTimeout(contextReactionTimer);
+    const context = classifyApp(app);
+    contextReactionTimer = setTimeout(() => reactToContext(context), 2500);
+  });
+
+  setInterval(() => {
+    if (busy || state === 'sleep') return;
+    if (activeContext.type === 'music') spawnExpressions(['🎵', '🎶'], 2);
+    if (activeContext.type === 'youtube') spawnExpressions(['🍿', '✨'], 2);
+    if (activeContext.type === 'gaming') spawnExpressions(['⚡', '🔥'], 2);
+    if (activeContext.type === 'coding') spawnExpressions(['💻', '✨'], 2);
+  }, 12000);
+
   function updatePupils() {
     if (!cursor || !ready || state === 'sleep') return;
     const cx = winX + CAT_CENTER;
-    const cy = winY + 100;
+    const cy = winY + 118;
     const dx = cursor.x - cx;
     const dy = cursor.y - cy;
     const len = Math.hypot(dx, dy) || 1;
@@ -651,6 +995,7 @@
     void cat.offsetWidth;
     cat.classList.add('pouncing');
     spawnHearts(CAT_CENTER, 60);
+    spawnExpressions(['🐾', '✨'], 3);
     say('Gotcha! 🐾', 1800);
     needs.fun = clamp01(needs.fun + 15);
     setTimeout(() => {
@@ -754,6 +1099,7 @@
         needs.energy = clamp01(needs.energy + 8);
         renderMeters();
         spawnHearts(CAT_CENTER, 60);
+        spawnExpressions(['😋', '✨', '💛'], 4);
         say('Yum! 😋', 2500);
         busy = false;
         scheduleSoon(3000);
@@ -785,6 +1131,7 @@
       needs.energy = clamp01(needs.energy - 8);
       renderMeters();
       spawnHearts(CAT_CENTER, 60);
+      spawnExpressions(['🎵', '🎶', '✨'], 5);
       say('That was fun! 🐾', 2500);
       busy = false;
       scheduleSoon(3000);
@@ -797,6 +1144,30 @@
   });
 
   // ============ particles ============
+  function spawnExpressions(emojis, count = 3, x = CAT_CENTER, y = 92) {
+    for (let i = 0; i < count; i++) {
+      const particle = document.createElement('div');
+      const dx = (Math.random() < 0.5 ? -1 : 1) * (28 + Math.random() * 48);
+      const dy = -(34 + Math.random() * 52);
+      particle.className = 'expression';
+      particle.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+      particle.style.left = (x - 8 + (Math.random() * 18 - 9)) + 'px';
+      particle.style.top = (y - 8 + Math.random() * 10) + 'px';
+      particle.style.setProperty('--dx', dx + 'px');
+      particle.style.setProperty('--dy', dy + 'px');
+      particle.style.setProperty('--dx1', (dx * 0.08) + 'px');
+      particle.style.setProperty('--dy1', (dy * 0.08) + 'px');
+      particle.style.setProperty('--dx3', (dx * 0.3) + 'px');
+      particle.style.setProperty('--dy3', (dy * 0.3) + 'px');
+      particle.style.setProperty('--dx8', (dx * 0.78) + 'px');
+      particle.style.setProperty('--dy8', (dy * 0.78) + 'px');
+      particle.style.setProperty('--spin', ((Math.random() * 70 - 35)) + 'deg');
+      particle.style.animationDelay = (i * 0.1) + 's';
+      stage.appendChild(particle);
+      setTimeout(() => particle.remove(), 1600 + i * 100);
+    }
+  }
+
   function spawnHearts(x, y) {
     for (let i = 0; i < 3; i++) {
       const h = document.createElement('div');
@@ -829,10 +1200,12 @@
       setState('idle');
       scheduleSoon(5000);
     }
-    cat.classList.remove('happy');
+    cat.classList.remove('happy', 'petted');
     void cat.offsetWidth;
-    cat.classList.add('happy');
+    cat.classList.add('happy', 'petted');
+    setTimeout(() => cat.classList.remove('petted'), 650);
     spawnHearts(x, y);
+    spawnExpressions(['💛', '💕', '✨'], 4, x, y);
     needs.fun = clamp01(needs.fun + 6);
     renderMeters();
     say(PET_REACTIONS[Math.floor(Math.random() * PET_REACTIONS.length)], 2000);
@@ -840,7 +1213,7 @@
 
   // ============ dragging vs clicking ============
   let dragMoved = false;
-  let startCursorX = 0, startCursorY = 0, startWinX = 0, startWinY = 0;
+  let startCursorX = 0, startCursorY = 0;
 
   stage.addEventListener('mousedown', async (e) => {
     if (e.button !== 0) return;
@@ -848,20 +1221,26 @@
     await refreshBounds();
     dragging = true; dragMoved = false;
     startCursorX = e.screenX; startCursorY = e.screenY;
-    startWinX = winX; startWinY = winY;
     stage.classList.add('dragging');
+    startCarryPhysics(e.screenX, e.screenY);
   });
   window.addEventListener('mousemove', (e) => {
     if (!dragging) return;
     const dx = e.screenX - startCursorX;
     const dy = e.screenY - startCursorY;
     if (Math.abs(dx) > 4 || Math.abs(dy) > 4) dragMoved = true;
-    if (dragMoved) moveWindow(startWinX + dx, startWinY + dy);
+    if (dragMoved) {
+      aimCarryPhysics(e.screenX, e.screenY);
+      // Once lifted, the pointer holds the scruff instead of the original
+      // clicked pixel, matching the way a desktop pet is picked up by its neck.
+      moveWindow(e.screenX - CARRY_ANCHOR_X, e.screenY - CARRY_ANCHOR_Y, true);
+    }
   });
   window.addEventListener('mouseup', (e) => {
     if (!dragging) return;
     dragging = false;
     stage.classList.remove('dragging');
+    releaseCarryPhysics();
     if (dragMoved) {
       // Pick up the final, clamped position (and a possible new display) before
       // calculating the floor for gravity.
@@ -879,12 +1258,60 @@
 
   // ============ hover meters ============
   let metersTimer = null;
+  let hoverPlayTimer = null;
+  let mousePlayTimer = null;
+  let mousePlaying = false;
+
+  function stopMousePlay() {
+    if (hoverPlayTimer) { clearTimeout(hoverPlayTimer); hoverPlayTimer = null; }
+    if (mousePlayTimer) { clearInterval(mousePlayTimer); mousePlayTimer = null; }
+    cursorToy.classList.remove('show');
+    cat.classList.remove('mouse-playing', 'pouncing');
+    if (mousePlaying) {
+      mousePlaying = false;
+      busy = false;
+      setState('idle');
+      scheduleSoon(2500);
+    }
+  }
+
+  function startMousePlay() {
+    hoverPlayTimer = null;
+    if (dragging || busy || state === 'sleep') return;
+    mousePlaying = true;
+    busy = true;
+    if (stateTimer) clearTimeout(stateTimer);
+    setState('idle');
+    cat.classList.add('mouse-playing');
+    cursorToy.classList.add('show');
+    say('A tiny firefly!', 1800);
+    needs.fun = clamp01(needs.fun + 3);
+    renderMeters();
+    mousePlayTimer = setInterval(() => {
+      cat.classList.remove('pouncing');
+      void cat.offsetWidth;
+      cat.classList.add('pouncing');
+      setTimeout(() => cat.classList.remove('pouncing'), 280);
+    }, 850);
+  }
+
+  stage.addEventListener('mousemove', (e) => {
+    cursor = { x: e.screenX, y: e.screenY, idle: idleSec };
+    updatePupils();
+    cursorToy.style.left = e.clientX + 'px';
+    cursorToy.style.top = e.clientY + 'px';
+    if (mousePlaying) setFacing(e.clientX >= CAT_CENTER ? 1 : -1);
+  });
   stage.addEventListener('mouseenter', () => {
     meters.classList.add('show');
     if (metersTimer) clearTimeout(metersTimer);
   });
+  cat.addEventListener('mouseenter', () => {
+    if (!hoverPlayTimer && !mousePlaying) hoverPlayTimer = setTimeout(startMousePlay, 2000);
+  });
   stage.addEventListener('mouseleave', () => {
     metersTimer = setTimeout(() => meters.classList.remove('show'), 400);
+    stopMousePlay();
   });
 
   // ============ ambient chatter ============
