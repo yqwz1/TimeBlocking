@@ -71,7 +71,7 @@ jobs:
               -Headers $headers `
               -ContentType 'application/octet-stream' `
               -InFile $blockMap.FullName `
-              -Uri "$uploadUrl?name=$assetName"
+              -Uri "${uploadUrl}?name=${assetName}"
             $assets += $blockMap.Name
           }
 
