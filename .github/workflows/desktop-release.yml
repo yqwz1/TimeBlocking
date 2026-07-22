@@ -75,8 +75,22 @@ jobs:
             $assets += $blockMap.Name
           }
 
+          # Upload the updater manifest when electron-builder did not attach it.
+          # Without this file, installed clients cannot discover the new release.
           if ('latest.yml' -notin $assets) {
-            throw 'Release is missing latest.yml.'
+            $updateManifest = Get-Item -LiteralPath 'apps/desktop/release/latest.yml' -ErrorAction SilentlyContinue
+            if ($null -eq $updateManifest) {
+              throw 'Local updater manifest latest.yml was not generated.'
+            }
+            $uploadUrl = $release.upload_url -replace '\{\?name,label\}$', ''
+            $assetName = [uri]::EscapeDataString($updateManifest.Name)
+            Invoke-RestMethod `
+              -Method Post `
+              -Headers $headers `
+              -ContentType 'application/octet-stream' `
+              -InFile $updateManifest.FullName `
+              -Uri "${uploadUrl}?name=${assetName}"
+            $assets += $updateManifest.Name
           }
           if (-not ($assets | Where-Object { $_ -like '*.exe.blockmap' })) {
             throw 'Release is missing the NSIS .exe.blockmap required for differential updates.'
