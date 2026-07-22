@@ -40,7 +40,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Verify differential update assets
+      - name: Upload and verify differential update assets
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -56,6 +56,25 @@ jobs:
             -Headers $headers `
             -Uri "https://api.github.com/repos/${{ github.repository }}/releases/tags/$tag"
           $assets = @($release.assets.name)
+
+          # electron-builder creates the blockmap after publishing the main
+          # installer in this workflow, so attach it explicitly when absent.
+          if (-not ($assets | Where-Object { $_ -like '*.exe.blockmap' })) {
+            $blockMap = Get-ChildItem -LiteralPath 'apps/desktop/release' -Filter '*.exe.blockmap' | Select-Object -First 1
+            if ($null -eq $blockMap) {
+              throw 'Local NSIS .exe.blockmap was not generated.'
+            }
+            $uploadUrl = $release.upload_url -replace '\{\?name,label\}$', ''
+            $assetName = [uri]::EscapeDataString($blockMap.Name)
+            Invoke-RestMethod `
+              -Method Post `
+              -Headers $headers `
+              -ContentType 'application/octet-stream' `
+              -InFile $blockMap.FullName `
+              -Uri "$uploadUrl?name=$assetName"
+            $assets += $blockMap.Name
+          }
+
           if ('latest.yml' -notin $assets) {
             throw 'Release is missing latest.yml.'
           }
