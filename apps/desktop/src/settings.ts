@@ -6,6 +6,7 @@ export interface DesktopSettings {
   closeToTray: boolean;
   launchAtStartup: boolean;
   showPet: boolean;
+  playfulPet: boolean;
 }
 
 const DEFAULTS: DesktopSettings = {
@@ -13,6 +14,7 @@ const DEFAULTS: DesktopSettings = {
   // Ships on: the app lives in the tray, so starting with the OS is the expected behavior.
   launchAtStartup: true,
   showPet: true,
+  playfulPet: true,
 };
 
 const settingsPath = () => path.join(app.getPath('userData'), 'desktop-settings.json');

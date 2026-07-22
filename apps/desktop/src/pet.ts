@@ -12,6 +12,7 @@ let petWindow: BrowserWindow | null = null;
 let ipcRegistered = false;
 let cursorTimer: NodeJS.Timeout | null = null;
 let platformTimer: NodeJS.Timeout | null = null;
+let petCallbacks: PetCallbacks | null = null;
 
 interface WindowPlatform {
   x: number;
@@ -130,6 +131,8 @@ function getWindowPlatforms(): Promise<WindowPlatform[]> {
 export interface PetCallbacks {
   onHide: () => void;
   onOpenApp: () => void;
+  isPlayful: () => boolean;
+  onPlayfulChange: (enabled: boolean) => void;
 }
 
 export function hasPetWindow(): boolean {
@@ -142,7 +145,12 @@ function sendToPet(channel: string, ...args: unknown[]) {
   }
 }
 
+export function setPetPlayfulEnabled(enabled: boolean) {
+  sendToPet('pet:playful', enabled);
+}
+
 export function initPetIpc(callbacks: PetCallbacks) {
+  petCallbacks = callbacks;
   if (ipcRegistered) return;
   ipcRegistered = true;
 
@@ -175,6 +183,15 @@ export function initPetIpc(callbacks: PetCallbacks) {
     Menu.buildFromTemplate([
       { label: 'Feed 🍗', click: () => sendToPet('pet:do', 'feed') },
       { label: 'Play 🧶', click: () => sendToPet('pet:do', 'play') },
+      {
+        label: 'Playful mode (jump & chase)',
+        type: 'checkbox',
+        checked: callbacks.isPlayful(),
+        click: (item) => {
+          callbacks.onPlayfulChange(item.checked);
+          sendToPet('pet:playful', item.checked);
+        },
+      },
       { type: 'separator' },
       {
         label: 'Rename pet…',
@@ -218,6 +235,9 @@ export function createPetWindow() {
   petWindow.setAlwaysOnTop(true, 'floating');
   petWindow.setMenu(null);
   void petWindow.loadFile(path.join(__dirname, 'pet.html'));
+  petWindow.webContents.once('did-finish-load', () => {
+    sendToPet('pet:playful', petCallbacks?.isPlayful() ?? true);
+  });
   petWindow.on('closed', () => {
     petWindow = null;
     stopCursorFeed();

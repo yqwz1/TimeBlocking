@@ -41,6 +41,9 @@ contextBridge.exposeInMainWorld('pet', {
   onContext: (cb: (context: PetAppContext | null) => void): void => {
     ipcRenderer.on('pet:context', (_event, context: PetAppContext | null) => cb(context));
   },
+  onPlayful: (cb: (enabled: boolean) => void): void => {
+    ipcRenderer.on('pet:playful', (_event, enabled: boolean) => cb(enabled));
+  },
   onRename: (cb: () => void): void => {
     ipcRenderer.on('pet:rename', cb);
   },

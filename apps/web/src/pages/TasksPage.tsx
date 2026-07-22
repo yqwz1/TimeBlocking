@@ -142,7 +142,7 @@ export default function TasksPage() {
         settingsActive={view === 'settings'}
         onOpenSettings={() => setView('settings')}
       />
-      <div className="min-w-0 flex-1 px-4">
+      <div className="min-w-0 flex-1 px-4 pt-4">
         {!EMBEDDED_VIEWS.has(view) && <FilterBar view={view} onViewChange={setView} filters={filters} onFiltersChange={setFilters} />}
 
         {view === 'calendar' ? (

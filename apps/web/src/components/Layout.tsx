@@ -60,7 +60,7 @@ export default function Layout() {
       <header
         className={`border-b transition-colors duration-300 ${gameMode ? 'border-slate-800/80 bg-[#0e1424]' : 'border-slate-200 bg-white dark:border-neutral-800 dark:bg-neutral-900'}`}
       >
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3">
+        <div className="flex w-full items-center justify-between gap-4 px-4 py-3">
           <div className="flex items-center gap-6">
             <span className={`text-lg font-semibold ${gameMode ? 'text-slate-100' : 'text-slate-900 dark:text-neutral-100'}`}>
               ⏱ TimeBlock

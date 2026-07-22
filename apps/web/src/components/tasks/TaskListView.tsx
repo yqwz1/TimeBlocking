@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { AnimatePresence, animate, motion, useDragControls, useMotionValue, useTransform } from 'motion/react';
-import { CheckSquare, ChevronDown, ChevronRight, ChevronsDown, ChevronsUp, ChevronUp, Clock, GripVertical, Pin, Plus, Trash2 } from 'lucide-react';
+import { CheckSquare, ChevronRight, Clock, GripVertical, MoreHorizontal, Pin, Trash2 } from 'lucide-react';
 import type { TaskDTO } from '@timeblock/shared';
 import { useDeleteTask, useLabelColorMap, useReorderTasks, useUpdateTask } from '../../hooks.js';
 import { listItem } from '../../lib/motion.js';
@@ -242,8 +242,9 @@ function TaskRow({
             {task.links.length > 0 && <MetaChip icon={Link2}>{task.links.length}</MetaChip>}
             {task.reminderCount > 0 && <MetaChip icon={Bell}>{task.reminderCount}</MetaChip>}
           </div>
-          {/* action buttons, revealed on hover */}
-          <div className="flex shrink-0 items-center gap-1 pl-0.5">
+          {/* Compact actions: secondary controls live in the overflow menu so
+              invisible hover actions don't reserve a wide empty gutter. */}
+          <div className="flex shrink-0 items-center gap-0.5 pl-0.5">
             <button
               type="button"
               onClick={() => update.mutate({ id: task.id, patch: { pinned: !task.pinned } })}
@@ -259,54 +260,28 @@ function TaskRow({
             </button>
             <button
               type="button"
-              onClick={() => setAddingSub((v) => !v)}
-              className="rounded p-1 text-slate-400 opacity-0 transition-opacity hover:bg-slate-200 hover:text-slate-600 focus-visible:opacity-100 group-hover:opacity-100 dark:hover:bg-neutral-700 dark:hover:text-neutral-300"
-              title="Add subtask"
+              onClick={(e) =>
+                openTaskMenu(e, task, {
+                  onOpen,
+                  onAddSubtask: () => setAddingSub(true),
+                  orderActions: reorderable
+                    ? {
+                        canMoveUp,
+                        canMoveDown,
+                        moveUp: () => move('up'),
+                        moveDown: () => move('down'),
+                        moveToTop: () => moveToEdge('top'),
+                        moveToBottom: () => moveToEdge('bottom'),
+                      }
+                    : undefined,
+                })
+              }
+              className="rounded p-1 text-slate-400 opacity-0 transition-[opacity,color,background-color] hover:bg-slate-200 hover:text-slate-600 focus-visible:opacity-100 group-hover:opacity-100 dark:hover:bg-neutral-700 dark:hover:text-neutral-300"
+              title="More task actions"
+              aria-label="More task actions"
             >
-              <Plus size={14} />
+              <MoreHorizontal size={14} />
             </button>
-            <div className="flex shrink-0 items-center opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
-              <button
-                type="button"
-                onClick={() => moveToEdge('top')}
-                disabled={!canMoveUp}
-                className="rounded p-1 text-slate-400 hover:bg-slate-200 hover:text-slate-600 disabled:pointer-events-none disabled:opacity-30 dark:hover:bg-neutral-700 dark:hover:text-neutral-300"
-                title="Move to top"
-                aria-label="Move to top"
-              >
-                <ChevronsUp size={14} />
-              </button>
-              <button
-                type="button"
-                onClick={() => move('up')}
-                disabled={!canMoveUp}
-                className="rounded p-1 text-slate-400 hover:bg-slate-200 hover:text-slate-600 disabled:pointer-events-none disabled:opacity-30 dark:hover:bg-neutral-700 dark:hover:text-neutral-300"
-                title="Move up"
-                aria-label="Move up"
-              >
-                <ChevronUp size={14} />
-              </button>
-              <button
-                type="button"
-                onClick={() => move('down')}
-                disabled={!canMoveDown}
-                className="rounded p-1 text-slate-400 hover:bg-slate-200 hover:text-slate-600 disabled:pointer-events-none disabled:opacity-30 dark:hover:bg-neutral-700 dark:hover:text-neutral-300"
-                title="Move down"
-                aria-label="Move down"
-              >
-                <ChevronDown size={14} />
-              </button>
-              <button
-                type="button"
-                onClick={() => moveToEdge('bottom')}
-                disabled={!canMoveDown}
-                className="rounded p-1 text-slate-400 hover:bg-slate-200 hover:text-slate-600 disabled:pointer-events-none disabled:opacity-30 dark:hover:bg-neutral-700 dark:hover:text-neutral-300"
-                title="Move to bottom"
-                aria-label="Move to bottom"
-              >
-                <ChevronsDown size={14} />
-              </button>
-            </div>
           </div>
         </motion.div>
         {addingSub && (

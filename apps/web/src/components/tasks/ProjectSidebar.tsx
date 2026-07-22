@@ -86,6 +86,24 @@ function ProjectIcon({ icon, color, size = 14 }: { icon: string | null; color: s
   return <Icon size={size} className="shrink-0" style={{ color: color ?? '#64748b' }} />;
 }
 
+type SidebarIconMotion = 'analytics' | 'calendar' | 'focus' | 'goals' | 'habits' | 'inbox' | 'objectives' | 'review' | 'settings' | 'toggle';
+
+function SidebarNavIcon({
+  icon: Icon,
+  motion: iconMotion,
+  size,
+}: {
+  icon: LucideIcon;
+  motion: SidebarIconMotion;
+  size: number;
+}) {
+  return (
+    <span className={`tb-sidebar-nav-icon tb-sidebar-nav-icon--${iconMotion}`} aria-hidden="true">
+      <Icon size={size} />
+    </span>
+  );
+}
+
 function ColorPicker({ value, onChange }: { value: string | null; onChange: (c: string) => void }) {
   return (
     <div className="flex flex-wrap gap-1.5">
@@ -255,98 +273,98 @@ export default function ProjectSidebar({
           type="button"
           onClick={toggleCollapsed}
           title="Expand sidebar"
-          className="rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-white/5 dark:hover:text-neutral-300"
+          className="tb-sidebar-nav-item rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-white/5 dark:hover:text-neutral-300"
         >
-          <ChevronsRight size={16} />
+          <SidebarNavIcon icon={ChevronsRight} motion="toggle" size={16} />
         </button>
         <button
           type="button"
           onClick={() => onSelectProject(null)}
           title="All tasks"
-          className={`rounded-md p-1.5 ${activeProject === null && !otherViewActive ? 'bg-teal-50 text-teal-700 dark:bg-teal-500/15 dark:text-teal-300' : 'text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5'}`}
+          className={`tb-sidebar-nav-item rounded-md p-1.5 ${activeProject === null && !otherViewActive ? 'bg-teal-50 text-teal-700 dark:bg-teal-500/15 dark:text-teal-300' : 'text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5'}`}
         >
-          <Inbox size={16} />
+          <SidebarNavIcon icon={Inbox} motion="inbox" size={16} />
         </button>
         <button
           type="button"
           onClick={onOpenToday}
           title="Today"
-          className={`rounded-md p-1.5 ${todayActive ? 'bg-teal-50 text-teal-700 dark:bg-teal-500/15 dark:text-teal-300' : 'text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5'}`}
+          className={`tb-sidebar-nav-item rounded-md p-1.5 ${todayActive ? 'bg-teal-50 text-teal-700 dark:bg-teal-500/15 dark:text-teal-300' : 'text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5'}`}
         >
-          <CalendarDays size={16} />
+          <SidebarNavIcon icon={CalendarDays} motion="calendar" size={16} />
         </button>
         <button
           type="button"
           onClick={onOpenCalendar}
           title="Calendar"
-          className={`rounded-md p-1.5 ${calendarActive ? 'bg-teal-50 text-teal-700 dark:bg-teal-500/15 dark:text-teal-300' : 'text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5'}`}
+          className={`tb-sidebar-nav-item rounded-md p-1.5 ${calendarActive ? 'bg-teal-50 text-teal-700 dark:bg-teal-500/15 dark:text-teal-300' : 'text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5'}`}
         >
-          <CalendarRange size={16} />
+          <SidebarNavIcon icon={CalendarRange} motion="calendar" size={16} />
         </button>
         <div className="my-1 h-px w-6 bg-slate-100 dark:bg-neutral-800" />
         <button
           type="button"
           onClick={onOpenHabits}
           title="Habits"
-          className={`rounded-md p-1.5 ${habitsActive ? 'bg-teal-50 text-teal-700 dark:bg-teal-500/15 dark:text-teal-300' : 'text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5'}`}
+          className={`tb-sidebar-nav-item rounded-md p-1.5 ${habitsActive ? 'bg-teal-50 text-teal-700 dark:bg-teal-500/15 dark:text-teal-300' : 'text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5'}`}
         >
-          <Repeat size={16} />
+          <SidebarNavIcon icon={Repeat} motion="habits" size={16} />
         </button>
         <button
           type="button"
           onClick={onOpenFocus}
           title="Focus"
-          className={`rounded-md p-1.5 ${focusActive ? 'bg-teal-50 text-teal-700 dark:bg-teal-500/15 dark:text-teal-300' : 'text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5'}`}
+          className={`tb-sidebar-nav-item rounded-md p-1.5 ${focusActive ? 'bg-teal-50 text-teal-700 dark:bg-teal-500/15 dark:text-teal-300' : 'text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5'}`}
         >
-          <Timer size={16} />
+          <SidebarNavIcon icon={Timer} motion="focus" size={16} />
         </button>
         <div className="my-1 h-px w-6 bg-slate-100 dark:bg-neutral-800" />
         <button
           type="button"
           onClick={onOpenObjectives}
           title="Objectives"
-          className={`rounded-md p-1.5 ${objectivesActive ? 'bg-teal-50 text-teal-700 dark:bg-teal-500/15 dark:text-teal-300' : 'text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5'}`}
+          className={`tb-sidebar-nav-item rounded-md p-1.5 ${objectivesActive ? 'bg-teal-50 text-teal-700 dark:bg-teal-500/15 dark:text-teal-300' : 'text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5'}`}
         >
-          <Target size={16} />
+          <SidebarNavIcon icon={Target} motion="objectives" size={16} />
         </button>
         <button
           type="button"
           onClick={onOpenGoals}
           title="Goals"
-          className={`rounded-md p-1.5 ${goalsActive ? 'bg-teal-50 text-teal-700 dark:bg-teal-500/15 dark:text-teal-300' : 'text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5'}`}
+          className={`tb-sidebar-nav-item rounded-md p-1.5 ${goalsActive ? 'bg-teal-50 text-teal-700 dark:bg-teal-500/15 dark:text-teal-300' : 'text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5'}`}
         >
-          <Trophy size={16} />
+          <SidebarNavIcon icon={Trophy} motion="goals" size={16} />
         </button>
         <button
           type="button"
           onClick={onOpenReview}
           title="Review"
-          className={`rounded-md p-1.5 ${reviewActive ? 'bg-teal-50 text-teal-700 dark:bg-teal-500/15 dark:text-teal-300' : 'text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5'}`}
+          className={`tb-sidebar-nav-item rounded-md p-1.5 ${reviewActive ? 'bg-teal-50 text-teal-700 dark:bg-teal-500/15 dark:text-teal-300' : 'text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5'}`}
         >
-          <ClipboardCheck size={16} />
+          <SidebarNavIcon icon={ClipboardCheck} motion="review" size={16} />
         </button>
         <button
           type="button"
           onClick={onOpenAnalytics}
           title="Analytics"
-          className={`rounded-md p-1.5 ${analyticsActive ? 'bg-teal-50 text-teal-700 dark:bg-teal-500/15 dark:text-teal-300' : 'text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5'}`}
+          className={`tb-sidebar-nav-item rounded-md p-1.5 ${analyticsActive ? 'bg-teal-50 text-teal-700 dark:bg-teal-500/15 dark:text-teal-300' : 'text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5'}`}
         >
-          <BarChart3 size={16} />
+          <SidebarNavIcon icon={BarChart3} motion="analytics" size={16} />
         </button>
         <button
           type="button"
           onClick={onOpenSettings}
           title="Settings"
-          className={`mt-auto mb-1 rounded-md p-1.5 ${settingsActive ? 'bg-teal-50 text-teal-700 dark:bg-teal-500/15 dark:text-teal-300' : 'text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5'}`}
+          className={`tb-sidebar-nav-item mt-auto mb-1 rounded-md p-1.5 ${settingsActive ? 'bg-teal-50 text-teal-700 dark:bg-teal-500/15 dark:text-teal-300' : 'text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5'}`}
         >
-          <SettingsIcon size={16} />
+          <SidebarNavIcon icon={SettingsIcon} motion="settings" size={16} />
         </button>
       </div>
     );
   }
 
   return (
-    <div style={{ width }} className="relative flex shrink-0 flex-col gap-5 border-r border-slate-200 bg-white py-1 pl-3 pr-4 dark:border-neutral-800 dark:bg-neutral-900">
+    <div style={{ width }} className="relative flex min-h-screen shrink-0 flex-col gap-5 overflow-y-auto border-r border-slate-200 bg-white py-1 pl-3 pr-4 dark:border-neutral-800 dark:bg-neutral-900">
       <div
         onMouseDown={startDrag}
         className={`absolute -right-0.5 top-0 h-full w-1 cursor-col-resize select-none hover:bg-teal-400/50 ${dragging ? 'bg-teal-500/60' : ''}`}
@@ -357,9 +375,9 @@ export default function ProjectSidebar({
           type="button"
           onClick={toggleCollapsed}
           title="Collapse sidebar"
-          className="rounded p-0.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-white/5 dark:hover:text-neutral-300"
+          className="tb-sidebar-nav-item rounded p-0.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-white/5 dark:hover:text-neutral-300"
         >
-          <ChevronsLeft size={14} />
+          <SidebarNavIcon icon={ChevronsLeft} motion="toggle" size={14} />
         </button>
       </div>
       <div className="space-y-3">
@@ -376,20 +394,20 @@ export default function ProjectSidebar({
           <button
             type="button"
             onClick={() => onSelectProject('inbox')}
-            className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium transition-colors ${
+            className={`tb-sidebar-nav-item flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium transition-colors ${
               activeProject === 'inbox' && !otherViewActive ? 'bg-teal-50 text-teal-700 dark:bg-teal-500/15 dark:text-teal-300' : 'text-slate-600 hover:bg-slate-100 dark:text-neutral-300 dark:hover:bg-white/5'
             }`}
           >
-            <Inbox size={14} /> Inbox
+            <SidebarNavIcon icon={Inbox} motion="inbox" size={14} /> Inbox
           </button>
           <button
             type="button"
             onClick={onOpenToday}
-            className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium transition-colors ${
+            className={`tb-sidebar-nav-item flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium transition-colors ${
               todayActive ? 'bg-teal-50 text-teal-700 dark:bg-teal-500/15 dark:text-teal-300' : 'text-slate-600 hover:bg-slate-100 dark:text-neutral-300 dark:hover:bg-white/5'
             }`}
           >
-            <CalendarDays size={14} /> Today
+            <SidebarNavIcon icon={CalendarDays} motion="calendar" size={14} /> Today
           </button>
         </div>
 
@@ -398,29 +416,29 @@ export default function ProjectSidebar({
           <button
             type="button"
             onClick={onOpenCalendar}
-            className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium transition-colors ${
+            className={`tb-sidebar-nav-item flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium transition-colors ${
               calendarActive ? 'bg-teal-50 text-teal-700 dark:bg-teal-500/15 dark:text-teal-300' : 'text-slate-600 hover:bg-slate-100 dark:text-neutral-300 dark:hover:bg-white/5'
             }`}
           >
-            <CalendarRange size={14} /> Calendar
+            <SidebarNavIcon icon={CalendarRange} motion="calendar" size={14} /> Calendar
           </button>
           <button
             type="button"
             onClick={onOpenHabits}
-            className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium transition-colors ${
+            className={`tb-sidebar-nav-item flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium transition-colors ${
               habitsActive ? 'bg-teal-50 text-teal-700 dark:bg-teal-500/15 dark:text-teal-300' : 'text-slate-600 hover:bg-slate-100 dark:text-neutral-300 dark:hover:bg-white/5'
             }`}
           >
-            <Repeat size={14} /> Habits
+            <SidebarNavIcon icon={Repeat} motion="habits" size={14} /> Habits
           </button>
           <button
             type="button"
             onClick={onOpenFocus}
-            className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium transition-colors ${
+            className={`tb-sidebar-nav-item flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium transition-colors ${
               focusActive ? 'bg-teal-50 text-teal-700 dark:bg-teal-500/15 dark:text-teal-300' : 'text-slate-600 hover:bg-slate-100 dark:text-neutral-300 dark:hover:bg-white/5'
             }`}
           >
-            <Timer size={14} /> Focus
+            <SidebarNavIcon icon={Timer} motion="focus" size={14} /> Focus
           </button>
         </div>
 
@@ -429,49 +447,49 @@ export default function ProjectSidebar({
           <button
             type="button"
             onClick={onOpenObjectives}
-            className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium transition-colors ${
+            className={`tb-sidebar-nav-item flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium transition-colors ${
               objectivesActive ? 'bg-teal-50 text-teal-700 dark:bg-teal-500/15 dark:text-teal-300' : 'text-slate-600 hover:bg-slate-100 dark:text-neutral-300 dark:hover:bg-white/5'
             }`}
           >
-            <Target size={14} /> Objectives
+            <SidebarNavIcon icon={Target} motion="objectives" size={14} /> Objectives
           </button>
           <button
             type="button"
             onClick={onOpenGoals}
-            className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium transition-colors ${
+            className={`tb-sidebar-nav-item flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium transition-colors ${
               goalsActive ? 'bg-teal-50 text-teal-700 dark:bg-teal-500/15 dark:text-teal-300' : 'text-slate-600 hover:bg-slate-100 dark:text-neutral-300 dark:hover:bg-white/5'
             }`}
           >
-            <Trophy size={14} /> Goals
+            <SidebarNavIcon icon={Trophy} motion="goals" size={14} /> Goals
           </button>
           <button
             type="button"
             onClick={onOpenReview}
-            className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium transition-colors ${
+            className={`tb-sidebar-nav-item flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium transition-colors ${
               reviewActive ? 'bg-teal-50 text-teal-700 dark:bg-teal-500/15 dark:text-teal-300' : 'text-slate-600 hover:bg-slate-100 dark:text-neutral-300 dark:hover:bg-white/5'
             }`}
           >
-            <ClipboardCheck size={14} /> Review
+            <SidebarNavIcon icon={ClipboardCheck} motion="review" size={14} /> Review
           </button>
           <button
             type="button"
             onClick={onOpenAnalytics}
-            className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium transition-colors ${
+            className={`tb-sidebar-nav-item flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium transition-colors ${
               analyticsActive ? 'bg-teal-50 text-teal-700 dark:bg-teal-500/15 dark:text-teal-300' : 'text-slate-600 hover:bg-slate-100 dark:text-neutral-300 dark:hover:bg-white/5'
             }`}
           >
-            <BarChart3 size={14} /> Analytics
+            <SidebarNavIcon icon={BarChart3} motion="analytics" size={14} /> Analytics
           </button>
         </div>
 
         <button
           type="button"
           onClick={onOpenSettings}
-          className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium transition-colors ${
+          className={`tb-sidebar-nav-item flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium transition-colors ${
             settingsActive ? 'bg-teal-50 text-teal-700 dark:bg-teal-500/15 dark:text-teal-300' : 'text-slate-600 hover:bg-slate-100 dark:text-neutral-300 dark:hover:bg-white/5'
           }`}
         >
-          <SettingsIcon size={14} /> Settings
+          <SidebarNavIcon icon={SettingsIcon} motion="settings" size={14} /> Settings
         </button>
       </div>
 

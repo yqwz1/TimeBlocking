@@ -7,13 +7,18 @@ import {
   Ban,
   CalendarArrowUp,
   CheckCircle2,
+  ChevronDown,
   ChevronRight,
+  ChevronsDown,
+  ChevronsUp,
+  ChevronUp,
   ClipboardCopy,
   Copy,
   Flag,
   FolderInput,
   Pencil,
   Pin,
+  Plus,
   RotateCcw,
   Sun,
   Sunrise,
@@ -31,9 +36,22 @@ interface MenuState {
   y: number;
   /** Opens the full editor panel for this task (wired per-view). */
   onOpen?: (id: string) => void;
+  onAddSubtask?: () => void;
+  orderActions?: {
+    canMoveUp: boolean;
+    canMoveDown: boolean;
+    moveUp: () => void;
+    moveDown: () => void;
+    moveToTop: () => void;
+    moveToBottom: () => void;
+  };
 }
 
-type OpenMenuFn = (e: ReactMouseEvent, task: TaskDTO, opts?: { onOpen?: (id: string) => void }) => void;
+type OpenMenuFn = (
+  e: ReactMouseEvent,
+  task: TaskDTO,
+  opts?: Pick<MenuState, 'onOpen' | 'onAddSubtask' | 'orderActions'>,
+) => void;
 
 const TaskContextMenuContext = createContext<OpenMenuFn | null>(null);
 
@@ -60,7 +78,7 @@ export function useTaskContextMenu(): OpenMenuFn {
 export function TaskContextMenuProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<MenuState | null>(null);
   const open = useCallback<OpenMenuFn>((e, task, opts) => {
-    setState({ task, x: e.clientX, y: e.clientY, onOpen: opts?.onOpen });
+    setState({ task, x: e.clientX, y: e.clientY, ...opts });
   }, []);
   return (
     <TaskContextMenuContext.Provider value={open}>
@@ -83,7 +101,7 @@ const PRIORITY_FLAG: Record<number, string> = {
 const DATE_ICONS: LucideIcon[] = [Sun, Sunrise, CalendarArrowUp, Armchair];
 
 function MenuPanel({ state, onClose }: { state: MenuState; onClose: () => void }) {
-  const { task, onOpen } = state;
+  const { task, onOpen, onAddSubtask, orderActions } = state;
   const update = useUpdateTask();
   const del = useDeleteTask();
   const create = useCreateTask();
@@ -223,6 +241,27 @@ function MenuPanel({ state, onClose }: { state: MenuState; onClose: () => void }
         onClick={() => patch({ status: done ? 'todo' : 'done' })}
       />
       <MenuItem icon={Pin} label={task.pinned ? 'Unpin' : 'Pin'} onClick={() => patch({ pinned: !task.pinned })} />
+      {onAddSubtask && (
+        <MenuItem
+          icon={Plus}
+          label="Add subtask"
+          onClick={() => {
+            onAddSubtask();
+            onClose();
+          }}
+        />
+      )}
+      {orderActions && (
+        <>
+          <SectionLabel>Order</SectionLabel>
+          <div className="grid grid-cols-4 gap-1 px-3 pb-1.5 pt-0.5">
+            <OrderButton icon={ChevronsUp} label="Move to top" disabled={!orderActions.canMoveUp} onClick={orderActions.moveToTop} onClose={onClose} />
+            <OrderButton icon={ChevronUp} label="Move up" disabled={!orderActions.canMoveUp} onClick={orderActions.moveUp} onClose={onClose} />
+            <OrderButton icon={ChevronDown} label="Move down" disabled={!orderActions.canMoveDown} onClick={orderActions.moveDown} onClose={onClose} />
+            <OrderButton icon={ChevronsDown} label="Move to bottom" disabled={!orderActions.canMoveDown} onClick={orderActions.moveToBottom} onClose={onClose} />
+          </div>
+        </>
+      )}
       <MenuItem icon={Copy} label="Duplicate" onClick={duplicate} />
       <MenuItem
         icon={FolderInput}
@@ -266,6 +305,36 @@ function MenuPanel({ state, onClose }: { state: MenuState; onClose: () => void }
         }}
       />
     </motion.div>
+  );
+}
+
+function OrderButton({
+  icon: Icon,
+  label,
+  disabled,
+  onClick,
+  onClose,
+}: {
+  icon: LucideIcon;
+  label: string;
+  disabled: boolean;
+  onClick: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      title={label}
+      aria-label={label}
+      disabled={disabled}
+      onClick={() => {
+        onClick();
+        onClose();
+      }}
+      className="flex items-center justify-center rounded-md p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 disabled:pointer-events-none disabled:opacity-25 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
+    >
+      <Icon size={16} />
+    </button>
   );
 }
 

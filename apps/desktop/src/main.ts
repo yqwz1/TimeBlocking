@@ -22,7 +22,7 @@ import {
   type WindowState,
 } from './settings.js';
 import { initUpdater } from './updater.js';
-import { createPetWindow, destroyPetWindow, initPetIpc } from './pet.js';
+import { createPetWindow, destroyPetWindow, initPetIpc, setPetPlayfulEnabled } from './pet.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -54,7 +54,7 @@ let serverProcess: UtilityProcess | null = null;
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let isQuitting = false;
-let settings: DesktopSettings = { closeToTray: true, launchAtStartup: false, showPet: true };
+let settings: DesktopSettings = { closeToTray: true, launchAtStartup: false, showPet: true, playfulPet: true };
 
 const ICON_PATH = path.join(__dirname, 'icon.ico');
 
@@ -186,6 +186,14 @@ async function createWindow(port: number, startHidden = false) {
     height: state.height ?? 900,
     icon: ICON_PATH,
     autoHideMenuBar: true,
+    // Use Windows' caption buttons inside the app header so their background
+    // shares the dark header surface instead of creating a separate title bar.
+    titleBarStyle: 'hidden',
+    titleBarOverlay: {
+      color: '#171717',
+      symbolColor: '#e5e5e5',
+      height: 32,
+    },
     show: !startHidden,
     webPreferences: {
       contextIsolation: true,
@@ -273,6 +281,16 @@ function buildTrayMenu(port: number, extra: Electron.MenuItemConstructorOptions[
       },
     },
     {
+      label: 'Playful pet (jump & chase)',
+      type: 'checkbox',
+      checked: settings.playfulPet,
+      click: (item) => {
+        settings.playfulPet = item.checked;
+        saveSettings(settings);
+        setPetPlayfulEnabled(item.checked);
+      },
+    },
+    {
       label: 'Launch at startup',
       type: 'checkbox',
       checked: app.isPackaged ? app.getLoginItemSettings().openAtLogin : settings.launchAtStartup,
@@ -336,6 +354,12 @@ app.whenReady().then(async () => {
   createTray(port);
   initPetIpc({
     onOpenApp: showMainWindow,
+    isPlayful: () => settings.playfulPet,
+    onPlayfulChange: (enabled) => {
+      settings.playfulPet = enabled;
+      saveSettings(settings);
+      tray?.setContextMenu(buildTrayMenu(port));
+    },
     onHide: () => {
       settings.showPet = false;
       saveSettings(settings);

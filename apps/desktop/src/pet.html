@@ -313,6 +313,13 @@
     0%, 100% { transform: translateY(0); }
     30%, 65% { transform: translateY(-15px); }
   }
+  .jumping #cat-motion { animation: joyful-jump 0.82s steps(1, end); }
+  @keyframes joyful-jump {
+    0%, 100% { transform: translateY(0) scale(1, 1); }
+    12% { transform: translateY(3px) scale(1.08, 0.9); }
+    38%, 58% { transform: translateY(-31px) scale(0.94, 1.06); }
+    82% { transform: translateY(2px) scale(1.05, 0.93); }
+  }
 
   /* Carry physics now moves the complete precomposed cat frame. */
   #stage.dragging #cat-motion {
@@ -417,6 +424,7 @@
     onDo: () => {},
     onCursor: () => {},
     onContext: () => {},
+    onPlayful: () => {},
     onRename: () => {},
   };
 
@@ -587,8 +595,9 @@
   }
 
   // ============ state machine ============
-  const VISUAL_CLASSES = ['walking', 'sleeping', 'sitting', 'bored', 'begging', 'eating', 'playing', 'zoomies', 'stretching', 'mouse-playing'];
+  const VISUAL_CLASSES = ['walking', 'sleeping', 'sitting', 'bored', 'begging', 'eating', 'playing', 'zoomies', 'stretching', 'mouse-playing', 'jumping'];
   let state = 'idle';
+  let playfulMode = true;
   let facing = 1; // 1 = right, -1 = left
   let stateTimer = null;
   let moveTimer = null;
@@ -773,6 +782,10 @@
       case 'stretch':
         cat.classList.add('stretching');
         break;
+      case 'jump':
+        cat.classList.add('jumping');
+        spawnExpressions(['✨', '🐾'], 2);
+        break;
       case 'chase':
         cat.classList.add('walking');
         startChasing();
@@ -812,6 +825,15 @@
     cursor = c;
     idleSec = c.idle || 0;
     updatePupils();
+  });
+
+  petApi.onPlayful((enabled) => {
+    playfulMode = enabled;
+    if (!enabled && ['jump', 'chase', 'zoomies'].includes(state)) {
+      setState('idle');
+      scheduleSoon(3000);
+    }
+    if (!enabled) stopMousePlay();
   });
 
   // ============ foreground app awareness ============
@@ -927,12 +949,13 @@
   function pickState() {
     if (needs.energy <= 15) return 'sleep';
     if (needs.hunger <= 20) return 'beg';
-    if (needs.fun <= 20) return Math.random() < 0.5 ? 'bored' : 'zoomies';
+    if (needs.fun <= 20) return playfulMode && Math.random() < 0.5 ? 'zoomies' : 'bored';
     const pool = ['idle', 'idle', 'idle', 'walk', 'walk', 'walk', 'sit', 'sit', 'stretch'];
     if (needs.energy < 50) pool.push('sleep', 'sleep');
     if (needs.fun < 45) pool.push('bored');
-    if (needs.fun > 35 && cursor && Math.random() < 0.35) pool.push('chase', 'chase');
-    if (needs.fun > 55) pool.push('zoomies');
+    if (playfulMode && needs.energy > 30) pool.push('jump');
+    if (playfulMode && needs.fun > 35 && cursor && Math.random() < 0.35) pool.push('chase', 'chase');
+    if (playfulMode && needs.fun > 55) pool.push('zoomies');
     return pool[Math.floor(Math.random() * pool.length)];
   }
 
@@ -944,6 +967,7 @@
       case 'bored': return 5000;
       case 'beg': return 6000;
       case 'stretch': return 2000;
+      case 'jump': return 1100;
       case 'zoomies': return 3500 + Math.random() * 2000;
       case 'chase': return 8000;
       default: return 4000 + Math.random() * 6000;
@@ -1197,7 +1221,7 @@
 
   function startMousePlay() {
     hoverPlayTimer = null;
-    if (dragging || busy || state === 'sleep') return;
+    if (!playfulMode || dragging || busy || state === 'sleep') return;
     mousePlaying = true;
     busy = true;
     if (stateTimer) clearTimeout(stateTimer);
@@ -1227,7 +1251,7 @@
     if (metersTimer) clearTimeout(metersTimer);
   });
   cat.addEventListener('mouseenter', () => {
-    if (!hoverPlayTimer && !mousePlaying) hoverPlayTimer = setTimeout(startMousePlay, 2000);
+    if (playfulMode && !hoverPlayTimer && !mousePlaying) hoverPlayTimer = setTimeout(startMousePlay, 2000);
   });
   stage.addEventListener('mouseleave', () => {
     metersTimer = setTimeout(() => meters.classList.remove('show'), 400);

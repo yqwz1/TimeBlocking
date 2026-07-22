@@ -18,6 +18,48 @@ body {
   color: #e5e5e5;
 }
 
+/* Keep native scrollbars in the same quiet palette as the surrounding UI. */
+html {
+  scrollbar-width: thin;
+  scrollbar-color: #94a3b8 #f1f5f9;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+  border: 2px solid #f1f5f9;
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+.dark {
+  scrollbar-color: #525252 #0a0a0a;
+}
+
+.dark *::-webkit-scrollbar-track {
+  background: #0a0a0a;
+}
+
+.dark *::-webkit-scrollbar-thumb {
+  background: #525252;
+  border-color: #0a0a0a;
+}
+
+.dark *::-webkit-scrollbar-thumb:hover {
+  background: #737373;
+}
+
 /* ---------------- Design tokens ---------------- */
 
 :root {
@@ -67,6 +109,119 @@ body {
   --tb-event-text: #e9d5ff;
 }
 
+/* Task-manager sidebar icon micro-interactions. The motion is intentionally
+   attached to the whole nav row so the icon responds wherever the row is hit. */
+.tb-sidebar-nav-icon {
+  display: inline-grid;
+  flex: 0 0 auto;
+  place-items: center;
+  transform-origin: center;
+  will-change: transform;
+}
+
+.tb-sidebar-nav-item:is(:hover, :focus-visible) .tb-sidebar-nav-icon--inbox {
+  animation: tb-sidebar-inbox 440ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.tb-sidebar-nav-item:is(:hover, :focus-visible) .tb-sidebar-nav-icon--calendar {
+  animation: tb-sidebar-calendar 420ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.tb-sidebar-nav-item:is(:hover, :focus-visible) .tb-sidebar-nav-icon--habits {
+  animation: tb-sidebar-habits 500ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.tb-sidebar-nav-item:is(:hover, :focus-visible) .tb-sidebar-nav-icon--focus {
+  animation: tb-sidebar-focus 520ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.tb-sidebar-nav-item:is(:hover, :focus-visible) .tb-sidebar-nav-icon--objectives {
+  animation: tb-sidebar-objectives 440ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.tb-sidebar-nav-item:is(:hover, :focus-visible) .tb-sidebar-nav-icon--goals {
+  animation: tb-sidebar-goals 480ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.tb-sidebar-nav-item:is(:hover, :focus-visible) .tb-sidebar-nav-icon--review {
+  animation: tb-sidebar-review 440ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.tb-sidebar-nav-item:is(:hover, :focus-visible) .tb-sidebar-nav-icon--analytics {
+  animation: tb-sidebar-analytics 480ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.tb-sidebar-nav-item:is(:hover, :focus-visible) .tb-sidebar-nav-icon--settings {
+  animation: tb-sidebar-settings 560ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.tb-sidebar-nav-item:is(:hover, :focus-visible) .tb-sidebar-nav-icon--toggle {
+  animation: tb-sidebar-toggle 380ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes tb-sidebar-inbox {
+  0%, 100% { transform: translateY(0) rotate(0); }
+  42% { transform: translateY(-3px) rotate(-7deg) scale(1.1); }
+  72% { transform: translateY(0) rotate(4deg); }
+}
+
+@keyframes tb-sidebar-calendar {
+  0%, 100% { transform: translateY(0) rotate(0); }
+  38% { transform: translateY(-2px) rotate(-6deg) scale(1.06); }
+  70% { transform: translateY(0) rotate(5deg); }
+}
+
+@keyframes tb-sidebar-habits {
+  0% { transform: rotate(0) scale(1); }
+  55% { transform: rotate(210deg) scale(1.08); }
+  100% { transform: rotate(360deg) scale(1); }
+}
+
+@keyframes tb-sidebar-focus {
+  0%, 100% { transform: scale(1); }
+  38% { transform: scale(1.18); }
+  64% { transform: scale(0.94); }
+  82% { transform: scale(1.07); }
+}
+
+@keyframes tb-sidebar-objectives {
+  0%, 100% { transform: scale(1) rotate(0); }
+  45% { transform: scale(1.16) rotate(-8deg); }
+  72% { transform: scale(1.03) rotate(5deg); }
+}
+
+@keyframes tb-sidebar-goals {
+  0%, 100% { transform: translateY(0) rotate(0); }
+  38% { transform: translateY(-3px) rotate(-5deg) scale(1.1); }
+  62% { transform: translateY(1px) rotate(4deg); }
+  80% { transform: translateY(-1px) rotate(-2deg); }
+}
+
+@keyframes tb-sidebar-review {
+  0%, 100% { transform: translateY(0) rotate(0); }
+  40% { transform: translateY(-2px) rotate(-6deg) scale(1.08); }
+  68% { transform: translateY(0) rotate(4deg); }
+}
+
+@keyframes tb-sidebar-analytics {
+  0%, 100% { transform: translateY(0) scaleY(1); }
+  35% { transform: translateY(-2px) scaleY(1.12); }
+  62% { transform: translateY(1px) scaleY(0.94); }
+  82% { transform: translateY(-1px) scaleY(1.04); }
+}
+
+@keyframes tb-sidebar-settings {
+  0%, 100% { transform: rotate(0) scale(1); }
+  55% { transform: rotate(105deg) scale(1.1); }
+  78% { transform: rotate(82deg) scale(1.04); }
+}
+
+@keyframes tb-sidebar-toggle {
+  0%, 100% { transform: translateX(0); }
+  38% { transform: translateX(3px); }
+  68% { transform: translateX(-1px); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .fc *,
   .tb-ev,
@@ -75,7 +230,8 @@ body {
   .tb-glow,
   .tb-flame,
   .tb-xpbar::after,
-  .tb-skeleton-dark {
+  .tb-skeleton-dark,
+  .tb-sidebar-nav-icon {
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
