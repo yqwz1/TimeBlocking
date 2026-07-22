@@ -51,7 +51,6 @@
   #stage.context-youtube #name-tag { border-color: #ff6b62; box-shadow: 0 2px 0 #8c211c; }
   #stage.context-gaming #name-tag { border-color: #72d7ff; box-shadow: 0 2px 0 #185b76; }
   #stage.context-coding #name-tag { border-color: #f2d25e; box-shadow: 0 2px 0 #786619; }
-  #stage.context-music #tail { animation-duration: 0.55s; }
   #bubble::before,
   #bubble::after {
     content: '';
@@ -82,7 +81,10 @@
   #meters {
     position: absolute;
     top: 4px;
-    left: 6px;
+    /* The drawn cat is fractionally left of its SVG viewBox centre. Keep the
+       HUD and tag aligned to the visible sprite, not the 200px window. */
+    left: calc(50% - 2px);
+    transform: translateX(-50%);
     width: 88px;
     background: rgba(28, 30, 40, 0.88);
     border-radius: 8px;
@@ -143,7 +145,7 @@
     to { transform: rotate(360deg); }
   }
 
-  /* --- cat (pixel sprite) --- */
+  /* --- cat (whole-frame pixel spritesheet) --- */
   #cat {
     position: absolute;
     bottom: 2px;
@@ -152,83 +154,96 @@
     height: 96px;
     margin-left: -48px;
     z-index: 3;
-    shape-rendering: crispEdges;
-    image-rendering: pixelated;
-    image-rendering: crisp-edges;
-    overflow: visible;
     transform-origin: 50% 100%;
   }
   #cat.flip { transform: scaleX(-1); }
-  #cat rect { shape-rendering: crispEdges; }
-
-  #tail {
-    animation: tail-sway 2.4s steps(1, end) infinite;
+  #cat-motion,
+  #cat-sprite {
+    position: absolute;
+    inset: 0;
+    width: 96px;
+    height: 96px;
+    transform-origin: 50% 100%;
   }
-  @keyframes tail-sway {
-    0%, 49%, 100% { transform: translate(0, 0); }
-    50%, 74% { transform: translate(3px, -3px); }
-    75%, 99% { transform: translate(0, -3px); }
-  }
-  .walking #tail { animation-duration: 0.6s; }
-  .zoomies #tail { animation-duration: 0.24s; }
-
-  .eye {
-    animation: eyes-open 4.5s steps(1, end) infinite;
-  }
-  #blink-lines {
-    opacity: 0;
-    animation: eyes-closed 4.5s steps(1, end) infinite;
-  }
-  @keyframes eyes-open {
-    0%, 93%, 98%, 100% { opacity: 1; }
-    94%, 97% { opacity: 0; }
-  }
-  @keyframes eyes-closed {
-    0%, 93%, 98%, 100% { opacity: 0; }
-    94%, 97% { opacity: 1; }
-  }
-  .sleeping .eye { opacity: 0; animation: none; }
-  .sleeping #blink-lines { opacity: 1; animation: none; }
-
-  .ear {
-    transition: none;
-  }
-  .bored #ear-l, .sleeping #ear-l { transform: translate(3px, 3px); }
-  .bored #ear-r, .sleeping #ear-r { transform: translate(-3px, 3px); }
-
-  #mouth-sad { display: none; }
-  .begging #mouth { display: none; }
-  .begging #mouth-sad { display: block; }
-
-  #yawn { display: none; transform-box: fill-box; transform-origin: center; }
-  .yawning #yawn { display: block; animation: yawn-anim 1.4s steps(1, end); }
-  @keyframes yawn-anim {
-    0%, 24%, 76%, 100% { transform: scaleY(0); }
-    25%, 75% { transform: scaleY(1); }
+  #cat-sprite {
+    background: url('./cat-sprites.svg') 0 0 / 2016px 96px no-repeat;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    animation: sprite-idle 4.8s steps(1, end) infinite;
   }
 
-  .walking #pose-group { animation: walk-bob 0.36s steps(1, end) infinite; }
-  .zoomies #pose-group { animation: walk-bob 0.14s steps(1, end) infinite; }
-  @keyframes walk-bob {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-3px); }
+  /* All motion swaps complete 32x32 drawings. No head, paw, or tail can drift
+     away from the body because those pieces no longer exist in the DOM. */
+  .look-left #cat-sprite { animation: sprite-look-left 4.8s steps(1, end) infinite; }
+  .look-right #cat-sprite { animation: sprite-look-right 4.8s steps(1, end) infinite; }
+  .look-down #cat-sprite { animation: sprite-look-down 4.8s steps(1, end) infinite; }
+  .walking #cat-sprite { animation: sprite-walk 0.42s steps(1, end) infinite; }
+  .zoomies #cat-sprite { animation: sprite-walk 0.18s steps(1, end) infinite; }
+  .sleeping #cat-sprite { animation: sprite-sleep 2.6s steps(1, end) infinite; }
+  .sitting #cat-sprite { animation: none; background-position: -672px 0; }
+  .begging #cat-sprite { animation: none; background-position: -864px 0; }
+  .bored #cat-sprite { animation: sprite-bored 2.2s steps(1, end) infinite; }
+  .stretching #cat-sprite { animation: sprite-stretch 1.8s steps(1, end); }
+  .playing #cat-sprite,
+  .mouse-playing #cat-sprite { animation: sprite-play 0.46s steps(1, end) infinite; }
+  .eating #cat-sprite { animation: sprite-eat 0.55s steps(1, end) infinite; }
+  .yawning #cat-sprite { animation: sprite-yawn 1.4s steps(1, end); }
+  .pouncing #cat-sprite { animation: none; background-position: -1440px 0; }
+
+  @keyframes sprite-idle {
+    0%, 91%, 96%, 100% { background-position: 0 0; }
+    92%, 95% { background-position: -1536px 0; }
   }
-  .sleeping #pose-group { animation: breathe 2.6s steps(1, end) infinite; }
-  @keyframes breathe {
-    0%, 100% { transform: translateY(3px); }
-    50% { transform: translateY(0); }
+  @keyframes sprite-look-left {
+    0%, 91%, 96%, 100% { background-position: -1728px 0; }
+    92%, 95% { background-position: -1536px 0; }
   }
-  .happy #pose-group { animation: wiggle 0.32s steps(1, end) 2; }
+  @keyframes sprite-look-right {
+    0%, 91%, 96%, 100% { background-position: -1824px 0; }
+    92%, 95% { background-position: -1536px 0; }
+  }
+  @keyframes sprite-look-down {
+    0%, 91%, 96%, 100% { background-position: -1920px 0; }
+    92%, 95% { background-position: -1536px 0; }
+  }
+  @keyframes sprite-walk {
+    0%, 100% { background-position: -96px 0; }
+    25% { background-position: -192px 0; }
+    50% { background-position: -288px 0; }
+    75% { background-position: -384px 0; }
+  }
+  @keyframes sprite-sleep {
+    0%, 49% { background-position: -480px 0; }
+    50%, 100% { background-position: -576px 0; }
+  }
+  @keyframes sprite-bored {
+    0%, 64%, 100% { background-position: -672px 0; }
+    65%, 84% { background-position: -1632px 0; }
+  }
+  @keyframes sprite-stretch {
+    0%, 19%, 81%, 100% { background-position: 0 0; }
+    20%, 80% { background-position: -768px 0; }
+  }
+  @keyframes sprite-play {
+    0%, 49%, 100% { background-position: -960px 0; }
+    50%, 99% { background-position: -1056px 0; }
+  }
+  @keyframes sprite-eat {
+    0%, 49%, 100% { background-position: -1152px 0; }
+    50%, 99% { background-position: -1248px 0; }
+  }
+  @keyframes sprite-yawn {
+    0%, 24%, 76%, 100% { background-position: -672px 0; }
+    25%, 75% { background-position: -1632px 0; }
+  }
+
+  .happy #cat-motion { animation: wiggle 0.32s steps(1, end) 2; }
   @keyframes wiggle {
     0%, 100% { transform: translateX(0); }
     25% { transform: translateX(-3px); }
     75% { transform: translateX(3px); }
   }
-  .petted #pose-group {
-    transform-box: fill-box;
-    transform-origin: center bottom;
-    animation: pet-squash-stretch 0.62s steps(1, end);
-  }
+  .petted #cat-motion { animation: pet-squash-stretch 0.62s steps(1, end); }
   @keyframes pet-squash-stretch {
     0%, 100% { transform: translate(0, 0) scale(1, 1); }
     18%, 36% { transform: translate(-2px, 4px) scale(1.18, 0.76); }
@@ -236,20 +251,9 @@
     86% { transform: translate(0, 1px) scale(1.07, 0.94); }
   }
 
-  .mouse-playing #leg-front { animation: mouse-bat 0.32s steps(1, end) infinite; }
-  .mouse-playing #head { animation: mouse-look 0.64s steps(1, end) infinite; }
-  @keyframes mouse-bat {
-    0%, 100% { transform: translate(0, 0); }
-    50% { transform: translate(-7px, -8px); }
-  }
-  @keyframes mouse-look {
-    0%, 100% { transform: translate(0, 0); }
-    50% { transform: translate(2px, -2px); }
-  }
-
   #name-tag {
     position: absolute;
-    left: 50%;
+    left: calc(50% - 2px);
     bottom: 103px;
     transform: translateX(-50%);
     padding: 3px 7px 2px;
@@ -267,6 +271,28 @@
     z-index: 4;
     image-rendering: pixelated;
   }
+  #name-editor {
+    position: absolute;
+    left: calc(50% - 2px);
+    bottom: 100px;
+    transform: translateX(-50%);
+    width: 112px;
+    box-sizing: border-box;
+    padding: 3px 5px;
+    color: #fff;
+    background: #20202a;
+    border: 2px solid #f2d25e;
+    box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.42);
+    outline: none;
+    font-family: Consolas, 'Courier New', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.1;
+    text-align: center;
+    text-transform: uppercase;
+    z-index: 9;
+  }
+  #name-editor[hidden] { display: none; }
 
   #cursor-toy {
     position: absolute;
@@ -282,80 +308,19 @@
     z-index: 7;
   }
   #cursor-toy.show { transform: rotate(45deg) scale(1); }
-  .sitting #pose-group { transform: translateY(3px); }
-  .sitting .leg { opacity: 0; }
-  .sitting #tail { animation: none; transform: translate(-6px, 6px); }
-  .stretching #pose-group { animation: stretchy 1.8s steps(1, end); }
-  @keyframes stretchy {
-    0%, 100% { transform: translate(0, 0); }
-    40%, 60% { transform: translate(6px, 3px); }
-  }
-  .pouncing #pose-group { animation: pounce 0.55s steps(1, end); }
+  .pouncing #cat-motion { animation: pounce 0.55s steps(1, end); }
   @keyframes pounce {
     0%, 100% { transform: translateY(0); }
     30%, 65% { transform: translateY(-15px); }
   }
 
-  /* While carried, the scruff stays under the pointer and the rest of the cat
-     behaves like a loose, springy weight hanging from that point. */
-  #body-group {
-    transform-box: view-box;
-    transform-origin: 13px 18px;
-  }
-  #head {
-    transform-box: view-box;
-    transform-origin: 13px 18px;
-  }
-  #stage.dragging #pose-group { animation: none; transform: none; }
-  #stage.dragging #body-group {
+  /* Carry physics now moves the complete precomposed cat frame. */
+  #stage.dragging #cat-motion {
+    animation: none;
     transform: translate(var(--carry-x, 0px), var(--carry-y, 2px)) rotate(var(--carry-rotate, 0deg));
   }
-  #stage.dragging #head { animation: none; transform: translateY(-1px); }
-  #stage.dragging #ear-l { transform: translate(2px, 2px) rotate(5deg); }
-  #stage.dragging #ear-r { transform: translate(-2px, 2px) rotate(-5deg); }
-  #stage.dragging #tail { animation: none; transform: translate(-2px, 2px) rotate(var(--tail-rotate, 0deg)); }
-  #stage.dragging .leg { animation: carry-paws 0.5s ease-in-out infinite alternate; opacity: 1; }
-  #stage.dragging #leg-back { animation-delay: -0.25s; }
-  #stage.dragging #shadow { opacity: 0; }
+  #stage.dragging #cat-sprite { animation: none; background-position: -1344px 0; }
   #stage.dragging #name-tag { opacity: 0; }
-  @keyframes carry-paws {
-    from { transform: translateY(0); }
-    to { transform: translateY(2px); }
-  }
-  .eating #head {
-    animation: munch 0.55s steps(1, end) infinite;
-  }
-  @keyframes munch {
-    0%, 100% { transform: translate(0, 0); }
-    50% { transform: translate(-3px, 6px); }
-  }
-
-  .leg { transition: none; }
-  .walking #leg-front { animation: step-a 0.36s steps(1, end) infinite; }
-  .walking #leg-back { animation: step-b 0.36s steps(1, end) infinite; }
-  .zoomies #leg-front { animation: step-a 0.14s steps(1, end) infinite; }
-  .zoomies #leg-back { animation: step-b 0.14s steps(1, end) infinite; }
-  @keyframes step-a {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-3px); }
-  }
-  @keyframes step-b {
-    0%, 100% { transform: translateY(-3px); }
-    50% { transform: translateY(0); }
-  }
-  .playing #leg-front {
-    animation: bat 0.36s steps(1, end) infinite;
-  }
-  @keyframes bat {
-    0%, 100% { transform: translate(0, 0); }
-    50% { transform: translate(-6px, -6px); }
-  }
-
-  .walking #shadow, .zoomies #shadow { animation: shadow-hop 0.36s steps(1, end) infinite; }
-  @keyframes shadow-hop {
-    0%, 100% { opacity: 0.24; }
-    50% { opacity: 0.12; }
-  }
 
   #zzz {
     position: absolute;
@@ -433,101 +398,11 @@
   <div id="food">🍗</div>
   <div id="yarn">🧶</div>
   <div id="name-tag">MILO</div>
+  <input id="name-editor" hidden maxlength="16" aria-label="Pet name" />
   <div id="cursor-toy"></div>
-  <svg id="cat" viewBox="0 0 32 32" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg">
-    <g id="shadow" fill="#2e2b3d" opacity="0.24">
-      <rect x="6" y="30" width="21" height="1"/>
-      <rect x="9" y="31" width="15" height="1"/>
-    </g>
-    <g id="pose-group">
-      <g id="body-group">
-        <g id="tail">
-        <rect x="24" y="17" width="4" height="10" fill="#2e2b3d"/>
-        <rect x="27" y="13" width="3" height="8" fill="#2e2b3d"/>
-        <rect x="26" y="11" width="4" height="4" fill="#2e2b3d"/>
-        <rect x="25" y="17" width="2" height="9" fill="#d98236"/>
-        <rect x="27" y="14" width="2" height="6" fill="#f2a750"/>
-        <rect x="27" y="12" width="2" height="3" fill="#f6bd68"/>
-        </g>
-        <g id="body-shape">
-        <rect x="9" y="16" width="15" height="2" fill="#2e2b3d"/>
-        <rect x="7" y="18" width="19" height="2" fill="#2e2b3d"/>
-        <rect x="6" y="20" width="21" height="7" fill="#2e2b3d"/>
-        <rect x="7" y="27" width="19" height="2" fill="#2e2b3d"/>
-        <rect x="9" y="18" width="15" height="1" fill="#f6bd68"/>
-        <rect x="8" y="19" width="17" height="3" fill="#f2a750"/>
-        <rect x="7" y="22" width="19" height="4" fill="#f2a750"/>
-        <rect x="8" y="26" width="17" height="2" fill="#d98236"/>
-        </g>
-        <g id="belly-shape">
-        <rect x="11" y="23" width="11" height="4" fill="#ffdca6"/>
-        <rect x="13" y="22" width="7" height="1" fill="#ffe9c5"/>
-        </g>
-        <g id="leg-front" class="leg">
-        <rect x="8" y="26" width="5" height="5" fill="#2e2b3d"/>
-        <rect x="9" y="26" width="3" height="4" fill="#e99542"/>
-        <rect x="9" y="30" width="4" height="1" fill="#ffe9c5"/>
-        </g>
-        <g id="leg-back" class="leg">
-        <rect x="21" y="26" width="5" height="5" fill="#2e2b3d"/>
-        <rect x="22" y="26" width="3" height="4" fill="#d98236"/>
-        <rect x="21" y="30" width="5" height="1" fill="#ffe9c5"/>
-        </g>
-      </g>
-      <g id="head">
-        <g id="ear-l" class="ear">
-          <rect x="5" y="5" width="5" height="7" fill="#2e2b3d"/>
-          <rect x="6" y="6" width="3" height="5" fill="#f2a750"/>
-          <rect x="7" y="7" width="2" height="3" fill="#ed8f9f"/>
-        </g>
-        <g id="ear-r" class="ear">
-          <rect x="16" y="5" width="5" height="7" fill="#2e2b3d"/>
-          <rect x="17" y="6" width="3" height="5" fill="#f2a750"/>
-          <rect x="17" y="7" width="2" height="3" fill="#ed8f9f"/>
-        </g>
-        <g id="head-shape">
-          <rect x="4" y="9" width="18" height="3" fill="#2e2b3d"/>
-          <rect x="3" y="12" width="20" height="7" fill="#2e2b3d"/>
-          <rect x="4" y="19" width="18" height="3" fill="#2e2b3d"/>
-          <rect x="5" y="10" width="16" height="3" fill="#f6bd68"/>
-          <rect x="4" y="13" width="18" height="6" fill="#f2a750"/>
-          <rect x="5" y="19" width="16" height="2" fill="#e99542"/>
-          <rect x="8" y="10" width="2" height="2" fill="#d98236"/>
-          <rect x="12" y="9" width="2" height="3" fill="#d98236"/>
-          <rect x="16" y="10" width="2" height="2" fill="#d98236"/>
-        </g>
-        <rect x="5" y="17" width="3" height="2" fill="#f59aaa"/>
-        <rect x="18" y="17" width="3" height="2" fill="#f59aaa"/>
-        <g class="eye"><g id="eye-l">
-          <rect x="7" y="13" width="3" height="4" fill="#2e2b3d"/>
-          <rect x="8" y="13" width="1" height="1" fill="#fffdf7"/>
-        </g></g>
-        <g class="eye"><g id="eye-r">
-          <rect x="16" y="13" width="3" height="4" fill="#2e2b3d"/>
-          <rect x="17" y="13" width="1" height="1" fill="#fffdf7"/>
-        </g></g>
-        <g id="blink-lines" fill="#2e2b3d">
-          <rect x="7" y="15" width="3" height="1"/>
-          <rect x="16" y="15" width="3" height="1"/>
-        </g>
-        <rect x="1" y="16" width="5" height="1" fill="#2e2b3d"/>
-        <rect x="2" y="19" width="4" height="1" fill="#2e2b3d"/>
-        <rect x="20" y="16" width="5" height="1" fill="#2e2b3d"/>
-        <rect x="20" y="19" width="4" height="1" fill="#2e2b3d"/>
-        <rect x="12" y="17" width="2" height="1" fill="#de7186"/>
-        <g id="mouth" fill="#2e2b3d">
-          <rect x="10" y="19" width="2" height="1"/>
-          <rect x="14" y="19" width="2" height="1"/>
-        </g>
-        <g id="mouth-sad" fill="#2e2b3d">
-          <rect x="12" y="19" width="2" height="1"/>
-          <rect x="10" y="20" width="2" height="1"/>
-          <rect x="14" y="20" width="2" height="1"/>
-        </g>
-        <rect id="yawn" x="11" y="19" width="4" height="2" fill="#b9576d"/>
-      </g>
-    </g>
-  </svg>
+  <div id="cat" role="img" aria-label="Milo the desktop cat">
+    <div id="cat-motion"><div id="cat-sprite"></div></div>
+  </div>
   <div id="zzz"><span>z</span><span>z</span><span>z</span></div>
 </div>
 <script>
@@ -538,9 +413,11 @@
     setPosition: () => {},
     openApp: () => {},
     showMenu: () => {},
+    renameComplete: () => {},
     onDo: () => {},
     onCursor: () => {},
     onContext: () => {},
+    onRename: () => {},
   };
 
   const stage = document.getElementById('stage');
@@ -551,8 +428,8 @@
   const food = document.getElementById('food');
   const yarn = document.getElementById('yarn');
   const cursorToy = document.getElementById('cursor-toy');
-  const eyeL = document.getElementById('eye-l');
-  const eyeR = document.getElementById('eye-r');
+  const nameTag = document.getElementById('name-tag');
+  const nameEditor = document.getElementById('name-editor');
 
   const WIN_W = 200;
   const CAT_CENTER = WIN_W / 2;
@@ -638,6 +515,47 @@
   }
   renderMeters();
 
+  // ============ pet name ============
+  const PET_NAME_KEY = 'tb.pet.name';
+  let petName = 'Milo';
+  try {
+    const savedName = localStorage.getItem(PET_NAME_KEY)?.trim();
+    if (savedName) petName = savedName.slice(0, 16);
+  } catch {}
+  function renderPetName() {
+    nameTag.textContent = petName.toUpperCase();
+    nameTag.title = `${petName} — right-click and choose Rename pet`;
+  }
+  function finishRename(save) {
+    if (nameEditor.hidden) return;
+    const nextName = nameEditor.value.trim().replace(/\s+/g, ' ').slice(0, 16);
+    if (save && nextName) {
+      petName = nextName;
+      try { localStorage.setItem(PET_NAME_KEY, petName); } catch {}
+      renderPetName();
+    }
+    nameEditor.hidden = true;
+    nameTag.hidden = false;
+    petApi.renameComplete();
+  }
+  function beginRename() {
+    if (!nameEditor.hidden) return;
+    nameEditor.value = petName;
+    nameTag.hidden = true;
+    nameEditor.hidden = false;
+    requestAnimationFrame(() => {
+      nameEditor.focus();
+      nameEditor.select();
+    });
+  }
+  nameEditor.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') finishRename(true);
+    if (event.key === 'Escape') finishRename(false);
+  });
+  nameEditor.addEventListener('mousedown', (event) => event.stopPropagation());
+  nameEditor.addEventListener('blur', () => finishRename(true));
+  renderPetName();
+
   // ============ window position (the pet walks by moving its own window) ============
   let winX = 0, winY = 0, workArea = null, platforms = [];
   let ready = false;
@@ -695,7 +613,9 @@
 
   function setFacing(dir) {
     facing = dir;
-    cat.classList.toggle('flip', dir === -1);
+    // The unmirrored sprite faces left (its tail is drawn on the right), so
+    // only mirror it while moving or looking right.
+    cat.classList.toggle('flip', dir === 1);
   }
 
   function clearMovement() {
@@ -711,12 +631,11 @@
   }
 
   function renderCarryPose() {
-    // The entire SVG may be mirrored, so compensate here to keep the visible
-    // body lag opposite to the actual pointer movement in either direction.
+    // The complete sprite may be mirrored, so compensate here to keep its
+    // spring lag opposite to the actual pointer movement in either direction.
     cat.style.setProperty('--carry-x', `${(carryX * facing).toFixed(2)}px`);
     cat.style.setProperty('--carry-y', `${carryY.toFixed(2)}px`);
     cat.style.setProperty('--carry-rotate', `${(carryRotate * facing).toFixed(2)}deg`);
-    cat.style.setProperty('--tail-rotate', `${(-carryRotate * 0.7 * facing).toFixed(2)}deg`);
   }
 
   function runCarryPhysics(now) {
@@ -952,19 +871,19 @@
   }, 12000);
 
   function updatePupils() {
-    if (!cursor || !ready || state === 'sleep') return;
-    const cx = winX + CAT_CENTER;
-    const cy = winY + 118;
-    const dx = cursor.x - cx;
-    const dy = cursor.y - cy;
-    const len = Math.hypot(dx, dy) || 1;
-    // Eye tracking also stays on the sprite grid: pupils can move exactly one
-    // source pixel in each direction, never onto a blurry sub-pixel.
-    const px = Math.round(dx / len) * (cat.classList.contains('flip') ? -1 : 1);
-    const py = Math.round(dy / len);
-    const t = `translate(${px} ${py})`;
-    eyeL.setAttribute('transform', t);
-    eyeR.setAttribute('transform', t);
+    cat.classList.remove('look-left', 'look-right', 'look-down');
+    if (!cursor || !ready || state !== 'idle' || busy || dragging) return;
+    const dx = cursor.x - (winX + CAT_CENTER);
+    const dy = cursor.y - (winY + 118);
+    if (Math.abs(dy) > Math.abs(dx) * 1.1) {
+      if (dy > 8) cat.classList.add('look-down');
+      return;
+    }
+    if (Math.abs(dx) < 8) return;
+    // Facing mirrors the complete sheet, so choose the corresponding local
+    // gaze frame instead of moving eye elements independently.
+    const localDx = dx * (cat.classList.contains('flip') ? -1 : 1);
+    cat.classList.add(localDx < 0 ? 'look-left' : 'look-right');
   }
 
   let chaseNear = 0;
@@ -1142,6 +1061,7 @@
     if (action === 'feed') startFeed();
     if (action === 'play') startPlay();
   });
+  petApi.onRename(beginRename);
 
   // ============ particles ============
   function spawnExpressions(emojis, count = 3, x = CAT_CENTER, y = 92) {

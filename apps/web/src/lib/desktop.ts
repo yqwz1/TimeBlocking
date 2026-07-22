@@ -3,7 +3,14 @@ export type UpdateStatus =
   | { state: 'checking' }
   | { state: 'not-available'; version: string }
   | { state: 'available'; version: string }
-  | { state: 'downloading'; percent: number }
+  | {
+      state: 'downloading';
+      percent: number;
+      transferred: number;
+      total: number;
+      bytesPerSecond: number;
+      method: 'differential' | 'full' | 'unknown';
+    }
   | { state: 'downloaded'; version: string }
   | { state: 'error'; message: string };
 

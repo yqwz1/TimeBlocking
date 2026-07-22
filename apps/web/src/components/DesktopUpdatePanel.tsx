@@ -2,6 +2,14 @@ import { useEffect, useState } from 'react';
 import { CheckCircle2, Download, RefreshCw } from 'lucide-react';
 import { isDesktopApp, type UpdateStatus } from '../lib/desktop.js';
 
+function formatBytes(bytes: number): string {
+  if (!Number.isFinite(bytes) || bytes <= 0) return '0 B';
+  const units = ['B', 'KB', 'MB', 'GB'];
+  const unit = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+  const value = bytes / 1024 ** unit;
+  return `${value.toFixed(value >= 10 || unit === 0 ? 0 : 1)} ${units[unit]}`;
+}
+
 /** Desktop-only settings card: manual "Check for updates" + install prompt. Renders nothing on the web app. */
 export default function DesktopUpdatePanel() {
   const [status, setStatus] = useState<UpdateStatus>({ state: 'idle' });
@@ -46,9 +54,32 @@ export default function DesktopUpdatePanel() {
         )}
         {status.state === 'available' && <span className="text-sm text-slate-500 dark:text-neutral-400">Update v{status.version} found — downloading…</span>}
         {status.state === 'downloading' && (
-          <span className="flex items-center gap-1.5 text-sm text-slate-500 dark:text-neutral-400">
-            <Download size={14} /> Downloading… {status.percent}%
-          </span>
+          <div className="min-w-56 flex-1 text-sm text-slate-500 dark:text-neutral-400">
+            <span className="flex items-center gap-1.5">
+              <Download size={14} /> Downloading… {status.percent}%
+              {status.method === 'differential' && <span className="text-emerald-600 dark:text-emerald-400">Delta update</span>}
+              {status.method === 'full' && <span className="text-amber-600 dark:text-amber-400">Full installer fallback</span>}
+            </span>
+            <span className="mt-0.5 block pl-5 text-xs text-slate-400 dark:text-neutral-500">
+              {formatBytes(status.transferred)} transferred at {formatBytes(status.bytesPerSecond)}/s
+              {status.total > 0 ? ` · ${formatBytes(status.total)} download` : ''}
+            </span>
+            <div
+              className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-100 dark:bg-white/10"
+              role="progressbar"
+              aria-label="Update download progress"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={Math.max(0, Math.min(100, status.percent))}
+            >
+              <div
+                className={`h-full rounded-full transition-[width] duration-500 ease-out ${
+                  status.method === 'full' ? 'bg-amber-500' : 'bg-teal-500'
+                }`}
+                style={{ width: `${Math.max(0, Math.min(100, status.percent))}%` }}
+              />
+            </div>
+          </div>
         )}
         {status.state === 'error' && <span className="text-sm text-red-600 dark:text-red-400">{status.message}</span>}
       </div>

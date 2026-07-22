@@ -31,6 +31,7 @@ contextBridge.exposeInMainWorld('pet', {
     ipcRenderer.send('pet:set-position', x, y, crossDisplays),
   openApp: (): void => ipcRenderer.send('pet:open-app'),
   showMenu: (): void => ipcRenderer.send('pet:menu'),
+  renameComplete: (): void => ipcRenderer.send('pet:rename-complete'),
   onDo: (cb: (action: string) => void): void => {
     ipcRenderer.on('pet:do', (_event, action: string) => cb(action));
   },
@@ -39,5 +40,8 @@ contextBridge.exposeInMainWorld('pet', {
   },
   onContext: (cb: (context: PetAppContext | null) => void): void => {
     ipcRenderer.on('pet:context', (_event, context: PetAppContext | null) => cb(context));
+  },
+  onRename: (cb: () => void): void => {
+    ipcRenderer.on('pet:rename', cb);
   },
 });

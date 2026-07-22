@@ -1,10 +1,24 @@
 import { app, ipcMain, Menu, Notification, Tray, type BrowserWindow } from 'electron';
+import { appendFileSync, mkdirSync } from 'node:fs';
+import { join } from 'node:path';
 import updater from 'electron-updater';
 import type { UpdateStatus } from './preload.js';
 
 const { autoUpdater } = updater;
 
 const CHECK_INTERVAL_MS = 4 * 60 * 60 * 1000;
+
+type DownloadMethod = Extract<UpdateStatus, { state: 'downloading' }>['method'];
+
+function formatLogValue(value: unknown): string {
+  if (value instanceof Error) return value.stack ?? value.message;
+  if (typeof value === 'string') return value;
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return String(value);
+  }
+}
 
 // Non-blocking auto-update: download in the background, install on quit (or
 // on demand via the renderer's "Restart & Update" button). Offline or
@@ -24,17 +38,63 @@ export function initUpdater(tray: Tray | null, rebuildMenu: (extra?: Electron.Me
   autoUpdater.autoDownload = true;
   autoUpdater.autoInstallOnAppQuit = true;
 
+  // Differential failures normally appear only in electron-updater's logger.
+  // Persist them so a full-installer fallback can be diagnosed later.
+  const logDirectory = app.getPath('logs');
+  mkdirSync(logDirectory, { recursive: true });
+  const logPath = join(logDirectory, 'updater.log');
+  let downloadMethod: DownloadMethod = 'unknown';
+
+  const writeLog = (level: 'debug' | 'info' | 'warn' | 'error', ...values: unknown[]) => {
+    const message = values.map(formatLogValue).join(' ');
+    try {
+      appendFileSync(logPath, `${new Date().toISOString()} [${level}] ${message}\n`, 'utf8');
+    } catch (error) {
+      // Updating must continue even if the log directory becomes unwritable.
+      console.warn('[updater] Could not write updater.log:', error);
+    }
+
+    if (/Full: .*To download:/i.test(message) || /Differential download:/i.test(message)) {
+      downloadMethod = 'differential';
+    } else if (/fallback to full download/i.test(message)) {
+      downloadMethod = 'full';
+    }
+
+    const consoleMethod = level === 'debug' ? 'log' : level;
+    console[consoleMethod]('[updater]', ...values);
+  };
+
+  autoUpdater.logger = {
+    debug: (...values: unknown[]) => writeLog('debug', ...values),
+    info: (...values: unknown[]) => writeLog('info', ...values),
+    warn: (...values: unknown[]) => writeLog('warn', ...values),
+    error: (...values: unknown[]) => writeLog('error', ...values),
+  };
+  autoUpdater.disableDifferentialDownload = false;
+
   const broadcast = (status: UpdateStatus) => {
     getWindow()?.webContents.send('updater:status', status);
   };
 
-  autoUpdater.on('checking-for-update', () => broadcast({ state: 'checking' }));
+  autoUpdater.on('checking-for-update', () => {
+    downloadMethod = 'unknown';
+    broadcast({ state: 'checking' });
+  });
   autoUpdater.on('update-not-available', (info) => broadcast({ state: 'not-available', version: info.version }));
   autoUpdater.on('update-available', (info) => broadcast({ state: 'available', version: info.version }));
-  autoUpdater.on('download-progress', (p) => broadcast({ state: 'downloading', percent: Math.round(p.percent) }));
+  autoUpdater.on('download-progress', (p) =>
+    broadcast({
+      state: 'downloading',
+      percent: Math.round(p.percent),
+      transferred: p.transferred,
+      total: p.total,
+      bytesPerSecond: p.bytesPerSecond,
+      method: downloadMethod,
+    }),
+  );
 
   autoUpdater.on('error', (err) => {
-    console.warn('[updater]', err?.message ?? err);
+    writeLog('error', err?.message ?? err);
     broadcast({ state: 'error', message: err?.message ?? String(err) });
   });
 

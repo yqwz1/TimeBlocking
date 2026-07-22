@@ -166,12 +166,25 @@ export function initPetIpc(callbacks: PetCallbacks) {
 
   ipcMain.on('pet:open-app', () => callbacks.onOpenApp());
 
+  ipcMain.on('pet:rename-complete', () => {
+    petWindow?.setFocusable(false);
+  });
+
   ipcMain.on('pet:menu', () => {
     if (!petWindow) return;
     Menu.buildFromTemplate([
       { label: 'Feed 🍗', click: () => sendToPet('pet:do', 'feed') },
       { label: 'Play 🧶', click: () => sendToPet('pet:do', 'play') },
       { type: 'separator' },
+      {
+        label: 'Rename pet…',
+        click: () => {
+          if (!petWindow) return;
+          petWindow.setFocusable(true);
+          petWindow.focus();
+          sendToPet('pet:rename');
+        },
+      },
       { label: 'Open TimeBlock', click: callbacks.onOpenApp },
       { type: 'separator' },
       { label: 'Hide pet', click: callbacks.onHide },
