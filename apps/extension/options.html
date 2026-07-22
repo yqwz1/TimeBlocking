@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Brainclip settings</title>
+    <link rel="stylesheet" href="options.css">
+  </head>
+  <body>
+    <main>
+      <header>
+        <p class="kicker">TIMEBLOCK CAPTURE SYSTEM / 01</p>
+        <h1>Set the intake valve.</h1>
+        <p class="intro">Brainclip turns fleeting browser moments into plain Markdown files in your Second Brain. Keep the pipe local, choose where clips land, and pause the places that should stay private.</p>
+      </header>
+
+      <form id="settings-form">
+        <section class="panel connection-panel">
+          <div class="number">01</div>
+          <div class="field-body">
+            <label for="server-url">LOCAL APP ADDRESS</label>
+            <p>Brainclip only connects to localhost. The default matches TimeBlock’s normal server port.</p>
+            <div class="input-with-button">
+              <input id="server-url" type="url" required spellcheck="false" placeholder="http://127.0.0.1:4141">
+              <button id="test-connection" type="button">Test line</button>
+            </div>
+            <div id="connection-result" class="test-result" aria-live="polite">Not tested yet</div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="number">02</div>
+          <div class="field-body">
+            <label for="inbox-folder">CAPTURE FOLDER</label>
+            <p>Vault-relative path. Brainclip creates one note per clip, organized into dated subfolders.</p>
+            <div class="path-preview"><span>VAULT /</span><input id="inbox-folder" type="text" required spellcheck="false" placeholder="Inbox/Web"><span>/ YYYY-MM-DD / …</span></div>
+          </div>
+        </section>
+
+        <section class="panel privacy-panel">
+          <div class="number">03</div>
+          <div class="field-body">
+            <div class="toggle-heading">
+              <div>
+                <label for="capture-on-copy">AUTOMATIC COPY CAPTURE</label>
+                <p>When enabled, selected text is filed whenever you copy it. Password fields are never read.</p>
+              </div>
+              <label class="switch">
+                <input id="capture-on-copy" type="checkbox">
+                <span aria-hidden="true"></span>
+              </label>
+            </div>
+            <label for="excluded-hosts" class="sub-label">NEVER CAPTURE ON THESE SITES</label>
+            <p>One hostname per line. A hostname also pauses its subdomains.</p>
+            <textarea id="excluded-hosts" rows="6" spellcheck="false" placeholder="mail.example.com&#10;bank.example"></textarea>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="number">04</div>
+          <div class="field-body">
+            <label for="max-chars">MAXIMUM CLIP SIZE</label>
+            <p>Longer selections are safely truncated. This keeps accidental full-page copies from flooding the vault.</p>
+            <div class="range-row">
+              <input id="max-chars" type="range" min="1000" max="200000" step="1000">
+              <output id="max-chars-value" for="max-chars">50,000 chars</output>
+            </div>
+          </div>
+        </section>
+
+        <footer>
+          <div>
+            <strong>Everything remains local.</strong>
+            <span>The extension talks only to your TimeBlock server.</span>
+          </div>
+          <button class="save-button" type="submit">Save settings <span>↗</span></button>
+        </footer>
+      </form>
+      <div id="toast" class="toast" role="status"></div>
+    </main>
+    <script type="module" src="options.js"></script>
+  </body>
+</html>

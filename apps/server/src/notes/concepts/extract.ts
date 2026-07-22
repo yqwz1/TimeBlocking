@@ -1,6 +1,5 @@
-import { Type } from '@google/genai';
 import type { ConceptType } from '@timeblock/shared';
-import { getGenAIClient } from '../../ai/client.js';
+import { generateJson } from '../../ai/client.js';
 
 export interface ExtractedConcept {
   name: string;
@@ -17,7 +16,6 @@ const VALID_TYPES: ConceptType[] = ['person', 'project', 'technology', 'idea'];
 export async function extractConcepts(model: string, noteTitle: string, noteBody: string, existingNames: string[]): Promise<ExtractedConcept[]> {
   const body = noteBody.trim();
   if (!body) return [];
-  const client = getGenAIClient();
   const prompt = [
     `Extract the key entities and concepts from the note titled "${noteTitle}".`,
     'Categories: "person" (named people), "project" (named efforts/products), "technology" (tools, languages, frameworks, libraries), "idea" (recurring topics/themes/concepts).',
@@ -30,34 +28,29 @@ export async function extractConcepts(model: string, noteTitle: string, noteBody
     body.slice(0, 6000),
   ].join('\n');
 
-  const response = await client.models.generateContent({
-    model,
-    contents: prompt,
-    config: {
-      responseMimeType: 'application/json',
-      responseSchema: {
-        type: Type.OBJECT,
+  const response = await generateJson<{ concepts?: unknown }>(model, prompt, {
+        type: 'object',
         properties: {
           concepts: {
-            type: Type.ARRAY,
+            type: 'array',
             items: {
-              type: Type.OBJECT,
+              type: 'object',
               properties: {
-                name: { type: Type.STRING },
-                type: { type: Type.STRING, enum: VALID_TYPES },
+                name: { type: 'string' },
+                type: { type: 'string', enum: VALID_TYPES },
               },
               required: ['name', 'type'],
+              additionalProperties: false,
             },
           },
         },
         required: ['concepts'],
-      },
-    },
+        additionalProperties: false,
   });
 
   let parsed: unknown;
   try {
-    parsed = (JSON.parse(response.text ?? '{}') as { concepts?: unknown }).concepts;
+    parsed = response.concepts;
   } catch {
     return [];
   }

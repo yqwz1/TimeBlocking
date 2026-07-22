@@ -1,0 +1,168 @@
+:root {
+  color-scheme: light;
+  --paper: #f4f0e6;
+  --paper-deep: #e9e1d1;
+  --ink: #18251f;
+  --muted: #657069;
+  --line: #c9c1b1;
+  --green: #245f45;
+  --green-bright: #d8f16d;
+  --rust: #bf5737;
+  --shadow: 0 10px 30px rgba(33, 42, 35, .12);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-width: 390px;
+  min-height: 570px;
+  color: var(--ink);
+  background:
+    linear-gradient(rgba(36, 95, 69, .035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(36, 95, 69, .035) 1px, transparent 1px),
+    var(--paper);
+  background-size: 24px 24px;
+  font-family: "Avenir Next", "Segoe UI", sans-serif;
+}
+
+button, textarea, input { font: inherit; }
+button { color: inherit; }
+.shell { position: relative; overflow: hidden; }
+.shell::before {
+  content: "";
+  position: absolute;
+  width: 160px;
+  height: 160px;
+  border: 1px solid rgba(191, 87, 55, .23);
+  border-radius: 50%;
+  right: -84px;
+  top: 105px;
+  pointer-events: none;
+}
+
+.masthead {
+  display: grid;
+  grid-template-columns: 44px 1fr 34px;
+  align-items: center;
+  gap: 11px;
+  padding: 17px 18px 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.mark {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  background: var(--ink);
+  color: var(--green-bright);
+  transform: rotate(-2deg);
+}
+.mark svg { width: 29px; fill: none; stroke: currentColor; stroke-width: 1.45; stroke-linecap: round; stroke-linejoin: round; }
+.eyebrow, .label { margin: 0 0 2px; font-size: 9px; letter-spacing: .15em; font-weight: 800; color: var(--rust); }
+h1 { margin: 0; font: 700 25px/1 "Bodoni 72", Didot, Georgia, serif; letter-spacing: -.02em; }
+.icon-button {
+  width: 32px;
+  height: 32px;
+  padding: 7px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.icon-button:hover { background: var(--paper-deep); }
+.icon-button svg { fill: none; stroke: currentColor; stroke-width: 1.7; }
+
+.connection {
+  min-height: 49px;
+  padding: 9px 18px;
+  display: grid;
+  grid-template-columns: 9px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255,255,255,.32);
+  border-bottom: 1px solid var(--line);
+}
+.signal { width: 8px; height: 8px; border-radius: 50%; background: #b39e6e; box-shadow: 0 0 0 4px rgba(179,158,110,.14); }
+.connection.online .signal { background: var(--green); box-shadow: 0 0 0 4px rgba(36,95,69,.13); }
+.connection.offline .signal { background: var(--rust); box-shadow: 0 0 0 4px rgba(191,87,55,.13); }
+.connection strong { display: block; font-size: 11px; line-height: 1.2; }
+.connection span:not(.signal) { display: block; font-size: 9px; color: var(--muted); margin-top: 2px; }
+.text-button { border: 0; background: none; font-size: 9px; font-weight: 900; letter-spacing: .1em; cursor: pointer; color: var(--rust); }
+
+.source-card { padding: 17px 18px 18px; border-bottom: 1px solid var(--line); }
+.source-card h2 { margin: 5px 0 2px; max-width: 320px; font: 700 19px/1.17 "Bodoni 72", Didot, Georgia, serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.host { margin: 0; font-size: 10px; color: var(--muted); }
+.selection {
+  margin: 11px 0 0;
+  padding: 8px 10px;
+  max-height: 58px;
+  overflow: hidden;
+  border-left: 3px solid var(--rust);
+  background: rgba(255,255,255,.48);
+  font: italic 11px/1.45 Georgia, serif;
+}
+.capture-actions { display: grid; grid-template-columns: 1.18fr 1fr; gap: 8px; margin-top: 14px; }
+.button {
+  height: 39px;
+  border: 1px solid var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 10px 0 12px;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 2px 2px 0 var(--ink);
+  transition: transform .12s, box-shadow .12s;
+}
+.button:hover:not(:disabled) { transform: translate(-1px,-1px); box-shadow: 4px 4px 0 var(--ink); }
+.button:active:not(:disabled) { transform: translate(2px,2px); box-shadow: 0 0 0 var(--ink); }
+.button:disabled { opacity: .38; cursor: not-allowed; box-shadow: none; }
+.button-primary { background: var(--green); color: #fff; }
+.button-secondary { background: var(--paper); }
+kbd { border: 1px solid currentColor; padding: 2px 4px; font: 700 8px/1 monospace; opacity: .75; }
+
+.thought-card { margin: 14px 18px; border: 1px solid var(--line); background: rgba(255,255,255,.46); box-shadow: var(--shadow); }
+.thought-card label { display: block; padding: 9px 11px 0; color: var(--green); font-size: 9px; font-weight: 900; letter-spacing: .13em; }
+textarea { width: 100%; resize: vertical; min-height: 56px; max-height: 130px; border: 0; outline: 0; padding: 8px 11px; background: transparent; color: var(--ink); font: 14px/1.4 Georgia, serif; }
+textarea::placeholder { color: #9b988f; font-style: italic; }
+.thought-footer { min-height: 35px; border-top: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; padding-left: 11px; }
+.thought-footer > span { font: 9px monospace; color: var(--muted); }
+.send-button { align-self: stretch; border: 0; border-left: 1px solid var(--line); background: var(--green-bright); padding: 0 11px; font-size: 10px; font-weight: 900; cursor: pointer; }
+.send-button:disabled { background: transparent; color: #999; cursor: not-allowed; }
+.send-button span { margin-left: 4px; }
+
+.copy-row { display: flex; align-items: center; justify-content: space-between; gap: 15px; padding: 3px 18px 15px; }
+.copy-row strong { display: block; font-size: 11px; }
+.copy-row > div > span { display: block; color: var(--muted); font-size: 9px; margin-top: 2px; }
+.switch { display: flex; align-items: center; gap: 7px; cursor: pointer; }
+.switch input { position: absolute; opacity: 0; }
+.switch span { position: relative; display: block; width: 34px; height: 18px; border: 1px solid var(--ink); border-radius: 20px; background: var(--paper-deep); }
+.switch span::after { content: ""; position: absolute; width: 12px; height: 12px; border-radius: 50%; left: 2px; top: 2px; background: var(--ink); transition: transform .18s; }
+.switch input:checked + span { background: var(--green-bright); }
+.switch input:checked + span::after { transform: translateX(16px); }
+.switch em { width: 19px; font-style: normal; font: 900 8px monospace; }
+
+.recent-section { padding: 13px 18px 12px; background: var(--ink); color: #f8f4e9; }
+.section-heading { display: flex; align-items: baseline; justify-content: space-between; }
+.section-heading h2 { margin: 0 0 8px; font: 700 16px "Bodoni 72", Didot, Georgia, serif; }
+.section-heading span { color: #f2a27f; font: 800 8px monospace; letter-spacing: .08em; }
+.recent-list { display: grid; gap: 1px; background: rgba(255,255,255,.13); }
+.recent-item { min-height: 38px; display: grid; grid-template-columns: 35px 1fr 10px; align-items: center; gap: 8px; padding: 6px 8px; background: var(--ink); }
+.recent-kind { color: var(--green-bright); font: 800 8px monospace; }
+.recent-copy { min-width: 0; }
+.recent-copy strong { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 10px; }
+.recent-copy span { display: block; margin-top: 2px; color: #aebbb3; font-size: 8px; }
+.recent-status { width: 6px; height: 6px; border-radius: 50%; background: #7cb18e; }
+.recent-status.queued { background: #f18963; }
+.empty { margin: 0; padding: 8px; background: var(--ink); color: #aebbb3; font: italic 10px Georgia, serif; }
+
+footer { background: var(--ink); padding: 0 18px 15px; }
+.open-brain { width: 100%; padding: 9px 11px; border: 1px solid #63746a; background: transparent; color: #f8f4e9; display: flex; justify-content: space-between; font-size: 10px; font-weight: 800; cursor: pointer; }
+.open-brain:hover { border-color: var(--green-bright); color: var(--green-bright); }
+.toast { position: fixed; left: 50%; bottom: 12px; transform: translate(-50%, 14px); opacity: 0; pointer-events: none; padding: 8px 12px; background: var(--rust); color: #fff; font-size: 10px; font-weight: 800; box-shadow: 3px 3px 0 var(--ink); transition: .18s; }
+.toast.visible { transform: translate(-50%, 0); opacity: 1; }
+.toast.success { background: var(--green); }
+
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }

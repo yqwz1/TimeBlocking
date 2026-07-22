@@ -14,6 +14,7 @@ import NotificationCenter from './NotificationCenter.js';
 import ReminderToasts from './ReminderToasts.js';
 import UndoToasts from './UndoToasts.js';
 import ConfettiBurst from './ConfettiBurst.js';
+import VoiceCapture from './VoiceCapture.js';
 
 function ThemeToggle({ gameMode }: { gameMode: boolean }) {
   const { setting, resolved, setSetting } = useTheme();
@@ -56,11 +57,11 @@ export default function Layout() {
   const fullBleed = location.pathname.startsWith('/tasks') || location.pathname.startsWith('/whiteboard') || location.pathname.startsWith('/notes');
 
   return (
-    <div className={`flex h-full min-h-screen flex-col transition-colors duration-300 ${gameMode ? 'bg-[#0b0f1a]' : 'dark:bg-neutral-950'}`}>
+    <div className={`flex h-dvh min-h-0 overflow-hidden flex-col transition-colors duration-300 ${gameMode ? 'bg-[#0b0f1a]' : 'dark:bg-neutral-950'}`}>
       <header
-        className={`border-b transition-colors duration-300 ${gameMode ? 'border-slate-800/80 bg-[#0e1424]' : 'border-slate-200 bg-white dark:border-neutral-800 dark:bg-neutral-900'}`}
+        className={`shrink-0 border-b transition-colors duration-300 ${gameMode ? 'border-slate-800/80 bg-[#0e1424]' : 'border-slate-200 bg-white dark:border-neutral-800 dark:bg-neutral-900'}`}
       >
-        <div className="flex w-full items-center justify-between gap-4 px-4 py-3">
+        <div className="tb-app-header-row flex w-full items-center justify-between gap-4 px-4 py-3">
           <div className="flex items-center gap-6">
             <span className={`text-lg font-semibold ${gameMode ? 'text-slate-100' : 'text-slate-900 dark:text-neutral-100'}`}>
               ⏱ TimeBlock
@@ -99,6 +100,7 @@ export default function Layout() {
             </nav>
           </div>
           <div className={`flex items-center gap-4 ${gameMode ? '[&_*]:text-slate-300' : ''}`}>
+            <VoiceCapture gameMode={gameMode} />
             <UndoRedoControls gameMode={gameMode} />
             <ScheduleStateChip />
             <SyncStatusBar />
@@ -116,9 +118,20 @@ export default function Layout() {
           </div>
         )}
       </header>
-      <main className={`relative flex-1 ${fullBleed ? 'w-full' : 'mx-auto w-full max-w-7xl px-4 py-6'}`}>
+      <main
+        className={`relative min-h-0 flex-1 ${
+          fullBleed ? 'w-full overflow-hidden' : 'mx-auto w-full max-w-7xl overflow-y-auto px-4 py-6'
+        }`}
+      >
         <AnimatePresence initial={false}>
-          <motion.div key={location.pathname} className="min-h-full" variants={pageVariants} initial="initial" animate="animate" exit="exit">
+          <motion.div
+            key={location.pathname}
+            className={fullBleed ? 'h-full min-h-0' : 'min-h-full'}
+            variants={pageVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+          >
             {outlet}
           </motion.div>
         </AnimatePresence>

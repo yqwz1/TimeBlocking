@@ -3,6 +3,12 @@ import { eq } from 'drizzle-orm';
 import { settings } from './db/schema.js';
 import type { DB } from './db/client.js';
 
+const RETIRED_GEMINI_MODELS = new Set(['gemini-2.0-flash', 'gemini-2.0-flash-001', 'gemini-2.0-flash-lite', 'gemini-2.0-flash-lite-001']);
+
+export function normalizeAiModel(model: string): string {
+  return RETIRED_GEMINI_MODELS.has(model) ? 'gemini-3.5-flash-lite' : model;
+}
+
 function upsertRow(db: DB, key: string, value: string) {
   db.insert(settings)
     .values({ key, value })
@@ -24,6 +30,7 @@ export function getSettings(db: DB): Settings {
       }
     }
   }
+  if (typeof merged.aiModel === 'string') merged.aiModel = normalizeAiModel(merged.aiModel);
   const parsed = SettingsSchema.safeParse(merged);
   return parsed.success ? parsed.data : { ...DEFAULT_SETTINGS };
 }

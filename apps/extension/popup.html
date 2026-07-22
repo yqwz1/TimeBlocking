@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Brainclip</title>
+    <link rel="stylesheet" href="popup.css">
+  </head>
+  <body>
+    <main class="shell">
+      <header class="masthead">
+        <div class="mark" aria-hidden="true">
+          <svg viewBox="0 0 34 34" role="img">
+            <path d="M17 3v28M17 8c-3-4-10-3-11 2-4 2-3 9 1 10-2 5 4 10 10 7M17 8c3-4 10-3 11 2 4 2 3 9-1 10 2 5-4 10-10 7"/>
+            <path d="M8 12c3 0 4 2 4 5M26 12c-3 0-4 2-4 5M8 21c3 0 4-2 4-5M26 21c-3 0-4-2-4-5"/>
+          </svg>
+        </div>
+        <div>
+          <p class="eyebrow">TIMEBLOCK / SECOND BRAIN</p>
+          <h1>Brainclip</h1>
+        </div>
+        <button class="icon-button" id="open-options" title="Extension settings" aria-label="Open settings">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5Z"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.83 2.83-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.03 1.56V21h-4v-.08A1.7 1.7 0 0 0 8.94 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 4.57 15 1.7 1.7 0 0 0 3 14H3v-4h.08A1.7 1.7 0 0 0 4.6 8.94a1.7 1.7 0 0 0-.34-1.88L4.2 7l2.83-2.83.06.06A1.7 1.7 0 0 0 9 4.57 1.7 1.7 0 0 0 10 3V3h4v.08a1.7 1.7 0 0 0 1.06 1.52 1.7 1.7 0 0 0 1.88-.34L17 4.2 19.83 7l-.06.06A1.7 1.7 0 0 0 19.43 9 1.7 1.7 0 0 0 21 10h.08v4H21a1.7 1.7 0 0 0-1.6 1Z"/></svg>
+        </button>
+      </header>
+
+      <section class="connection" aria-live="polite">
+        <span class="signal" id="signal"></span>
+        <div>
+          <strong id="connection-label">Finding your brain…</strong>
+          <span id="connection-detail">Checking the local app</span>
+        </div>
+        <button id="retry" class="text-button" hidden>RETRY</button>
+      </section>
+
+      <section class="source-card">
+        <p class="label">ON THIS PAGE</p>
+        <h2 id="page-title">Loading current page…</h2>
+        <p id="page-host" class="host">—</p>
+        <p id="selection-preview" class="selection" hidden></p>
+        <div class="capture-actions">
+          <button id="save-selection" class="button button-primary" disabled>
+            <span>Clip selection</span><kbd>TEXT</kbd>
+          </button>
+          <button id="save-page" class="button button-secondary">
+            <span>Save page</span><kbd>⌥⇧S</kbd>
+          </button>
+        </div>
+      </section>
+
+      <section class="thought-card">
+        <label for="quick-thought">QUICK THOUGHT</label>
+        <textarea id="quick-thought" rows="3" maxlength="50000" placeholder="Catch it before it disappears…"></textarea>
+        <div class="thought-footer">
+          <span id="char-count">0 / 50,000</span>
+          <button id="save-thought" class="send-button" disabled>Send to brain <span>↗</span></button>
+        </div>
+      </section>
+
+      <section class="copy-row">
+        <div>
+          <strong>Capture when I copy</strong>
+          <span>Passwords are always ignored.</span>
+        </div>
+        <label class="switch">
+          <input id="copy-toggle" type="checkbox">
+          <span aria-hidden="true"></span>
+          <em id="copy-state">ON</em>
+        </label>
+      </section>
+
+      <section class="recent-section">
+        <div class="section-heading">
+          <h2>Recent drops</h2>
+          <span id="queue-count"></span>
+        </div>
+        <div id="recent-list" class="recent-list">
+          <p class="empty">Nothing captured yet.</p>
+        </div>
+      </section>
+
+      <footer>
+        <button id="open-brain" class="open-brain">Open Second Brain <span>→</span></button>
+      </footer>
+      <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    </main>
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>

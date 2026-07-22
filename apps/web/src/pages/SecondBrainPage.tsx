@@ -280,7 +280,7 @@ export default function SecondBrainPage() {
   }
 
   return (
-    <div className="second-brain h-[calc(100dvh-6.5rem)] min-h-[34rem] p-3 sm:p-4">
+    <div className="second-brain h-full min-h-0 overflow-hidden p-3 sm:p-4">
       <div className="sb-mobile-tabs" role="tablist" aria-label="Second Brain workspace panels">
         <button type="button" role="tab" aria-selected={mobilePanel === 'library'} onClick={() => setMobilePanel('library')} className={mobilePanel === 'library' ? 'is-active' : ''}>
           Library
@@ -296,7 +296,7 @@ export default function SecondBrainPage() {
       <aside className={`sb-panel sb-library min-h-0 ${mobilePanel === 'library' ? 'sb-panel-active' : 'sb-panel-hidden'}`}>
         <div className="sb-library-head">
           <div>
-            <p className="sb-eyebrow">Your knowledge garden</p>
+            <p className="sb-eyebrow">Workspace</p>
             <h1>Second Brain</h1>
           </div>
           <span className="sb-note-count" title={`${notes?.length ?? 0} notes in your vault`}>{notes?.length ?? 0}</span>
@@ -415,7 +415,7 @@ export default function SecondBrainPage() {
 
       <aside className={`sb-panel sb-insights min-h-0 overflow-auto ${mobilePanel === 'insights' ? 'sb-panel-active' : 'sb-panel-hidden'}`}>
         <div className="sb-insights-head">
-          <p className="sb-eyebrow">Context & connections</p>
+          <p className="sb-eyebrow">Workspace</p>
           <h2>Note insights</h2>
         </div>
         {note ? (

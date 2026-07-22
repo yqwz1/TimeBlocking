@@ -42,7 +42,7 @@ export default function WhiteboardPage() {
   }, [boards, boardId]);
 
   return (
-    <div className="flex h-[calc(100vh-6.5rem)] w-full">
+    <div className="flex h-full min-h-0 w-full overflow-hidden">
       <BoardSidebar activeBoardId={boardId} onSelectBoard={selectBoard} />
       <div className="relative min-w-0 flex-1">
         {boardId ? (

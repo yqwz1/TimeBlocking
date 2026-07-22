@@ -1,9 +1,8 @@
 import type { TodayPlanDTO } from '@timeblock/shared';
-import { getGenAIClient } from './client.js';
+import { generateText } from './client.js';
 
 /** Advisory-only: never mutates schedule state, purely narrates the day. */
 export async function generateBrief(today: TodayPlanDTO, model: string): Promise<string> {
-  const client = getGenAIClient();
   const prompt = [
     'You are a terse, encouraging personal daily-planning assistant.',
     "Given today's plan as JSON, write a short brief (4-6 sentences, plain text, no headers or markdown):",
@@ -14,6 +13,5 @@ export async function generateBrief(today: TodayPlanDTO, model: string): Promise
     '',
     JSON.stringify(today),
   ].join('\n');
-  const response = await client.models.generateContent({ model, contents: prompt });
-  return (response.text ?? '').trim();
+  return generateText(model, prompt);
 }

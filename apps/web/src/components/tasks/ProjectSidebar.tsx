@@ -268,7 +268,7 @@ export default function ProjectSidebar({
 
   if (collapsed) {
     return (
-      <div style={{ width }} className="relative flex min-h-screen shrink-0 flex-col items-center gap-1.5 border-r border-slate-200 bg-white pt-2 dark:border-neutral-800 dark:bg-neutral-900">
+      <div style={{ width }} className="relative flex h-full min-h-0 shrink-0 flex-col items-center gap-1.5 overflow-y-auto border-r border-slate-200 bg-white pt-2 dark:border-neutral-800 dark:bg-neutral-900">
         <button
           type="button"
           onClick={toggleCollapsed}
@@ -364,7 +364,7 @@ export default function ProjectSidebar({
   }
 
   return (
-    <div style={{ width }} className="relative flex min-h-screen shrink-0 flex-col gap-5 overflow-y-auto border-r border-slate-200 bg-white py-1 pl-3 pr-4 dark:border-neutral-800 dark:bg-neutral-900">
+    <div style={{ width }} className="relative flex h-full min-h-0 shrink-0 flex-col gap-5 overflow-y-auto border-r border-slate-200 bg-white py-1 pl-3 pr-4 dark:border-neutral-800 dark:bg-neutral-900">
       <div
         onMouseDown={startDrag}
         className={`absolute -right-0.5 top-0 h-full w-1 cursor-col-resize select-none hover:bg-teal-400/50 ${dragging ? 'bg-teal-500/60' : ''}`}

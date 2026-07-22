@@ -104,7 +104,7 @@ export const SettingsSchema = z.object({
   notesDigestFolder: z.string().min(1),
   /** System-prompt seed for Vault Chat — who you are, so answers are framed the way you'd want. */
   aiAboutMe: z.string(),
-  /** Gemini embedding model used for the Second Brain semantic index. */
+  /** Embedding model used for the Second Brain semantic index. `auto` selects a provider-appropriate default. */
   aiEmbeddingModel: z.string().min(1),
   /** Graph: min cosine similarity for a semantic edge between two notes. */
   graphSemanticThreshold: z.number().min(0).max(1),
@@ -158,7 +158,7 @@ export const DEFAULT_SETTINGS: Settings = {
   busyCalendarIds: [],
   appCalendarId: null,
   aiEnabled: true,
-  aiModel: 'gemini-2.0-flash',
+  aiModel: 'gemini-3.5-flash-lite',
   gamificationEnabled: true,
   streakRule: 'one_block',
   celebrationToasts: true,
@@ -171,7 +171,7 @@ export const DEFAULT_SETTINGS: Settings = {
   notesDigestFolder: 'Digests',
   aiAboutMe:
     'Software engineering student and game developer (Unity/C#), also works with web stacks. Juggles university, a co-op placement, side projects, community leadership, and content creation. Notes mix project logs, university material, game design ideas, career/job-hunt notes, and daily planning — in both Arabic and English. Prefers direct, practical answers and step-by-step breakdowns.',
-  aiEmbeddingModel: 'gemini-embedding-001',
+  aiEmbeddingModel: 'auto',
   graphSemanticThreshold: 0.78,
   graphSemanticTopK: 5,
   graphTagCoocMin: 1,
@@ -987,6 +987,41 @@ export const BoardFileInputSchema = z.object({
   dataUrl: z.string().min(1),
 });
 export type BoardFileInput = z.infer<typeof BoardFileInputSchema>;
+
+// ---------- Voice capture ----------
+
+export const VoiceIntentSchema = z.enum(['task', 'note', 'unknown']);
+export type VoiceIntent = z.infer<typeof VoiceIntentSchema>;
+
+export const VoiceTaskDraftSchema = z.object({
+  content: z.string().min(1),
+  description: z.string(),
+  projectId: z.string().nullable(),
+  priority: z.number().int().min(1).max(4).nullable(),
+  dueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
+  dueDatetimeUtc: z.string().datetime({ offset: true }).nullable(),
+  durationMin: z.number().int().min(5).max(480).nullable(),
+  difficulty: TaskDifficultySchema.nullable(),
+  labels: z.array(z.string()),
+});
+export type VoiceTaskDraft = z.infer<typeof VoiceTaskDraftSchema>;
+
+export const VoiceNoteDraftSchema = z.object({
+  title: z.string().min(1),
+  /** Cleaned Markdown body without a duplicate top-level title. */
+  body: z.string().min(1),
+});
+export type VoiceNoteDraft = z.infer<typeof VoiceNoteDraftSchema>;
+
+export const VoiceInterpretationSchema = z.object({
+  transcript: z.string().min(1),
+  language: z.string().min(1),
+  intent: VoiceIntentSchema,
+  task: VoiceTaskDraftSchema.nullable(),
+  note: VoiceNoteDraftSchema.nullable(),
+  warnings: z.array(z.string()),
+});
+export type VoiceInterpretationDTO = z.infer<typeof VoiceInterpretationSchema>;
 
 // ---------- Notes (Second Brain vault) ----------
 

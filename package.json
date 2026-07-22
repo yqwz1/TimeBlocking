@@ -15,6 +15,7 @@
     "start": "npm run build && npm -w @timeblock/server run start",
     "test": "npm -w @timeblock/server run test",
     "typecheck": "npm -w @timeblock/server run typecheck && npm -w @timeblock/web run typecheck",
+    "extension:check": "npm -w @timeblock/extension run check && npm -w @timeblock/extension test",
     "desktop:dev": "npm -w @timeblock/server run build && npm -w @timeblock/desktop run dev",
     "desktop:dist": "npm run build && npm -w @timeblock/server run build && npm -w @timeblock/desktop run dist",
     "native:node": "npm rebuild better-sqlite3"

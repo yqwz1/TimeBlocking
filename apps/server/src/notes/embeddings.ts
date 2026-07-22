@@ -2,7 +2,7 @@ import { eq, sql } from 'drizzle-orm';
 import type { RelatedNoteDTO } from '@timeblock/shared';
 import { noteChunks, notes } from '../db/schema.js';
 import type { DB } from '../db/client.js';
-import { getGenAIClient } from '../ai/client.js';
+import { embedContent } from '../ai/client.js';
 import { readNoteFile } from './vault.js';
 import { hashContent, parseNote } from './parser.js';
 
@@ -51,20 +51,16 @@ const EMBEDDING_DIMENSIONS = 768;
 /** Embeds a batch of texts in one call. `title` gives each chunk surrounding context for a better vector. */
 async function embedTexts(model: string, title: string, texts: string[]): Promise<number[][]> {
   if (texts.length === 0) return [];
-  const client = getGenAIClient();
-  const response = await client.models.embedContent({
+  return embedContent(
     model,
-    contents: texts.map((t) => `Note: ${title}\n\n${t}`),
-    config: { outputDimensionality: EMBEDDING_DIMENSIONS },
-  });
-  return (response.embeddings ?? []).map((e) => e.values ?? []);
+    texts.map((t) => `Note: ${title}\n\n${t}`),
+    EMBEDDING_DIMENSIONS,
+  );
 }
 
 /** Embeds a bare query string (no note-title context to prepend). */
 export async function embedQuery(model: string, query: string): Promise<number[]> {
-  const client = getGenAIClient();
-  const response = await client.models.embedContent({ model, contents: [query], config: { outputDimensionality: EMBEDDING_DIMENSIONS } });
-  return response.embeddings?.[0]?.values ?? [];
+  return (await embedContent(model, [query], EMBEDDING_DIMENSIONS))[0] ?? [];
 }
 
 function existingChunkHash(db: DB, noteId: string): string | null {

@@ -114,7 +114,7 @@ export default function TasksPage() {
   const quickAddDefaults = activeProject && activeProject !== 'inbox' ? { projectId: activeProject } : undefined;
 
   return (
-    <div className="flex min-h-full gap-5">
+    <div className="flex h-full min-h-0 gap-5 overflow-hidden">
       <ProjectSidebar
         activeProject={activeProject}
         onSelectProject={selectProjectAndLeaveFocus}
@@ -142,7 +142,7 @@ export default function TasksPage() {
         settingsActive={view === 'settings'}
         onOpenSettings={() => setView('settings')}
       />
-      <div className="min-w-0 flex-1 px-4 pt-4">
+      <div className="min-h-0 min-w-0 flex-1 overflow-y-auto px-4 pt-4">
         {!EMBEDDED_VIEWS.has(view) && <FilterBar view={view} onViewChange={setView} filters={filters} onFiltersChange={setFilters} />}
 
         {view === 'calendar' ? (

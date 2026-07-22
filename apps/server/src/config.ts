@@ -19,6 +19,12 @@ export const env = {
   googleClientId: process.env.GOOGLE_CLIENT_ID || '',
   googleClientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
   geminiKey: process.env.GEMINI_API_KEY || '',
+  openRouterKey: process.env.OPENROUTER_API_KEY || '',
+  aiProvider: (process.env.AI_PROVIDER || '').toLowerCase(),
+  aiModel: process.env.AI_MODEL || '',
+  aiEmbeddingModel: process.env.AI_EMBEDDING_MODEL || '',
+  openRouterSiteUrl: process.env.OPENROUTER_SITE_URL || '',
+  openRouterAppName: process.env.OPENROUTER_APP_NAME || 'TimeBlocking',
   isProd: process.env.NODE_ENV === 'production',
 };
 

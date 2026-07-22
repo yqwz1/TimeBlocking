@@ -307,7 +307,8 @@ export default function SettingsPage() {
         <h3 className="mb-1 font-semibold text-slate-900 dark:text-neutral-100">AI features</h3>
         <p className="mb-3 text-sm text-slate-400 dark:text-neutral-500">
           One switch for every outbound AI call this app makes — the daily brief, Second Brain semantic search, related notes, Vault chat, link/tag
-          suggestions, and weekly digests. Off means nothing ever leaves your machine. Requires <code>GEMINI_API_KEY</code> in <code>.env</code>.
+          suggestions, and weekly digests. Off means nothing ever leaves your machine. Configure <code>OPENROUTER_API_KEY</code> (recommended) or{' '}
+          <code>GEMINI_API_KEY</code> in <code>.env</code>.
         </p>
         <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-neutral-400">
           <input type="checkbox" checked={form.aiEnabled} onChange={(e) => set('aiEnabled', e.target.checked)} />
@@ -327,6 +328,15 @@ export default function SettingsPage() {
               />
             </label>
             <div className="grid grid-cols-2 gap-3">
+              <label className="text-sm text-slate-500 dark:text-neutral-400">
+                Generation model
+                <input
+                  value={form.aiModel}
+                  onChange={(e) => set('aiModel', e.target.value)}
+                  placeholder="google/gemini-3.5-flash-lite"
+                  className="mt-1 block w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
+                />
+              </label>
               <label className="text-sm text-slate-500 dark:text-neutral-400">
                 Embedding model
                 <input

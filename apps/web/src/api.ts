@@ -31,4 +31,10 @@ export const api = {
     form.append('file', file);
     return req<T>(path, { method: 'POST', body: form });
   },
+  interpretVoice: <T>(file: File, browserTranscript = '') => {
+    const form = new FormData();
+    if (browserTranscript.trim()) form.append('browserTranscript', browserTranscript.trim());
+    form.append('audio', file);
+    return req<T>('/voice/interpret', { method: 'POST', body: form });
+  },
 };

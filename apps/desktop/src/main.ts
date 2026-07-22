@@ -204,6 +204,29 @@ async function createWindow(port: number, startHidden = false) {
     },
   });
   mainWindow = win;
+  const appOrigin = `http://127.0.0.1:${port}`;
+  const isAppOrigin = (value?: string) => {
+    try {
+      return !!value && new URL(value).origin === appOrigin;
+    } catch {
+      return false;
+    }
+  };
+  // Electron approves permission requests by default. Explicitly constrain this
+  // local app to its two used capabilities, and only grant microphone (not camera).
+  win.webContents.session.setPermissionCheckHandler((webContents, permission, requestingOrigin, details) => {
+    const ownOrigin = isAppOrigin(requestingOrigin) || isAppOrigin(details.securityOrigin) || isAppOrigin(webContents?.getURL());
+    if (!ownOrigin) return false;
+    if (permission === 'notifications') return true;
+    return permission === 'media' && (details.mediaType === 'audio' || details.mediaType === 'unknown');
+  });
+  win.webContents.session.setPermissionRequestHandler((webContents, permission, callback, details) => {
+    const ownOrigin = isAppOrigin(details.requestingUrl) || isAppOrigin(webContents.getURL());
+    if (!ownOrigin) return callback(false);
+    if (permission === 'notifications') return callback(true);
+    const mediaTypes = (details as { mediaTypes?: string[] }).mediaTypes ?? [];
+    callback(permission === 'media' && mediaTypes.length > 0 && mediaTypes.every((type) => type === 'audio'));
+  });
   // maximize() would force a hidden window visible, so only restore it when showing.
   if (state.isMaximized && !startHidden) win.maximize();
 

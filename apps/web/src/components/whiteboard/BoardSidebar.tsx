@@ -49,7 +49,7 @@ export default function BoardSidebar({ activeBoardId, onSelectBoard }: { activeB
 
   if (collapsed) {
     return (
-      <div className="relative flex min-h-screen w-14 shrink-0 flex-col items-center gap-1.5 border-r border-slate-200 bg-white pt-2 dark:border-neutral-800 dark:bg-neutral-900">
+      <div className="relative flex h-full min-h-0 w-14 shrink-0 flex-col items-center gap-1.5 overflow-y-auto border-r border-slate-200 bg-white pt-2 dark:border-neutral-800 dark:bg-neutral-900">
         <button
           type="button"
           onClick={toggleCollapsed}
@@ -74,7 +74,7 @@ export default function BoardSidebar({ activeBoardId, onSelectBoard }: { activeB
   }
 
   return (
-    <div className="relative flex w-60 shrink-0 flex-col gap-3 border-r border-slate-200 bg-white py-2 pl-3 pr-3 dark:border-neutral-800 dark:bg-neutral-900">
+    <div className="relative flex h-full min-h-0 w-60 shrink-0 flex-col gap-3 border-r border-slate-200 bg-white py-2 pl-3 pr-3 dark:border-neutral-800 dark:bg-neutral-900">
       <div className="flex items-center justify-between px-1">
         <span className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-neutral-500">Whiteboards</span>
         <div className="flex items-center gap-0.5">
