@@ -3,21 +3,38 @@ import type {
   ConceptDTO,
   ConceptStatusDTO,
   GraphInsightsDTO,
+  GraphIndexFreshnessDTO,
   GraphPathResultDTO,
   GraphQueryResponseDTO,
+  GraphTimelineDTO,
+  GraphLayoutPointDTO,
   GraphWhyDTO,
+  InboxNoteDTO,
+  InboxTriageSuggestionDTO,
   NoteChatResponseDTO,
   NoteConflictDTO,
   NoteDetailDTO,
   NoteDTO,
   NoteGraphDTO,
+  NoteAssetUploadDTO,
+  NoteDraftLinkedInInput,
   NoteSearchResultDTO,
+  NoteShareDTO,
+  NoteSnapshotDTO,
+  NoteSnapshotDetailDTO,
   NoteSuggestionsDTO,
   NoteSummaryDTO,
   NoteTrashEntryDTO,
+  NoteQueryResultDTO,
+  OnThisDayDTO,
+  PublicNoteDTO,
   RelatedNoteDTO,
+  StudyQueueDTO,
+  StudyReviewBlockDTO,
+  StudyReviewResultDTO,
   SuggestedEdgeDTO,
   TemplateSummaryDTO,
+  VaultTaskHubDTO,
 } from '@timeblock/shared';
 import { api } from '../api.js';
 
@@ -34,6 +51,8 @@ export class NoteConflictError extends Error {
 
 export const useNoteTree = () => useQuery({ queryKey: ['notes', 'tree'], queryFn: () => api.get<NoteSummaryDTO[]>('/notes/tree') });
 
+export const useInboxNotes = () => useQuery({ queryKey: ['notes', 'inbox'], queryFn: () => api.get<InboxNoteDTO[]>('/notes/inbox') });
+
 export const useNoteSearch = (q: string) =>
   useQuery({
     queryKey: ['notes', 'search', q],
@@ -48,12 +67,36 @@ export const useNote = (id: string | null) =>
     enabled: !!id,
   });
 
+export const usePublicNote = (token: string | null) =>
+  useQuery({
+    queryKey: ['notes', 'public', token],
+    queryFn: () => api.get<PublicNoteDTO>(`/notes/public/${encodeURIComponent(token!)}`),
+    enabled: !!token,
+    retry: false,
+  });
+
 export const useCreateNote = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (input: { path: string; content?: string }) => api.post<NoteDTO>('/notes/file', input),
     // Broad invalidation (not just 'tree'): a note created inside the templates/daily folder
     // should refresh those lists too, not just the file tree.
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['notes'] }),
+  });
+};
+
+export const useQuickCaptureNote = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { text: string; title?: string; folder?: string; sourceUrl?: string }) => api.post<NoteDTO>('/notes/capture', input),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['notes'] }),
+  });
+};
+
+export const useClipUrlToInbox = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { url: string; summarize?: boolean; folder?: string }) => api.post<NoteDTO>('/notes/clip-url', input),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['notes'] }),
   });
 };
@@ -89,6 +132,56 @@ export const useMoveNote = () => {
   });
 };
 
+export const useNoteShare = (id: string | null) =>
+  useQuery({
+    queryKey: ['notes', 'share', id],
+    queryFn: () => api.get<NoteShareDTO>(`/notes/file-share/${encodeNotePath(id!)}`),
+    enabled: !!id,
+  });
+
+export const useCreateNoteShare = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.post<NoteShareDTO>(`/notes/file-share/${encodeNotePath(id)}`),
+    onSuccess: (_data, id) => qc.invalidateQueries({ queryKey: ['notes', 'share', id] }),
+  });
+};
+
+export const useRevokeNoteShare = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.delete<NoteShareDTO>(`/notes/file-share/${encodeNotePath(id)}`),
+    onSuccess: (_data, id) => qc.invalidateQueries({ queryKey: ['notes', 'share', id] }),
+  });
+};
+
+export const useNoteSnapshots = (id: string | null, enabled = true) =>
+  useQuery({
+    queryKey: ['notes', 'snapshots', id],
+    queryFn: () => api.get<NoteSnapshotDTO[]>(`/notes/file-snapshots/${encodeNotePath(id!)}`),
+    enabled: !!id && enabled,
+  });
+
+export const useNoteSnapshot = (id: string | null, snapshotId: string | null, enabled = true) =>
+  useQuery({
+    queryKey: ['notes', 'snapshots', id, snapshotId],
+    queryFn: () => api.get<NoteSnapshotDetailDTO>(`/notes/file-snapshot/${encodeURIComponent(snapshotId!)}/${encodeNotePath(id!)}`),
+    enabled: !!id && !!snapshotId && enabled,
+  });
+
+export const useRestoreNoteSnapshot = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, snapshotId }: { id: string; snapshotId: string }) =>
+      api.post<NoteDTO>(`/notes/file-snapshot-restore/${encodeNotePath(id)}`, { snapshotId }),
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: ['notes', 'file', vars.id] });
+      qc.invalidateQueries({ queryKey: ['notes', 'tree'] });
+      qc.invalidateQueries({ queryKey: ['notes', 'snapshots', vars.id] });
+    },
+  });
+};
+
 export const useNoteTrash = () => useQuery({ queryKey: ['notes', 'trash'], queryFn: () => api.get<NoteTrashEntryDTO[]>('/notes/trash') });
 
 export const useRestoreNote = () => {
@@ -116,7 +209,24 @@ export const useReindexNotes = () => {
 };
 
 export const useNoteGraph = (enabled: boolean) =>
-  useQuery({ queryKey: ['notes', 'graph'], queryFn: () => api.get<NoteGraphDTO>('/notes/graph'), enabled });
+  useQuery({ queryKey: ['notes', 'graph'], queryFn: () => api.get<NoteGraphDTO>('/notes/graph'), enabled, refetchInterval: enabled ? 3_000 : false });
+
+export const useGraphTimeline = (enabled: boolean) =>
+  useQuery({ queryKey: ['notes', 'graph', 'timeline'], queryFn: () => api.get<GraphTimelineDTO>('/notes/graph/timeline'), enabled, staleTime: 60_000 });
+
+export const useGraphEra = (at: string | null) =>
+  useQuery({
+    queryKey: ['notes', 'graph', 'era', at],
+    queryFn: () => api.get<NoteGraphDTO>(`/notes/graph/era?at=${encodeURIComponent(at!)}`),
+    enabled: !!at,
+    placeholderData: (previous) => previous,
+  });
+
+export const useGraphIndexFreshness = (enabled: boolean) =>
+  useQuery({ queryKey: ['notes', 'graph', 'jobs'], queryFn: () => api.get<GraphIndexFreshnessDTO>('/notes/graph/jobs'), enabled, refetchInterval: enabled ? 1_500 : false });
+
+export const useSaveGraphLayout = () =>
+  useMutation({ mutationFn: (points: GraphLayoutPointDTO[]) => api.put<{ ok: true; count: number }>('/notes/graph/layout', { mode: 'connectivity', points }) });
 
 export const useTemplates = () =>
   useQuery({ queryKey: ['notes', 'templates'], queryFn: () => api.get<TemplateSummaryDTO[]>('/notes/templates') });
@@ -160,7 +270,7 @@ export const useSuggestLinksAndTags = () =>
 
 export const useVaultChat = () =>
   useMutation({
-    mutationFn: (input: { message: string; history?: { role: 'user' | 'assistant'; content: string }[] }) =>
+    mutationFn: (input: { message: string; focusNoteIds?: string[]; history?: { role: 'user' | 'assistant'; content: string }[] }) =>
       api.post<NoteChatResponseDTO>('/notes/chat', input),
   });
 
@@ -168,6 +278,73 @@ export const useGenerateDigest = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: () => api.post<NoteDTO>('/notes/digest'),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['notes'] }),
+  });
+};
+
+export const useDraftLinkedInPost = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: NoteDraftLinkedInInput) => api.post<NoteDTO>('/notes/draft-linkedin', input),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['notes'] }),
+  });
+};
+
+export const useNoteQuery = () =>
+  useMutation({ mutationFn: (query: string) => api.post<NoteQueryResultDTO>('/notes/query', { query }) });
+
+export const useVaultTasks = (filters?: { tag?: string; folder?: string; status?: 'open' | 'done' | 'all'; due?: string }) => {
+  const params = new URLSearchParams();
+  if (filters?.tag) params.set('tag', filters.tag);
+  if (filters?.folder) params.set('folder', filters.folder);
+  if (filters?.status) params.set('status', filters.status);
+  if (filters?.due) params.set('due', filters.due);
+  const query = params.toString();
+  return useQuery({
+    queryKey: ['notes', 'tasks', query],
+    queryFn: () => api.get<VaultTaskHubDTO>(`/notes/tasks${query ? `?${query}` : ''}`),
+  });
+};
+
+export const useToggleVaultTask = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, completed }: { id: string; completed: boolean }) => api.post<{ ok: true }>(`/notes/tasks/${encodeURIComponent(id)}/toggle`, { completed }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['notes', 'tasks'] });
+      qc.invalidateQueries({ queryKey: ['notes', 'file'] });
+      qc.invalidateQueries({ queryKey: ['notes', 'graph'] });
+    },
+  });
+};
+
+export const useStudyQueue = () =>
+  useQuery({ queryKey: ['notes', 'study', 'queue'], queryFn: () => api.get<StudyQueueDTO>('/notes/study/queue') });
+
+export const useReviewStudyCard = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { cardId: string; rating: 'again' | 'hard' | 'good' | 'easy' }) => api.post<StudyReviewResultDTO>('/notes/study/review', input),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['notes', 'study', 'queue'] }),
+  });
+};
+
+export const useScheduleStudyReviewBlock = () =>
+  useMutation({
+    mutationFn: (input?: { noteId?: string; durationMin?: number }) => api.post<StudyReviewBlockDTO>('/notes/study/review-block', input),
+  });
+
+export const useOnThisDay = () =>
+  useQuery({ queryKey: ['notes', 'on-this-day'], queryFn: () => api.get<OnThisDayDTO>('/notes/on-this-day'), staleTime: 60_000 });
+
+export const useInboxTriageSuggestion = () =>
+  useMutation({ mutationFn: (id: string) => api.post<InboxTriageSuggestionDTO>('/notes/inbox/triage/suggest', { id }) });
+
+export const useApplyInboxTriage = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { id: string; title: string; destinationFolder: string; tags: string[]; links: string[] }) =>
+      api.post<NoteDTO>('/notes/inbox/triage/apply', input),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['notes'] }),
   });
 };

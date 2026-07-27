@@ -1,5 +1,5 @@
 import type { ConceptType } from '@timeblock/shared';
-import { generateJson } from '../../ai/client.js';
+import { ModelGateway } from '../../assistant/modelGateway.js';
 
 export interface ExtractedConcept {
   name: string;
@@ -13,7 +13,7 @@ const VALID_TYPES: ConceptType[] = ['person', 'project', 'technology', 'idea'];
  * model reuses canonical names verbatim (the first line of dedup) rather than minting near-duplicates.
  * Throws on API/offline error — the caller decides whether to skip the note or retry later.
  */
-export async function extractConcepts(model: string, noteTitle: string, noteBody: string, existingNames: string[]): Promise<ExtractedConcept[]> {
+export async function extractConcepts(gateway: ModelGateway, model: string, noteTitle: string, noteBody: string, existingNames: string[]): Promise<ExtractedConcept[]> {
   const body = noteBody.trim();
   if (!body) return [];
   const prompt = [
@@ -28,7 +28,7 @@ export async function extractConcepts(model: string, noteTitle: string, noteBody
     body.slice(0, 6000),
   ].join('\n');
 
-  const response = await generateJson<{ concepts?: unknown }>(model, prompt, {
+  const response = await gateway.generateStructured<{ concepts?: unknown }>({ task: 'extraction', promptVersion: 'concept-extract-v2', model, prompt, schema: {
         type: 'object',
         properties: {
           concepts: {
@@ -46,7 +46,7 @@ export async function extractConcepts(model: string, noteTitle: string, noteBody
         },
         required: ['concepts'],
         additionalProperties: false,
-  });
+  }, validate: (value) => value as { concepts?: unknown } });
 
   let parsed: unknown;
   try {

@@ -8,6 +8,8 @@ import { aiConfigured } from '../../ai/client.js';
 import { readNoteFile } from '../vault.js';
 import { hashContent, parseNote } from '../parser.js';
 import { extractConcepts } from './extract.js';
+import { ModelGateway } from '../../assistant/modelGateway.js';
+import { completeGraphJob, failGraphJob, progressGraphJob, queueGraphJob, startGraphJob } from '../graph/jobs.js';
 
 function normKey(type: string, name: string): string {
   return `${type}|${name.trim().toLowerCase()}`;
@@ -73,7 +75,8 @@ export async function extractStaleNotes(db: DB, root: string, settings: Settings
   const extractedHash = new Map(db.select().from(conceptExtractions).all().map((e) => [e.noteId, e.contentHash]));
 
   let processed = 0;
-  for (const { id } of noteRows) {
+  for (let noteIndex = 0; noteIndex < noteRows.length; noteIndex++) {
+    const { id } = noteRows[noteIndex];
     const file = await readNoteFile(root, id);
     if (!file) continue;
     const parsed = parseNote(id, file.content);
@@ -84,7 +87,7 @@ export async function extractStaleNotes(db: DB, root: string, settings: Settings
     const existingNames = index.rows.map((c) => c.name);
     let extracted;
     try {
-      extracted = await extractConcepts(settings.aiModel, parsed.title, parsed.body, existingNames);
+      extracted = await extractConcepts(new ModelGateway(db), settings.aiModel, parsed.title, parsed.body, existingNames);
     } catch {
       continue; // offline / API error (e.g. rate limit) — leave stale; retries next pass
     }
@@ -108,6 +111,7 @@ export async function extractStaleNotes(db: DB, root: string, settings: Settings
     }
     db.insert(conceptExtractions).values({ noteId: id, contentHash: bodyHash }).onConflictDoUpdate({ target: conceptExtractions.noteId, set: { contentHash: bodyHash } }).run();
     processed++;
+    progressGraphJob(db, 'concepts', noteRows.length ? (noteIndex + 1) / noteRows.length : 1, id);
   }
 
   // Prune concepts left with no mentions.
@@ -126,12 +130,15 @@ async function runExtraction(db: DB, root: string): Promise<void> {
     return;
   }
   running = true;
+  startGraphJob(db, 'concepts');
   try {
     do {
       pending = false;
       await extractStaleNotes(db, root, getSettings(db));
     } while (pending);
-  } catch {
+    completeGraphJob(db, 'concepts');
+  } catch (error) {
+    failGraphJob(db, 'concepts', error);
     // rebuildable cache — swallow
   } finally {
     running = false;
@@ -140,6 +147,7 @@ async function runExtraction(db: DB, root: string): Promise<void> {
 
 /** Debounced, fire-and-forget incremental extraction after note writes. */
 export function triggerConceptExtraction(db: DB, root: string): void {
+  queueGraphJob(db, 'concepts');
   if (timer) clearTimeout(timer);
   timer = setTimeout(() => {
     timer = null;

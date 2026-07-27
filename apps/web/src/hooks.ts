@@ -9,6 +9,9 @@ import type {
   CalendarListEntryDTO,
   DailyHighlightInput,
   DailyPlanDTO,
+  DriveBackupDTO,
+  DriveBackupStatusDTO,
+  DriveConnectionDTO,
   DailyShutdownInput,
   DayResultDTO,
   EventDTO,
@@ -119,6 +122,28 @@ export const useDisconnectGoogle = () => {
     },
   });
 };
+
+// ---------- Google Drive (Second Brain mirror) ----------
+
+export const useDriveConnection = () =>
+  useQuery({ queryKey: ['drive', 'status'], queryFn: () => api.get<DriveConnectionDTO>('/drive/status'), refetchInterval: 30_000 });
+
+export const useDriveBackupStatus = () =>
+  useQuery({ queryKey: ['drive', 'backups', 'status'], queryFn: () => api.get<DriveBackupStatusDTO>('/drive/backups/status'), refetchInterval: 15_000 });
+
+export const useDriveBackups = (enabled: boolean) =>
+  useQuery({ queryKey: ['drive', 'backups'], queryFn: () => api.get<DriveBackupDTO[]>('/drive/backups'), enabled });
+
+export const useBackupDriveNow = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.post<DriveBackupDTO>('/drive/backups'),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['drive', 'backups'] }); qc.invalidateQueries({ queryKey: ['drive', 'backups', 'status'] }); },
+  });
+};
+
+export const useRestoreDriveBackup = () =>
+  useMutation({ mutationFn: (id: string) => api.post<{ ok: true; inspectionPath: string }>(`/drive/backups/${encodeURIComponent(id)}/restore`) });
 
 // ---------- sync ----------
 
@@ -697,6 +722,18 @@ export const useDeleteAttachment = () => {
 // ---------- settings ----------
 
 export const useSettings = () => useQuery({ queryKey: ['settings'], queryFn: () => api.get<Settings>('/settings') });
+
+export interface AiUsageDashboard {
+  configured: boolean;
+  provider: 'openrouter' | 'gemini';
+  generationModel: string;
+  embeddingModel: string;
+  local: { inputTokens: number; outputTokens: number; reasoningTokens: number; cachedTokens: number; billableTokens: number; estimatedUsd: number; exactUsageRate: number | null; calls: number; periodStart: string };
+  providerBalance: { totalCreditsUsd: number | null; usedCreditsUsd: number | null; remainingCreditsUsd: number | null; keyLimitUsd: number | null; keyRemainingUsd: number | null; keyUsageUsd: number | null; reset: 'daily' | 'weekly' | 'monthly' | null; available: boolean; message: string | null };
+}
+
+export const useAiUsageDashboard = () =>
+  useQuery({ queryKey: ['assistant', 'usage'], queryFn: () => api.get<AiUsageDashboard>('/assistant/usage'), refetchInterval: 60_000, retry: false });
 
 export const useUpdateSettings = () => {
   const qc = useQueryClient();

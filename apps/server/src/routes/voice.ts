@@ -5,6 +5,7 @@ import type { DB } from '../db/client.js';
 import { labels as labelsTable, projects as projectsTable } from '../db/schema.js';
 import { aiConfigured } from '../ai/client.js';
 import { interpretVoiceAudio, VoiceNoSpeechError } from '../ai/voice.js';
+import { ModelGateway } from '../assistant/modelGateway.js';
 import { getSettings } from '../settings.js';
 
 const MAX_VOICE_BYTES = 10 * 1024 * 1024;
@@ -45,7 +46,7 @@ export function registerVoiceRoutes(app: FastifyInstance, db: DB) {
     const labels = db.select({ name: labelsTable.name }).from(labelsTable).all().map((label) => label.name);
 
     try {
-      return await interpretVoiceAudio(settings.aiModel, audio, mimeType, browserTranscript, {
+      return await interpretVoiceAudio(new ModelGateway(db), settings.aiModel, audio, mimeType, browserTranscript, {
         timezone: settings.timezone,
         now: DateTime.now().setZone(settings.timezone),
         projects,

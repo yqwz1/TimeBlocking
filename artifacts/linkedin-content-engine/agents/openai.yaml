@@ -1,0 +1,4 @@
+interface:
+  display_name: "LinkedIn Content Engine"
+  short_description: "Draft, plan, and improve LinkedIn content"
+  default_prompt: "Use $linkedin-content-engine to draft a LinkedIn post about my latest Unity milestone."

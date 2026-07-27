@@ -28,8 +28,12 @@ import { registerWhiteboardRoutes } from './whiteboards.js';
 import { registerNoteRoutes } from './notes.js';
 import { registerVoiceRoutes } from './voice.js';
 import { env } from '../config.js';
+import { registerIntegrationRoutes } from './integration.js';
+import { registerDriveRoutes } from './drive.js';
+import type { DriveBackupService } from '../integrations/google/driveBackups.js';
+import { registerAssistantRoutes } from './assistant.js';
 
-export function registerApiRoutes(app: FastifyInstance, db: DB, manager: SyncManager) {
+export function registerApiRoutes(app: FastifyInstance, db: DB, manager: SyncManager, driveBackups: DriveBackupService) {
   app.get('/health', async () => ({ ok: true }));
 
   registerSetupRoutes(app, db, manager);
@@ -55,7 +59,10 @@ export function registerApiRoutes(app: FastifyInstance, db: DB, manager: SyncMan
   registerLearningRoutes(app, db, manager);
   registerGamificationRoutes(app, db);
   registerWhiteboardRoutes(app, db);
-  registerNoteRoutes(app, db);
+  registerNoteRoutes(app, db, manager);
   registerVoiceRoutes(app, db);
+  registerDriveRoutes(app, db, driveBackups);
+  registerAssistantRoutes(app, db, manager);
+  app.register(async (integration) => registerIntegrationRoutes(integration, db), { prefix: '/integration' });
   if (!env.isProd) registerDemoRoutes(app, db, manager);
 }

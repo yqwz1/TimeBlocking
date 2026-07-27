@@ -36,13 +36,21 @@ export function stripFrontmatter(raw: string): { body: string; frontmatterLineCo
 
 function renderInline(text: string, opts: MarkdownOptions): string {
   let out = escapeHtml(text);
+  const assetHref = (src: string) => (/^(https?:)?\/\//.test(src) ? src : `/api/notes/asset/${src.split('/').map(encodeURIComponent).join('/')}`);
   // images ![alt](src)
   out = out.replace(/!\[([^\]]*)\]\(([^)\s]+)\)/g, (_m, alt: string, src: string) => {
-    const url = /^(https?:)?\/\//.test(src) ? src : `/api/notes/asset/${src.split('/').map(encodeURIComponent).join('/')}`;
+    const url = assetHref(src);
     return `<img src="${url}" alt="${alt}" loading="lazy" />`;
   });
   // links [text](url)
-  out = out.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (_m, label: string, url: string) => `<a href="${url}" target="_blank" rel="noopener noreferrer">${label}</a>`);
+  out = out.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (_m, label: string, url: string) => {
+    const gdrive = /^gdrive:\/\/([^/?#\s]+)$/i.exec(url);
+    if (gdrive) {
+      const fileId = gdrive[1];
+      return `<a class="gdrive-card" href="https://drive.google.com/open?id=${encodeURIComponent(fileId)}" target="_blank" rel="noopener noreferrer" data-gdrive-id="${escapeHtml(fileId)}"><span class="gdrive-card-icon">Drive</span><span>${label}</span><span class="gdrive-card-meta">Google Drive file</span></a>`;
+    }
+    return `<a href="${assetHref(url)}" target="_blank" rel="noopener noreferrer">${label}</a>`;
+  });
   // wikilinks [[Target]] / [[Target|Alias]] / [[Target#heading]]
   out = out.replace(/\[\[([^\]|#]+)(?:#[^\]|]*)?(?:\|([^\]]+))?\]\]/g, (_m, target: string, alias?: string) => {
     const t = target.trim();
@@ -163,6 +171,10 @@ export function renderMarkdown(body: string, opts: MarkdownOptions): string {
     flushListBuf();
 
     if (line.trim() === '') {
+      i++;
+      continue;
+    }
+    if (/^<!--[\s\S]*-->$/.test(line.trim())) {
       i++;
       continue;
     }

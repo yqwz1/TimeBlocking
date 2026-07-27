@@ -7,6 +7,7 @@ import { getSettings } from '../settings.js';
 import { buildTodayPlan } from '../plan/today.js';
 import { aiConfigured } from '../ai/client.js';
 import { generateBrief } from '../ai/brief.js';
+import { ModelGateway } from '../assistant/modelGateway.js';
 import { isOfflineError } from '../integrations/google/client.js';
 import { nowUtcIso } from '../config.js';
 
@@ -19,7 +20,7 @@ export function registerBriefRoutes(app: FastifyInstance, db: DB) {
     const today = buildTodayPlan(db, settings);
     let content: string;
     try {
-      content = await generateBrief(today, settings.aiModel);
+      content = await generateBrief(new ModelGateway(db), today, settings.aiModel);
     } catch (err) {
       // The AI brief needs internet (Gemini). Offline, fail cleanly instead of a 500.
       if (isOfflineError(err)) return reply.code(503).send({ error: 'AI brief unavailable offline' });

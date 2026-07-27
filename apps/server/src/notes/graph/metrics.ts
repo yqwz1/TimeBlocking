@@ -1,9 +1,10 @@
 import Graph from 'graphology';
 import pagerank from 'graphology-metrics/centrality/pagerank.js';
 import betweenness from 'graphology-metrics/centrality/betweenness.js';
-import { isNotNull } from 'drizzle-orm';
-import { noteLinks, notes } from '../../db/schema.js';
+import { eq, isNotNull } from 'drizzle-orm';
+import { blocks, noteLinks, notes, tasks } from '../../db/schema.js';
 import type { DB } from '../../db/client.js';
+import { notePathFromDeepLink } from '../../integrations/secondBrain/ids.js';
 
 export interface NodeMetric {
   noteId: string;
@@ -46,6 +47,30 @@ export function computeMetrics(db: DB): Map<string, NodeMetric> {
       pagerank: (pr[id] ?? 0) / maxPr,
       betweenness: bt[id] ?? 0,
     });
+  }
+  return out;
+}
+
+/** Minutes completed in blocks whose task links back to a Second Brain note. */
+export function computeTimeAttention(db: DB): Map<string, number> {
+  const out = new Map<string, number>();
+  const rows = db
+    .select({ startUtc: blocks.startUtc, endUtc: blocks.endUtc, url: tasks.url, links: tasks.links })
+    .from(blocks)
+    .innerJoin(tasks, eq(blocks.taskId, tasks.id))
+    .where(eq(blocks.status, 'done'))
+    .all();
+  for (const row of rows) {
+    const urls: string[] = row.url ? [row.url] : [];
+    try {
+      const links = JSON.parse(row.links) as Array<{ url?: unknown }>;
+      for (const link of links) if (typeof link.url === 'string') urls.push(link.url);
+    } catch {
+      // A malformed rebuildable task-link cache should not break the graph.
+    }
+    const notePaths = new Set(urls.map(notePathFromDeepLink).filter((value): value is string => value !== null));
+    const minutes = Math.max(0, Math.round((Date.parse(row.endUtc) - Date.parse(row.startUtc)) / 60_000));
+    for (const notePath of notePaths) out.set(notePath, (out.get(notePath) ?? 0) + minutes);
   }
   return out;
 }

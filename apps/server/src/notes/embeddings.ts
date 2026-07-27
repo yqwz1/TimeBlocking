@@ -2,7 +2,7 @@ import { eq, sql } from 'drizzle-orm';
 import type { RelatedNoteDTO } from '@timeblock/shared';
 import { noteChunks, notes } from '../db/schema.js';
 import type { DB } from '../db/client.js';
-import { embedContent } from '../ai/client.js';
+import { ModelGateway } from '../assistant/modelGateway.js';
 import { readNoteFile } from './vault.js';
 import { hashContent, parseNote } from './parser.js';
 
@@ -49,18 +49,19 @@ export function cosineSimilarity(a: number[], b: number[]): number {
 const EMBEDDING_DIMENSIONS = 768;
 
 /** Embeds a batch of texts in one call. `title` gives each chunk surrounding context for a better vector. */
-async function embedTexts(model: string, title: string, texts: string[]): Promise<number[][]> {
+async function embedTexts(db: DB, model: string, title: string, texts: string[]): Promise<number[][]> {
   if (texts.length === 0) return [];
-  return embedContent(
+  return (await new ModelGateway(db).embedCached(
     model,
     texts.map((t) => `Note: ${title}\n\n${t}`),
     EMBEDDING_DIMENSIONS,
-  );
+    'embedding',
+  )).value;
 }
 
 /** Embeds a bare query string (no note-title context to prepend). */
-export async function embedQuery(model: string, query: string): Promise<number[]> {
-  return (await embedContent(model, [query], EMBEDDING_DIMENSIONS))[0] ?? [];
+export async function embedQuery(db: DB, model: string, query: string): Promise<number[]> {
+  return (await new ModelGateway(db).embedCached(model, [query], EMBEDDING_DIMENSIONS, 'embedding')).value[0] ?? [];
 }
 
 function existingChunkHash(db: DB, noteId: string): string | null {
@@ -86,7 +87,7 @@ export async function embedNoteIfStale(db: DB, root: string, id: string, aiEnabl
 
   let vectors: number[][];
   try {
-    vectors = await embedTexts(embeddingModel, parsed.title, pieces);
+    vectors = await embedTexts(db, embeddingModel, parsed.title, pieces);
   } catch {
     // Offline or API error — leave the note unembedded; it'll retry on the next save/reindex.
     return;

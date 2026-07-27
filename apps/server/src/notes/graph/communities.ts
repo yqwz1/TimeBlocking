@@ -8,7 +8,9 @@ import type { DB } from '../../db/client.js';
 import { getSettings } from '../../settings.js';
 import { aiConfigured } from '../../ai/client.js';
 import { nameCommunity } from '../../ai/notesAi.js';
+import { ModelGateway } from '../../assistant/modelGateway.js';
 import type { RawEdge } from './edges.js';
+import { completeGraphJob, failGraphJob, queueGraphJob, startGraphJob } from './jobs.js';
 
 /**
  * The Graph — G4. Hierarchical community detection (Louvain at three resolutions) over the combined
@@ -234,7 +236,7 @@ export async function nameStaleCommunities(db: DB, settings: Settings): Promise<
     const memberTitles = members.map((m) => titleById.get(m)).filter((t): t is string => !!t).slice(0, 40);
     let result;
     try {
-      result = await nameCommunity(settings.aiModel, memberTitles);
+      result = await nameCommunity(new ModelGateway(db), settings.aiModel, memberTitles);
     } catch {
       break; // offline / quota — stop; the rest keep their fallback and retry on the next pass
     }
@@ -258,12 +260,15 @@ async function runNaming(db: DB): Promise<void> {
     return;
   }
   running = true;
+  startGraphJob(db, 'community-labels');
   try {
     do {
       pending = false;
       await nameStaleCommunities(db, getSettings(db));
     } while (pending);
-  } catch {
+    completeGraphJob(db, 'community-labels');
+  } catch (error) {
+    failGraphJob(db, 'community-labels', error);
     // rebuildable cache — swallow
   } finally {
     running = false;
@@ -272,6 +277,7 @@ async function runNaming(db: DB): Promise<void> {
 
 /** Debounced, fire-and-forget community naming — fires after the graph recompute has written the communities. */
 export function triggerCommunityNaming(db: DB): void {
+  queueGraphJob(db, 'community-labels');
   if (timer) clearTimeout(timer);
   timer = setTimeout(() => {
     timer = null;

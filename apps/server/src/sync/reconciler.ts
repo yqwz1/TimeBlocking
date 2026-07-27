@@ -16,6 +16,7 @@ import { awardBlockDone } from '../gamification/engine.js';
 import type { DesiredBlock, PlanHabitInput, PlanInput, PlanResult, PlanTaskInput } from '../scheduler/types.js';
 import { blockHash } from './hash.js';
 import { APP_TAG, eventIdForBlock, type Gcal, type GEvent } from '../integrations/google/client.js';
+import { triggerGraphRecompute } from '../notes/graph/recompute.js';
 
 export interface RunSummary {
   created: number;
@@ -503,6 +504,8 @@ export async function applyCompletionToCalendar(db: DB, gcal: Gcal | null, setti
     }
     recordTaskDone(db, settings, taskId, nowUtcIso());
   }
+  // Phase 4: completed linked blocks change Second Brain time-attention halos.
+  triggerGraphRecompute(db);
 }
 
 /** Task(s) deleted (locally): cancel any live calendar event. `gcal` may be null. */

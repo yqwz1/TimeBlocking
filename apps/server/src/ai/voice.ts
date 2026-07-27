@@ -1,7 +1,7 @@
 import { VoiceInterpretationSchema, type VoiceInterpretationDTO } from '@timeblock/shared';
 import { DateTime } from 'luxon';
 import { z } from 'zod';
-import { generateAudioJson } from './client.js';
+import { ModelGateway } from '../assistant/modelGateway.js';
 
 const RawTaskSchema = z.object({
   content: z.string(),
@@ -139,6 +139,7 @@ export function normalizeVoiceInterpretation(rawInput: unknown, context: VoiceIn
 }
 
 export async function interpretVoiceAudio(
+  gateway: ModelGateway,
   model: string,
   audio: Buffer,
   mimeType: string,
@@ -161,7 +162,7 @@ export async function interpretVoiceAudio(
     .filter(Boolean)
     .join('\n');
 
-  const response = await generateAudioJson<unknown>(model, prompt, audio, mimeType, {
+  const response = (await gateway.generateAudioStructured<unknown>({ task: 'extraction', promptVersion: 'voice-v2', model, prompt, schema: {
         type: 'object',
         properties: {
           transcript: { type: 'string' },
@@ -195,6 +196,6 @@ export async function interpretVoiceAudio(
         },
         required: ['transcript', 'language', 'intent', 'task', 'note', 'warnings'],
         additionalProperties: false,
-  });
+  }, validate: (value) => value }, audio, mimeType)).value;
   return normalizeVoiceInterpretation(response, context);
 }

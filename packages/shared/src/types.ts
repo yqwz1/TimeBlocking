@@ -102,8 +102,22 @@ export const SettingsSchema = z.object({
   notesTemplatesFolder: z.string().min(1),
   /** Vault-relative folder weekly digests are written to, e.g. "Digests". */
   notesDigestFolder: z.string().min(1),
+  /** Vault-relative folder AI-written content drafts are written to, e.g. "Content/Drafts". */
+  notesContentDraftsFolder: z.string().min(1),
+  /** Root inbox folder for fast capture workflows, e.g. "Inbox". */
+  notesInboxFolder: z.string().min(1),
+  /** Vault-relative folder where pasted images and recorded audio are stored. */
+  notesAttachmentsFolder: z.string().min(1),
+  /** Toggle OCR text extraction for pasted screenshots/images in notes. */
+  notesImageOcrEnabled: z.boolean(),
+  /** Default editor chrome for notes. Zen mode can still be toggled per session. */
+  notesZenModeDefault: z.boolean(),
+  /** Enables a lightweight built-in Vim-style editing layer for CodeMirror. */
+  notesVimModeDefault: z.boolean(),
   /** System-prompt seed for Vault Chat — who you are, so answers are framed the way you'd want. */
   aiAboutMe: z.string(),
+  /** Example posts/snippets used to imitate the user's writing voice for content repurposing. */
+  aiWritingSamples: z.string(),
   /** Embedding model used for the Second Brain semantic index. `auto` selects a provider-appropriate default. */
   aiEmbeddingModel: z.string().min(1),
   /** Graph: min cosine similarity for a semantic edge between two notes. */
@@ -116,6 +130,42 @@ export const SettingsSchema = z.object({
   graphFreshnessFadeDays: z.number().int().min(1).max(3650),
   /** Graph: min cosine similarity for a note pair to be proposed as a suggested [[wikilink]] (G6 §7 ghost edges). */
   graphSuggestThreshold: z.number().min(0).max(1),
+  /** Graph: camera ratio at which labels become visible (LOD). */
+  graphLodLabelThreshold: z.number().min(0.01).max(20),
+  /** Graph: hide non-essential edge layers above this camera ratio (LOD). */
+  graphLodEdgeThreshold: z.number().min(0.01).max(20),
+  /** Graph: initial visibility for the optional semantic edge layer. */
+  graphDefaultSemanticEdges: z.boolean(),
+  /** Graph: initial visibility for the optional tag co-occurrence layer. */
+  graphDefaultTagEdges: z.boolean(),
+  /** Graph: initial visibility for extracted concept nodes. */
+  graphDefaultConceptLayer: z.boolean(),
+  /** Google Drive mirror: 0 disables automatic snapshots; otherwise run every N hours. */
+  driveBackupIntervalHours: z.number().int().min(0).max(24 * 31),
+  /** Number of app-created vault snapshots retained in Drive. */
+  driveBackupRetention: z.number().int().min(1).max(365),
+  /** Optional passphrase for AES-encrypting Drive backup archives before upload. */
+  driveBackupPassphrase: z.string(),
+  /** Enables the broader Drive read-only permission for search, import, and indexing. */
+  driveReadOnlyEnabled: z.boolean(),
+  /** Explicit Drive folder ids selected for the separate external-document index. */
+  driveIndexedFolderIds: z.array(z.string()),
+  /** Master flag for the durable chief-of-staff runtime. Turning it off keeps legacy Vault Chat available. */
+  assistantEnabled: z.boolean(),
+  /** Enables explainable personal memory and candidate review. */
+  assistantMemoryEnabled: z.boolean(),
+  /** Enables persisted, approval-gated action proposals. */
+  assistantActionsEnabled: z.boolean(),
+  /** Enables daily/weekly briefs and budgeted proactive insights. */
+  assistantProactiveEnabled: z.boolean(),
+  /** Enables opt-in communication connector configuration. */
+  assistantConnectorsEnabled: z.boolean(),
+  /** Quiet-hours start for proactive notifications, in local HH:mm time. */
+  assistantQuietHoursStart: z.string().regex(HHMM),
+  /** Quiet-hours end for proactive notifications, in local HH:mm time. */
+  assistantQuietHoursEnd: z.string().regex(HHMM),
+  /** Maximum proactive alerts surfaced per local day. */
+  assistantDailyNotificationBudget: z.number().int().min(0).max(20),
 });
 export type Settings = z.infer<typeof SettingsSchema>;
 export type StreakRule = Settings['streakRule'];
@@ -169,15 +219,71 @@ export const DEFAULT_SETTINGS: Settings = {
   notesDailyFolder: 'Daily',
   notesTemplatesFolder: 'Templates',
   notesDigestFolder: 'Digests',
+  notesContentDraftsFolder: 'Content/Drafts',
+  notesInboxFolder: 'Inbox',
+  notesAttachmentsFolder: 'Attachments',
+  notesImageOcrEnabled: true,
+  notesZenModeDefault: false,
+  notesVimModeDefault: false,
   aiAboutMe:
     'Software engineering student and game developer (Unity/C#), also works with web stacks. Juggles university, a co-op placement, side projects, community leadership, and content creation. Notes mix project logs, university material, game design ideas, career/job-hunt notes, and daily planning — in both Arabic and English. Prefers direct, practical answers and step-by-step breakdowns.',
+  aiWritingSamples: '',
   aiEmbeddingModel: 'auto',
   graphSemanticThreshold: 0.78,
   graphSemanticTopK: 5,
   graphTagCoocMin: 1,
   graphFreshnessFadeDays: 45,
   graphSuggestThreshold: 0.82,
+  graphLodLabelThreshold: 0.9,
+  graphLodEdgeThreshold: 1.35,
+  graphDefaultSemanticEdges: true,
+  graphDefaultTagEdges: true,
+  graphDefaultConceptLayer: true,
+  driveBackupIntervalHours: 24,
+  driveBackupRetention: 14,
+  driveBackupPassphrase: '',
+  driveReadOnlyEnabled: false,
+  driveIndexedFolderIds: [],
+  assistantEnabled: true,
+  assistantMemoryEnabled: true,
+  assistantActionsEnabled: true,
+  assistantProactiveEnabled: true,
+  assistantConnectorsEnabled: false,
+  assistantQuietHoursStart: '21:30',
+  assistantQuietHoursEnd: '07:30',
+  assistantDailyNotificationBudget: 3,
 };
+
+// ---------- Google Drive (Phase 5) ----------
+
+export interface DriveConnectionDTO {
+  connected: boolean;
+  accountEmail: string | null;
+  encryptionConfigured: boolean;
+  readOnlyGranted: boolean;
+}
+
+export interface DriveBackupDTO {
+  id: string;
+  name: string;
+  createdAt: string | null;
+  size: number | null;
+  webViewLink: string | null;
+}
+
+export interface DriveBackupStatusDTO {
+  lastBackupAt: string | null;
+  lastBackupError: string | null;
+  running: boolean;
+}
+
+export interface DriveFileDTO {
+  id: string;
+  name: string;
+  mimeType: string;
+  modifiedTime: string | null;
+  webViewLink: string | null;
+}
 
 // ---------- Habits ----------
 
@@ -1064,6 +1170,43 @@ export const NoteMoveSchema = z.object({
 });
 export type NoteMoveInput = z.infer<typeof NoteMoveSchema>;
 
+export const NoteDraftLinkedInSchema = z.object({
+  id: z.string().min(1),
+  language: z.enum(['ar', 'en']),
+});
+export type NoteDraftLinkedInInput = z.infer<typeof NoteDraftLinkedInSchema>;
+
+export interface NoteShareDTO {
+  noteId: string;
+  token: string | null;
+  shareUrl: string | null;
+  createdAt: string | null;
+  revokedAt: string | null;
+  active: boolean;
+}
+
+export interface PublicNoteDTO {
+  noteId: string;
+  title: string;
+  content: string;
+  publishedAt: string;
+}
+
+export interface NoteSnapshotDTO {
+  id: string;
+  createdAt: string;
+  sizeBytes: number;
+}
+
+export interface NoteSnapshotDetailDTO extends NoteSnapshotDTO {
+  content: string;
+}
+
+export const NoteRestoreSnapshotSchema = z.object({
+  snapshotId: z.string().min(1),
+});
+export type NoteRestoreSnapshotInput = z.infer<typeof NoteRestoreSnapshotSchema>;
+
 export interface NoteConflictDTO {
   error: 'conflict';
   serverContent: string;
@@ -1112,6 +1255,8 @@ export interface RelatedNoteDTO {
 
 export const NoteChatSchema = z.object({
   message: z.string().min(1),
+  /** Optional explicit graph scope for community chat and multi-note summaries. */
+  focusNoteIds: z.array(z.string().min(1)).max(80).optional(),
   history: z
     .array(
       z.object({
@@ -1137,12 +1282,506 @@ export interface NoteChatResponseDTO {
   focusNoteIds: string[];
 }
 
+// ---------- Personal intelligence / chief of staff ----------
+
+export type KnowledgeSourceType =
+  | 'note'
+  | 'task'
+  | 'goal'
+  | 'habit'
+  | 'calendar'
+  | 'reflection'
+  | 'weekly_review'
+  | 'communication'
+  | 'assistant'
+  | 'manual';
+
+export interface EvidenceRef {
+  id: string;
+  sourceType: KnowledgeSourceType;
+  sourceId: string;
+  title: string;
+  excerpt: string;
+  occurredAt: string | null;
+  deepLink: string | null;
+  contentHash: string | null;
+}
+
+export interface KnowledgeRecord {
+  id: string;
+  sourceType: KnowledgeSourceType;
+  sourceId: string;
+  sourceVersion: string;
+  title: string;
+  excerpt: string;
+  occurredAt: string | null;
+  sensitivity: 'normal' | 'sensitive';
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
+}
+
+export type KnowledgeEntityKind = 'person' | 'project' | 'organization' | 'topic' | 'goal' | 'commitment' | 'decision';
+
+export interface KnowledgeEntity {
+  id: string;
+  kind: KnowledgeEntityKind;
+  canonicalName: string;
+  aliases: string[];
+  description: string;
+  status: 'candidate' | 'confirmed' | 'rejected' | 'merged';
+  sensitivity: 'normal' | 'sensitive';
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface KnowledgeRelation {
+  id: string;
+  sourceEntityId: string;
+  targetEntityId: string;
+  type: string;
+  confidence: number;
+  status: 'candidate' | 'confirmed' | 'rejected';
+  validFrom: string | null;
+  validTo: string | null;
+  evidence: EvidenceRef[];
+}
+
+export type MemoryClass =
+  | 'identity_fact'
+  | 'preference'
+  | 'value'
+  | 'relationship'
+  | 'skill'
+  | 'routine'
+  | 'constraint'
+  | 'active_goal'
+  | 'decision'
+  | 'temporary_context';
+
+export type MemoryStatus = 'candidate' | 'confirmed' | 'rejected' | 'contradicted' | 'expired' | 'forgotten';
+
+export interface MemoryClaim {
+  id: string;
+  memoryClass: MemoryClass;
+  claim: string;
+  status: MemoryStatus;
+  confidence: number;
+  sensitivity: 'normal' | 'sensitive';
+  validFrom: string | null;
+  validTo: string | null;
+  expiresAt: string | null;
+  lastUsedAt: string | null;
+  supersedesId: string | null;
+  contradictedById: string | null;
+  evidence: EvidenceRef[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const MemoryClaimInputSchema = z.object({
+  memoryClass: z.enum([
+    'identity_fact',
+    'preference',
+    'value',
+    'relationship',
+    'skill',
+    'routine',
+    'constraint',
+    'active_goal',
+    'decision',
+    'temporary_context',
+  ]),
+  claim: z.string().min(1).max(2_000),
+  sensitivity: z.enum(['normal', 'sensitive']).default('normal'),
+  expiresAt: z.string().datetime().nullable().optional(),
+  evidence: z
+    .array(
+      z.object({
+        sourceType: z.enum(['note', 'task', 'goal', 'habit', 'calendar', 'reflection', 'weekly_review', 'communication', 'assistant', 'manual']),
+        sourceId: z.string().min(1),
+        title: z.string().min(1),
+        excerpt: z.string().max(2_000),
+        occurredAt: z.string().nullable().optional(),
+        deepLink: z.string().nullable().optional(),
+        contentHash: z.string().nullable().optional(),
+      }),
+    )
+    .max(20)
+    .optional(),
+});
+export type MemoryClaimInput = z.infer<typeof MemoryClaimInputSchema>;
+
+export const MemoryClaimPatchSchema = MemoryClaimInputSchema.partial().extend({
+  status: z.enum(['candidate', 'confirmed', 'rejected', 'contradicted', 'expired', 'forgotten']).optional(),
+  confidence: z.number().min(0).max(1).optional(),
+});
+export type MemoryClaimPatch = z.infer<typeof MemoryClaimPatchSchema>;
+
+export interface AssistantThread {
+  id: string;
+  title: string;
+  status: 'active' | 'archived';
+  createdAt: string;
+  updatedAt: string;
+  lastMessageAt: string | null;
+}
+
+export interface AssistantMessage {
+  id: string;
+  threadId: string;
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  citations: EvidenceRef[];
+  memoriesUsed: string[];
+  uncertainties: string[];
+  proposedActionIds: string[];
+  createdAt: string;
+}
+
+export interface ContextPack {
+  query: string;
+  records: KnowledgeRecord[];
+  evidence: EvidenceRef[];
+  confirmedMemories: MemoryClaim[];
+  candidateMemories: MemoryClaim[];
+  generatedAt: string;
+}
+
+export type ActionProposalType =
+  | 'create_task'
+  | 'update_task'
+  | 'create_reminder'
+  | 'create_note'
+  | 'create_goal'
+  | 'schedule_change'
+  | 'create_commitment'
+  | 'draft_communication'
+  | 'send_communication';
+
+export type ActionProposalStatus = 'draft' | 'approved' | 'executing' | 'completed' | 'rejected' | 'failed' | 'expired';
+
+export interface ActionProposal {
+  id: string;
+  type: ActionProposalType;
+  status: ActionProposalStatus;
+  title: string;
+  preview: string;
+  payload: Record<string, unknown>;
+  reasoning: string;
+  evidence: EvidenceRef[];
+  riskLevel: 'low' | 'medium' | 'high' | 'critical';
+  expiresAt: string;
+  affectedRecords: string[];
+  freshnessVersion: string;
+  idempotencyKey: string;
+  error: string | null;
+  createdAt: string;
+  updatedAt: string;
+  executedAt: string | null;
+}
+
+export const AssistantChatSchema = z.object({
+  threadId: z.string().uuid().optional(),
+  message: z.string().min(1).max(20_000),
+  focusNoteIds: z.array(z.string().min(1)).max(80).optional(),
+});
+export type AssistantChatInput = z.infer<typeof AssistantChatSchema>;
+
+export interface AssistantChatResponse {
+  thread: AssistantThread;
+  message: AssistantMessage;
+  citations: EvidenceRef[];
+  memoriesUsed: MemoryClaim[];
+  uncertainties: string[];
+  proposedActions: ActionProposal[];
+  focusNoteIds: string[];
+}
+
+export type ConnectorProvider = 'gmail' | 'outlook' | 'slack' | 'teams';
+
+export interface ConnectorAccount {
+  id: string;
+  provider: ConnectorProvider;
+  accountLabel: string;
+  status: 'disconnected' | 'connected' | 'syncing' | 'error' | 'revoked';
+  selectedScopes: string[];
+  selectedSources: string[];
+  aiProcessingEnabled: boolean;
+  lastCursor: string | null;
+  lastSyncedAt: string | null;
+  lastError: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Commitment {
+  id: string;
+  direction: 'by_me' | 'to_me';
+  title: string;
+  details: string;
+  personEntityId: string | null;
+  dueAt: string | null;
+  status: 'open' | 'waiting' | 'done' | 'cancelled';
+  evidence: EvidenceRef[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Decision {
+  id: string;
+  title: string;
+  decision: string;
+  rationale: string;
+  alternatives: string[];
+  participantEntityIds: string[];
+  outcome: string | null;
+  decidedAt: string;
+  evidence: EvidenceRef[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ProactiveInsight {
+  id: string;
+  kind:
+    | 'calendar_conflict'
+    | 'forgotten_commitment'
+    | 'goal_drift'
+    | 'meeting_prep'
+    | 'forgotten_knowledge'
+    | 'work_pattern'
+    | 'opportunity';
+  title: string;
+  body: string;
+  priority: 'low' | 'medium' | 'high';
+  status: 'new' | 'seen' | 'dismissed' | 'acted_on';
+  evidence: EvidenceRef[];
+  cooldownKey: string;
+  surfacedAt: string | null;
+  expiresAt: string | null;
+  createdAt: string;
+}
+
+export interface ChiefOfStaffBriefing {
+  kind: 'daily' | 'weekly';
+  title: string;
+  generatedAt: string;
+  summary: string;
+  sections: Array<{ title: string; items: Array<{ text: string; citationIds: string[] }> }>;
+  citations: EvidenceRef[];
+  proposedActions: ActionProposal[];
+}
+
 export interface NoteSuggestionsDTO {
   /** Suggested wikilink targets — existing note titles or new ones, never auto-inserted. */
   links: string[];
   /** Suggested #tags, without the leading "#". */
   tags: string[];
 }
+
+export interface InboxNoteDTO extends NoteSummaryDTO {
+  captureType: string | null;
+  capturedAt: string | null;
+  source: string | null;
+  processed: boolean;
+}
+
+export const QuickCaptureSchema = z.object({
+  text: z.string().min(1),
+  title: z.string().optional(),
+  /** Vault-relative destination; defaults to Inbox/Quick. */
+  folder: z.string().optional(),
+  sourceUrl: z.string().url().optional(),
+});
+export type QuickCaptureInput = z.infer<typeof QuickCaptureSchema>;
+
+export const ClipUrlSchema = z.object({
+  url: z.string().url(),
+  summarize: z.boolean().optional(),
+  folder: z.string().optional(),
+});
+export type ClipUrlInput = z.infer<typeof ClipUrlSchema>;
+
+export interface NoteAssetUploadDTO {
+  /** Vault-relative asset path. */
+  path: string;
+  /** Markdown snippet safe to insert into the note. */
+  markdown: string;
+  /** OCR text extracted from an image, null when disabled/unavailable/not applicable. */
+  ocrText: string | null;
+}
+
+export type NoteQueryTaskState = 'open' | 'done' | 'all';
+export type NoteQuerySort = 'modified' | 'created' | 'title';
+
+export interface NoteQueryDefinitionDTO {
+  raw: string;
+  tags: string[];
+  folders: string[];
+  task: NoteQueryTaskState | null;
+  text: string | null;
+  createdFrom: string | null;
+  createdTo: string | null;
+  modifiedFrom: string | null;
+  modifiedTo: string | null;
+  sort: NoteQuerySort;
+}
+
+export interface NoteQueryNoteRowDTO {
+  kind: 'note';
+  id: string;
+  title: string;
+  tags: string[];
+  folder: string;
+  openTasks: number;
+  createdAt: string | null;
+  updatedAt: string | null;
+}
+
+export interface NoteQueryTaskRowDTO {
+  kind: 'task';
+  id: string;
+  noteId: string;
+  noteTitle: string;
+  notePath: string;
+  line: number;
+  text: string;
+  completed: boolean;
+  tags: string[];
+  due: string | null;
+  estimateMinutes: number | null;
+  status: string | null;
+}
+
+export interface NoteQueryResultDTO {
+  query: NoteQueryDefinitionDTO;
+  resultKind: 'notes' | 'tasks';
+  rows: Array<NoteQueryNoteRowDTO | NoteQueryTaskRowDTO>;
+}
+
+export const NoteQuerySchema = z.object({
+  query: z.string().min(1),
+});
+export type NoteQueryInput = z.infer<typeof NoteQuerySchema>;
+
+export interface VaultTaskDTO {
+  id: string;
+  noteId: string;
+  noteTitle: string;
+  notePath: string;
+  line: number;
+  text: string;
+  completed: boolean;
+  tags: string[];
+  due: string | null;
+  estimateMinutes: number | null;
+  status: string | null;
+}
+
+export interface VaultTaskGroupDTO {
+  noteId: string;
+  noteTitle: string;
+  notePath: string;
+  tasks: VaultTaskDTO[];
+}
+
+export interface VaultTaskBoardColumnDTO {
+  status: string;
+  label: string;
+  tasks: VaultTaskDTO[];
+}
+
+export interface VaultTaskHubDTO {
+  tasks: VaultTaskDTO[];
+  groups: VaultTaskGroupDTO[];
+  board: VaultTaskBoardColumnDTO[];
+}
+
+export const VaultTaskToggleSchema = z.object({
+  completed: z.boolean(),
+});
+export type VaultTaskToggleInput = z.infer<typeof VaultTaskToggleSchema>;
+
+export interface StudyCardDTO {
+  id: string;
+  noteId: string;
+  noteTitle: string;
+  kind: 'qa';
+  prompt: string;
+  answer: string;
+  dueDate: string;
+  easeFactor: number;
+  intervalDays: number;
+  repetitions: number;
+  lastReviewedAt: string | null;
+}
+
+export interface StudyQueueDTO {
+  dueToday: number;
+  dueCards: StudyCardDTO[];
+}
+
+export const StudyReviewSchema = z.object({
+  cardId: z.string().min(1),
+  rating: z.enum(['again', 'hard', 'good', 'easy']),
+});
+export type StudyReviewInput = z.infer<typeof StudyReviewSchema>;
+
+export interface StudyReviewResultDTO {
+  card: StudyCardDTO;
+  nextDueDate: string;
+}
+
+export const StudyReviewBlockSchema = z.object({
+  noteId: z.string().optional(),
+  durationMin: z.number().int().min(5).max(180).optional(),
+});
+export type StudyReviewBlockInput = z.infer<typeof StudyReviewBlockSchema>;
+
+export interface StudyReviewBlockDTO {
+  taskId: string;
+  content: string;
+  noteId: string | null;
+}
+
+export interface OnThisDayBucketDTO {
+  label: string;
+  anchorDate: string;
+  notes: NoteQueryNoteRowDTO[];
+}
+
+export interface OnThisDayDTO {
+  date: string;
+  buckets: OnThisDayBucketDTO[];
+}
+
+export type NoteExportFormat = 'pdf' | 'docx';
+export type NoteExportKind = 'note' | 'folder';
+
+export const NoteExportSchema = z.object({
+  kind: z.enum(['note', 'folder']),
+  target: z.string(),
+  format: z.enum(['pdf', 'docx']),
+});
+export type NoteExportInput = z.infer<typeof NoteExportSchema>;
+
+export interface InboxTriageSuggestionDTO {
+  suggestedTitle: string;
+  destinationFolder: string;
+  tags: string[];
+  links: string[];
+  summary: string;
+}
+
+export const InboxTriageApplySchema = z.object({
+  id: z.string().min(1),
+  title: z.string().min(1),
+  destinationFolder: z.string().min(1),
+  tags: z.array(z.string()),
+  links: z.array(z.string()),
+});
+export type InboxTriageApplyInput = z.infer<typeof InboxTriageApplySchema>;
 
 /** person / project / technology / idea — the categories the concept extractor assigns (G3). */
 export type ConceptType = 'person' | 'project' | 'technology' | 'idea';
@@ -1165,6 +1804,8 @@ export interface NoteGraphNodeDTO {
   betweenness: number;
   /** Count of open `- [ ]` checkbox tasks in the note body. */
   openTasks: number;
+  /** Completed time-block minutes linked back to this note (Phase 4 attention halo). */
+  timeSpentMin: number;
   /** Whole days since the note was last modified — drives the freshness/opacity encoding. */
   freshnessDays: number;
   /** Node kind (G3). Concept nodes carry the entity name in `title` and a `conceptType`. */
@@ -1175,6 +1816,10 @@ export interface NoteGraphNodeDTO {
   communityId: string | null;
   /** G4: the coarse community's label (AI or fallback), for legends and the G6 §5 "cluster" filter. */
   communityLabel: string | null;
+  /** Short plain-text excerpt used by the delayed graph hover preview. */
+  preview: string;
+  createdAt: string | null;
+  updatedAt: string | null;
 }
 
 /** explicit = [[wikilink]]; semantic = embedding similarity; tag = shared tags; concept = note↔extracted-entity; suggested = AI-proposed link (G6 §7 ghost edge). */
@@ -1212,7 +1857,65 @@ export interface NoteGraphDTO {
   edges: NoteGraphEdgeDTO[];
   /** Whether the cached metrics/edges index is populated (false = a recompute was just triggered). */
   indexReady: boolean;
+  /** Cached ForceAtlas position by node id. New nodes may be absent and settle incrementally in the worker. */
+  layout: Record<string, { x: number; y: number; pinned: boolean }>;
+  freshness: GraphIndexFreshnessDTO;
+  /** Set for a reconstructed historical frame; null means the live vault. */
+  era: GraphEraDTO | null;
 }
+
+export interface GraphEraDTO {
+  at: string;
+  weekStart: string;
+  label: string;
+  noteCount: number;
+  communityLabels: string[];
+}
+
+export interface GraphTimelineDTO {
+  weeks: GraphEraDTO[];
+  currentWeek: string;
+}
+
+export type GraphJobStatus = 'idle' | 'queued' | 'running' | 'completed' | 'failed';
+
+export interface GraphJobDTO {
+  name: string;
+  status: GraphJobStatus;
+  progress: number;
+  cursor: string | null;
+  queuedAt: string | null;
+  startedAt: string | null;
+  completedAt: string | null;
+  error: string | null;
+}
+
+export interface GraphIndexFreshnessDTO {
+  status: 'fresh' | 'updating' | 'stale' | 'error';
+  indexedAt: string | null;
+  staleSince: string | null;
+  jobs: GraphJobDTO[];
+}
+
+export interface GraphLayoutPointDTO {
+  nodeId: string;
+  x: number;
+  y: number;
+  pinned?: boolean;
+}
+
+export const GraphLayoutSaveSchema = z.object({
+  mode: z.string().min(1).max(40),
+  points: z.array(
+    z.object({
+      nodeId: z.string().min(1),
+      x: z.number().finite(),
+      y: z.number().finite(),
+      pinned: z.boolean().optional(),
+    }),
+  ).max(20_000),
+});
+export type GraphLayoutSaveInput = z.infer<typeof GraphLayoutSaveSchema>;
 
 // ── G6 §5 — Ask the graph in natural language ────────────────────────────────
 

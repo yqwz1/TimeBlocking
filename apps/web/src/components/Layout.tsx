@@ -1,11 +1,14 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { FilePlus2 } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
-import { NavLink, useLocation, useOutlet } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate, useOutlet } from 'react-router-dom';
 import { useLiveSync, useSettings, useSetupStatus } from '../hooks.js';
 import { useTheme } from '../hooks/useTheme.js';
+import CommandPalette from './CommandPalette.js';
 import { useUndoRedoShortcuts } from '../lib/undoStack.js';
 import { pageVariants, springs } from '../lib/motion.js';
 import { setSoundEnabled } from '../lib/sound.js';
+import { useCommandPaletteState } from '../lib/commandPalette.js';
 import SyncStatusBar from './SyncStatusBar.js';
 import ScheduleStateChip from './ScheduleStateChip.js';
 import UndoRedoControls from './UndoRedoControls.js';
@@ -15,6 +18,7 @@ import ReminderToasts from './ReminderToasts.js';
 import UndoToasts from './UndoToasts.js';
 import ConfettiBurst from './ConfettiBurst.js';
 import VoiceCapture from './VoiceCapture.js';
+import QuickCaptureModal from './notes/QuickCaptureModal.js';
 
 function ThemeToggle({ gameMode }: { gameMode: boolean }) {
   const { setting, resolved, setSetting } = useTheme();
@@ -46,6 +50,10 @@ export default function Layout() {
   useLiveSync();
   useUndoRedoShortcuts();
   const { data: settings } = useSettings();
+  const { scopedCommands } = useCommandPaletteState();
+  const navigate = useNavigate();
+  const [showQuickCapture, setShowQuickCapture] = useState(false);
+  const [showCommandPalette, setShowCommandPalette] = useState(false);
   useEffect(() => {
     if (settings) setSoundEnabled(settings.soundEffects);
   }, [settings?.soundEffects]);
@@ -55,6 +63,32 @@ export default function Layout() {
   const outlet = useOutlet();
   const gameMode = location.pathname.startsWith('/today');
   const fullBleed = location.pathname.startsWith('/tasks') || location.pathname.startsWith('/whiteboard') || location.pathname.startsWith('/notes');
+  const paletteCommands = useMemo(
+    () => [
+      { id: 'nav-tasks', title: 'Go to Tasks', subtitle: 'Open the task manager workspace', shortcut: 'G T', keywords: ['tasks schedule inbox calendar'], run: () => navigate('/tasks') },
+      { id: 'nav-whiteboard', title: 'Go to Whiteboard', subtitle: 'Open your whiteboards', shortcut: 'G W', keywords: ['board sketch draw'], run: () => navigate('/whiteboard') },
+      { id: 'nav-notes', title: 'Go to Second Brain', subtitle: 'Open your notes workspace', shortcut: 'G N', keywords: ['notes second brain vault'], run: () => navigate('/notes') },
+      { id: 'nav-settings', title: 'Open Settings', subtitle: 'Jump to app settings', shortcut: 'G S', keywords: ['settings preferences'], run: () => navigate('/settings') },
+      { id: 'quick-capture', title: 'Quick capture', subtitle: 'Create a fast note from anywhere', shortcut: 'Ctrl/Cmd+Shift+C', keywords: ['capture inbox note'], run: () => setShowQuickCapture(true) },
+      ...scopedCommands,
+    ],
+    [navigate, scopedCommands],
+  );
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      const mod = event.metaKey || event.ctrlKey;
+      if (mod && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        setShowCommandPalette(true);
+      } else if (mod && event.shiftKey && event.key.toLowerCase() === 'c') {
+        event.preventDefault();
+        setShowQuickCapture(true);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
 
   return (
     <div className={`flex h-dvh min-h-0 overflow-hidden flex-col transition-colors duration-300 ${gameMode ? 'bg-[#0b0f1a]' : 'dark:bg-neutral-950'}`}>
@@ -100,6 +134,19 @@ export default function Layout() {
             </nav>
           </div>
           <div className={`flex items-center gap-4 ${gameMode ? '[&_*]:text-slate-300' : ''}`}>
+            <button
+              type="button"
+              onClick={() => setShowQuickCapture(true)}
+              title="Quick capture (Ctrl/Cmd+Shift+C)"
+              className={`inline-flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-sm transition-colors ${
+                gameMode
+                  ? 'border-white/10 bg-white/5 text-slate-300 hover:border-teal-400/40 hover:bg-teal-400/10 hover:text-teal-300'
+                  : 'border-slate-200 bg-white text-slate-600 hover:border-teal-300 hover:bg-teal-50 hover:text-teal-700 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-300 dark:hover:border-teal-500/40 dark:hover:bg-teal-500/10 dark:hover:text-teal-300'
+              }`}
+            >
+              <FilePlus2 size={15} />
+              <span className="hidden sm:inline">Capture</span>
+            </button>
             <VoiceCapture gameMode={gameMode} />
             <UndoRedoControls gameMode={gameMode} />
             <ScheduleStateChip />
@@ -140,6 +187,16 @@ export default function Layout() {
       <ReminderToasts />
       <UndoToasts />
       <ConfettiBurst />
+      {showQuickCapture && (
+        <QuickCaptureModal
+          onClose={() => setShowQuickCapture(false)}
+          onCreated={(noteId) => {
+            setShowQuickCapture(false);
+            navigate(`/notes?note=${encodeURIComponent(noteId)}`);
+          }}
+        />
+      )}
+      {showCommandPalette && <CommandPalette commands={paletteCommands} onClose={() => setShowCommandPalette(false)} />}
     </div>
   );
 }

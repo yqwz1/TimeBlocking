@@ -18,14 +18,16 @@ import {
   X,
 } from 'lucide-react';
 import {
+  buildInboxNotePath,
   buildVoiceNotePath,
+  type NoteAssetUploadDTO,
   type NoteSummaryDTO,
   type TaskDifficulty,
   type VoiceInterpretationDTO,
 } from '@timeblock/shared';
 import { api } from '../api.js';
 import { useCreateTask, useLabels, useProjects, useSettings } from '../hooks.js';
-import { useCreateNote } from '../hooks/notes.js';
+import { encodeNotePath, useCreateNote } from '../hooks/notes.js';
 import { startBrowserSpeech, startWavRecording, type WavRecording } from '../lib/voiceRecorder.js';
 
 type Stage = 'idle' | 'requesting' | 'recording' | 'processing' | 'review' | 'error';
@@ -265,9 +267,36 @@ export default function VoiceCapture({ gameMode }: { gameMode: boolean }) {
         if (!title || !body) throw new Error('Add a note title and body before saving.');
         const existing = await api.get<NoteSummaryDTO[]>('/notes/tree');
         const zone = settings?.timezone || 'UTC';
-        const timestamp = DateTime.now().setZone(zone).toFormat('yyyy-LL-dd-HHmmss');
-        const path = buildVoiceNotePath(timestamp, title, existing.map((item) => item.id));
-        await createNote.mutateAsync({ path, content: `# ${title}\n\n${body}\n` });
+        const now = DateTime.now().setZone(zone);
+        const timestamp = now.toFormat('yyyy-LL-dd-HHmmss');
+        const path = buildInboxNotePath(`${settings?.notesInboxFolder || 'Inbox'}/Voice`, timestamp, title, existing.map((item) => item.id));
+        const baseContent = [
+          '---',
+          'capture: voice',
+          `capturedAt: ${now.toUTC().toISO()}`,
+          'processed: false',
+          'tags:',
+          '  - voice-capture',
+          '---',
+          '',
+          `# ${title}`,
+          '',
+          body,
+          '',
+        ].join('\n');
+        const created = await createNote.mutateAsync({ path, content: baseContent });
+        if (lastAudioRef.current) {
+          try {
+            const audioFile = new File([lastAudioRef.current], `${buildVoiceNotePath(timestamp, title).split('/').pop()?.replace(/\.md$/i, '') || 'voice-capture'}.wav`, { type: 'audio/wav' });
+            const asset = await api.upload<NoteAssetUploadDTO>(`/notes/file-asset/${encodeNotePath(created.id)}?kind=audio`, audioFile);
+            await api.put(`/notes/file/${encodeNotePath(created.id)}`, {
+              content: `${baseContent}## Source audio\n\n${asset.markdown}\n`,
+              expectedUpdatedAt: created.updatedAt,
+            });
+          } catch {
+            // Keep the inbox note even if the audio attachment upload fails.
+          }
+        }
       } else {
         throw new Error('Choose Task or Note before saving.');
       }
@@ -444,7 +473,7 @@ export default function VoiceCapture({ gameMode }: { gameMode: boolean }) {
                     <label className="block text-xs font-semibold text-slate-500 dark:text-neutral-400">Cleaned Markdown
                       <textarea dir="auto" rows={10} value={noteForm.body} onChange={(event) => setNoteForm({ ...noteForm, body: event.target.value })} className="mt-1.5 block w-full resize-y rounded-xl border border-slate-200 bg-white px-3 py-3 font-mono text-sm leading-6 text-slate-900 outline-none transition focus:border-teal-400 focus:ring-2 focus:ring-teal-500/10 dark:border-neutral-700 dark:bg-neutral-950 dark:text-neutral-100" />
                     </label>
-                    <p className="text-xs text-slate-400 dark:text-neutral-500">Saved as a new Markdown file inside Voice Notes.</p>
+                    <p className="text-xs text-slate-400 dark:text-neutral-500">Saved into your inbox voice folder, with the original recording attached when upload succeeds.</p>
                   </div>
                 )}
 

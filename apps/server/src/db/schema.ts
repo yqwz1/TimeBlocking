@@ -450,6 +450,18 @@ export const notes = sqliteTable(
   (t) => [index('idx_notes_title').on(t.title)],
 );
 
+/** A revocable public read-only share for a single note. At most one active link per note. */
+export const noteShares = sqliteTable(
+  'note_shares',
+  {
+    noteId: text('note_id').primaryKey(),
+    token: text('token').notNull(),
+    createdAtUtc: text('created_at_utc').notNull(),
+    revokedAtUtc: text('revoked_at_utc'),
+  },
+  (t) => [uniqueIndex('idx_note_shares_token').on(t.token)],
+);
+
 /** One row per `[[wikilink]]` found in a note. `targetId` is resolved by title match; null until a matching note exists. */
 export const noteLinks = sqliteTable(
   'note_links',
@@ -603,6 +615,52 @@ export const suggestedEdgeDismissals = sqliteTable(
   (t) => [primaryKey({ columns: [t.source, t.target] })],
 );
 
+/** Rebuildable graph layout cache. Physics stays in a Web Worker; settled positions make cold-open instant. */
+export const layoutCache = sqliteTable(
+  'layout_cache',
+  {
+    mode: text('mode').notNull(),
+    nodeId: text('node_id').notNull(),
+    x: real('x').notNull(),
+    y: real('y').notNull(),
+    pinned: integer('pinned').notNull().default(0),
+    updatedAtUtc: text('updated_at_utc'),
+  },
+  (t) => [primaryKey({ columns: [t.mode, t.nodeId] }), index('idx_layout_cache_mode').on(t.mode)],
+);
+
+/** Durable state for debounced, incremental, restart-safe Second Brain indexing jobs. */
+export const graphJobs = sqliteTable('graph_jobs', {
+  name: text('name').primaryKey(),
+  status: text('status').notNull().default('idle'),
+  progress: real('progress').notNull().default(0),
+  cursor: text('cursor'),
+  queuedAtUtc: text('queued_at_utc'),
+  startedAtUtc: text('started_at_utc'),
+  completedAtUtc: text('completed_at_utc'),
+  error: text('error'),
+});
+
+/** Phase 7 study layer: SM-2 state for Q:: / A:: flashcards extracted from notes. */
+export const studyCards = sqliteTable(
+  'study_cards',
+  {
+    id: text('id').primaryKey(),
+    noteId: text('note_id').notNull(),
+    kind: text('kind').notNull().default('qa'),
+    prompt: text('prompt').notNull(),
+    answer: text('answer').notNull(),
+    dueDate: text('due_date').notNull(), // local YYYY-MM-DD
+    easeFactor: real('ease_factor').notNull().default(2.5),
+    intervalDays: integer('interval_days').notNull().default(0),
+    repetitions: integer('repetitions').notNull().default(0),
+    lastReviewedAtUtc: text('last_reviewed_at_utc'),
+    createdAtUtc: text('created_at_utc'),
+    updatedAtUtc: text('updated_at_utc'),
+  },
+  (t) => [index('idx_study_cards_due').on(t.dueDate), index('idx_study_cards_note').on(t.noteId)],
+);
+
 /** One row per local week (Monday) holding the weekly review ritual. */
 export const weeklyReviews = sqliteTable('weekly_reviews', {
   weekStart: text('week_start').primaryKey(), // local Monday YYYY-MM-DD
@@ -620,3 +678,392 @@ export const weeklyReviews = sqliteTable('weekly_reviews', {
   createdAtUtc: text('created_at_utc'),
   updatedAtUtc: text('updated_at_utc'),
 });
+
+/** Stable, local source registry used by the personal-intelligence runtime. Source bodies remain in their native stores. */
+export const knowledgeRecords = sqliteTable(
+  'knowledge_records',
+  {
+    id: text('id').primaryKey(),
+    sourceType: text('source_type').notNull(),
+    sourceId: text('source_id').notNull(),
+    sourceVersion: text('source_version').notNull(),
+    title: text('title').notNull(),
+    excerpt: text('excerpt').notNull().default(''),
+    contentHash: text('content_hash'),
+    occurredAtUtc: text('occurred_at_utc'),
+    sensitivity: text('sensitivity').notNull().default('normal'),
+    createdAtUtc: text('created_at_utc').notNull(),
+    updatedAtUtc: text('updated_at_utc').notNull(),
+    deletedAtUtc: text('deleted_at_utc'),
+  },
+  (t) => [
+    uniqueIndex('idx_knowledge_source').on(t.sourceType, t.sourceId),
+    index('idx_knowledge_source_type').on(t.sourceType),
+    index('idx_knowledge_occurred').on(t.occurredAtUtc),
+  ],
+);
+
+/** Durable people/projects/topics promoted from rebuildable note concepts only after review. */
+export const knowledgeEntities = sqliteTable(
+  'knowledge_entities',
+  {
+    id: text('id').primaryKey(),
+    kind: text('kind').notNull(),
+    canonicalName: text('canonical_name').notNull(),
+    aliases: text('aliases').notNull().default('[]'),
+    description: text('description').notNull().default(''),
+    status: text('status').notNull().default('candidate'),
+    sensitivity: text('sensitivity').notNull().default('normal'),
+    mergedIntoId: text('merged_into_id'),
+    createdAtUtc: text('created_at_utc').notNull(),
+    updatedAtUtc: text('updated_at_utc').notNull(),
+  },
+  (t) => [index('idx_knowledge_entity_kind').on(t.kind), index('idx_knowledge_entity_status').on(t.status)],
+);
+
+export const knowledgeRelations = sqliteTable(
+  'knowledge_relations',
+  {
+    id: text('id').primaryKey(),
+    sourceEntityId: text('source_entity_id').notNull(),
+    targetEntityId: text('target_entity_id').notNull(),
+    type: text('type').notNull(),
+    confidence: real('confidence').notNull().default(0.5),
+    status: text('status').notNull().default('candidate'),
+    validFromUtc: text('valid_from_utc'),
+    validToUtc: text('valid_to_utc'),
+    evidenceIds: text('evidence_ids').notNull().default('[]'),
+    createdAtUtc: text('created_at_utc').notNull(),
+    updatedAtUtc: text('updated_at_utc').notNull(),
+  },
+  (t) => [
+    uniqueIndex('idx_knowledge_relation_unique').on(t.sourceEntityId, t.targetEntityId, t.type),
+    index('idx_knowledge_relation_source').on(t.sourceEntityId),
+    index('idx_knowledge_relation_target').on(t.targetEntityId),
+  ],
+);
+
+export const memoryClaims = sqliteTable(
+  'memory_claims',
+  {
+    id: text('id').primaryKey(),
+    memoryClass: text('memory_class').notNull(),
+    claim: text('claim').notNull(),
+    normalizedClaim: text('normalized_claim').notNull(),
+    status: text('status').notNull().default('candidate'),
+    confidence: real('confidence').notNull().default(0.5),
+    sensitivity: text('sensitivity').notNull().default('normal'),
+    validFromUtc: text('valid_from_utc'),
+    validToUtc: text('valid_to_utc'),
+    expiresAtUtc: text('expires_at_utc'),
+    lastUsedAtUtc: text('last_used_at_utc'),
+    supersedesId: text('supersedes_id'),
+    contradictedById: text('contradicted_by_id'),
+    createdAtUtc: text('created_at_utc').notNull(),
+    updatedAtUtc: text('updated_at_utc').notNull(),
+  },
+  (t) => [index('idx_memory_status').on(t.status), index('idx_memory_class').on(t.memoryClass)],
+);
+
+export const memoryEvidence = sqliteTable(
+  'memory_evidence',
+  {
+    memoryId: text('memory_id').notNull(),
+    knowledgeRecordId: text('knowledge_record_id').notNull(),
+    excerpt: text('excerpt').notNull().default(''),
+    createdAtUtc: text('created_at_utc').notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.memoryId, t.knowledgeRecordId] }),
+    index('idx_memory_evidence_record').on(t.knowledgeRecordId),
+  ],
+);
+
+export const assistantThreads = sqliteTable('assistant_threads', {
+  id: text('id').primaryKey(),
+  title: text('title').notNull(),
+  status: text('status').notNull().default('active'),
+  createdAtUtc: text('created_at_utc').notNull(),
+  updatedAtUtc: text('updated_at_utc').notNull(),
+  lastMessageAtUtc: text('last_message_at_utc'),
+});
+
+export const assistantMessages = sqliteTable(
+  'assistant_messages',
+  {
+    id: text('id').primaryKey(),
+    threadId: text('thread_id').notNull(),
+    role: text('role').notNull(),
+    content: text('content').notNull(),
+    citations: text('citations').notNull().default('[]'),
+    memoriesUsed: text('memories_used').notNull().default('[]'),
+    uncertainties: text('uncertainties').notNull().default('[]'),
+    proposedActionIds: text('proposed_action_ids').notNull().default('[]'),
+    createdAtUtc: text('created_at_utc').notNull(),
+  },
+  (t) => [index('idx_assistant_messages_thread').on(t.threadId, t.createdAtUtc)],
+);
+
+export const assistantSummaries = sqliteTable('assistant_summaries', {
+  threadId: text('thread_id').primaryKey(),
+  throughMessageId: text('through_message_id').notNull(),
+  summary: text('summary').notNull(),
+  updatedAtUtc: text('updated_at_utc').notNull(),
+});
+
+export const assistantFeedback = sqliteTable(
+  'assistant_feedback',
+  {
+    id: text('id').primaryKey(),
+    messageId: text('message_id').notNull(),
+    rating: text('rating').notNull(),
+    detail: text('detail').notNull().default(''),
+    createdAtUtc: text('created_at_utc').notNull(),
+  },
+  (t) => [uniqueIndex('idx_assistant_feedback_message').on(t.messageId)],
+);
+
+/** General durable queue: every handler leases a job before work and may safely retry after a restart. */
+export const durableJobs = sqliteTable(
+  'durable_jobs',
+  {
+    id: text('id').primaryKey(),
+    kind: text('kind').notNull(),
+    payload: text('payload').notNull().default('{}'),
+    status: text('status').notNull().default('queued'),
+    dedupeKey: text('dedupe_key'),
+    attempts: integer('attempts').notNull().default(0),
+    maxAttempts: integer('max_attempts').notNull().default(3),
+    availableAtUtc: text('available_at_utc').notNull(),
+    leaseOwner: text('lease_owner'),
+    leaseExpiresAtUtc: text('lease_expires_at_utc'),
+    checkpoint: text('checkpoint').notNull().default('{}'),
+    progress: real('progress').notNull().default(0),
+    lastError: text('last_error'),
+    createdAtUtc: text('created_at_utc').notNull(),
+    updatedAtUtc: text('updated_at_utc').notNull(),
+    completedAtUtc: text('completed_at_utc'),
+  },
+  (t) => [
+    uniqueIndex('idx_durable_jobs_dedupe').on(t.dedupeKey),
+    index('idx_durable_jobs_claim').on(t.status, t.availableAtUtc, t.leaseExpiresAtUtc),
+  ],
+);
+
+export const indexVersions = sqliteTable(
+  'index_versions',
+  {
+    id: text('id').primaryKey(),
+    kind: text('kind').notNull(),
+    model: text('model').notNull(),
+    dimensions: integer('dimensions'),
+    status: text('status').notNull().default('building'),
+    recordCount: integer('record_count').notNull().default(0),
+    activatedAtUtc: text('activated_at_utc'),
+    createdAtUtc: text('created_at_utc').notNull(),
+  },
+  (t) => [index('idx_index_versions_kind_status').on(t.kind, t.status)],
+);
+
+/** Embeddings are written under a building version, then atomically activated by flipping index_versions.status. */
+export const knowledgeEmbeddings = sqliteTable(
+  'knowledge_embeddings',
+  {
+    indexVersionId: text('index_version_id').notNull(),
+    recordId: text('record_id').notNull(),
+    contentHash: text('content_hash').notNull(),
+    vector: text('vector').notNull(),
+    createdAtUtc: text('created_at_utc').notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.indexVersionId, t.recordId] }),
+    index('idx_knowledge_embeddings_record').on(t.recordId),
+  ],
+);
+
+export const domainEvents = sqliteTable(
+  'domain_events',
+  {
+    seq: integer('seq').primaryKey({ autoIncrement: true }),
+    type: text('type').notNull(),
+    aggregateType: text('aggregate_type').notNull(),
+    aggregateId: text('aggregate_id').notNull(),
+    payload: text('payload').notNull().default('{}'),
+    occurredAtUtc: text('occurred_at_utc').notNull(),
+    processedAtUtc: text('processed_at_utc'),
+  },
+  (t) => [index('idx_domain_events_unprocessed').on(t.processedAtUtc, t.seq)],
+);
+
+export const aiRuns = sqliteTable(
+  'ai_runs',
+  {
+    id: text('id').primaryKey(),
+    task: text('task').notNull(),
+    provider: text('provider').notNull(),
+    model: text('model').notNull(),
+    promptVersion: text('prompt_version').notNull(),
+    cacheKey: text('cache_key'),
+    status: text('status').notNull(),
+    latencyMs: integer('latency_ms').notNull().default(0),
+    inputTokens: integer('input_tokens').notNull().default(0),
+    outputTokens: integer('output_tokens').notNull().default(0),
+    reasoningTokens: integer('reasoning_tokens').notNull().default(0),
+    billableTokens: integer('billable_tokens').notNull().default(0),
+    cachedTokens: integer('cached_tokens').notNull().default(0),
+    estimatedUsd: real('estimated_usd'),
+    routeTier: text('route_tier').notNull().default('cheap-cloud'),
+    parentAttemptId: text('parent_attempt_id'),
+    cacheStatus: text('cache_status').notNull().default('miss'),
+    escalationReason: text('escalation_reason'),
+    toolNames: text('tool_names').notNull().default('[]'),
+    contextBreakdown: text('context_breakdown').notNull().default('{}'),
+    retrievedRecordIds: text('retrieved_record_ids').notNull().default('[]'),
+    error: text('error'),
+    createdAtUtc: text('created_at_utc').notNull(),
+  },
+  (t) => [index('idx_ai_runs_task_created').on(t.task, t.createdAtUtc)],
+);
+
+export const aiResponseCache = sqliteTable('ai_response_cache', {
+  key: text('key').primaryKey(),
+  value: text('value').notNull(),
+  expiresAtUtc: text('expires_at_utc').notNull(),
+  createdAtUtc: text('created_at_utc').notNull(),
+});
+
+/** Content-addressed vectors shared by note and knowledge indexing. Raw source text is never persisted here. */
+export const aiEmbeddingCache = sqliteTable(
+  'ai_embedding_cache',
+  {
+    model: text('model').notNull(),
+    dimensions: integer('dimensions').notNull(),
+    contentHash: text('content_hash').notNull(),
+    vector: text('vector').notNull(),
+    createdAtUtc: text('created_at_utc').notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.model, t.dimensions, t.contentHash] })],
+);
+
+export const actionProposals = sqliteTable(
+  'action_proposals',
+  {
+    id: text('id').primaryKey(),
+    type: text('type').notNull(),
+    status: text('status').notNull().default('draft'),
+    title: text('title').notNull(),
+    preview: text('preview').notNull(),
+    payload: text('payload').notNull().default('{}'),
+    reasoning: text('reasoning').notNull().default(''),
+    evidenceIds: text('evidence_ids').notNull().default('[]'),
+    riskLevel: text('risk_level').notNull().default('low'),
+    expiresAtUtc: text('expires_at_utc').notNull(),
+    affectedRecords: text('affected_records').notNull().default('[]'),
+    freshnessVersion: text('freshness_version').notNull(),
+    idempotencyKey: text('idempotency_key').notNull(),
+    error: text('error'),
+    createdAtUtc: text('created_at_utc').notNull(),
+    updatedAtUtc: text('updated_at_utc').notNull(),
+    executedAtUtc: text('executed_at_utc'),
+  },
+  (t) => [uniqueIndex('idx_action_idempotency').on(t.idempotencyKey), index('idx_action_status').on(t.status)],
+);
+
+export const connectorAccounts = sqliteTable(
+  'connector_accounts',
+  {
+    id: text('id').primaryKey(),
+    provider: text('provider').notNull(),
+    accountLabel: text('account_label').notNull(),
+    status: text('status').notNull().default('disconnected'),
+    selectedScopes: text('selected_scopes').notNull().default('[]'),
+    selectedSources: text('selected_sources').notNull().default('[]'),
+    aiProcessingEnabled: integer('ai_processing_enabled').notNull().default(0),
+    credentialRef: text('credential_ref'),
+    lastCursor: text('last_cursor'),
+    lastSyncedAtUtc: text('last_synced_at_utc'),
+    lastError: text('last_error'),
+    createdAtUtc: text('created_at_utc').notNull(),
+    updatedAtUtc: text('updated_at_utc').notNull(),
+  },
+  (t) => [uniqueIndex('idx_connector_provider_label').on(t.provider, t.accountLabel)],
+);
+
+/** Selectively retained communication metadata and bounded excerpts, never a permanent full-body mirror. */
+export const connectorItems = sqliteTable(
+  'connector_items',
+  {
+    id: text('id').primaryKey(),
+    accountId: text('account_id').notNull(),
+    providerItemId: text('provider_item_id').notNull(),
+    sourceLabel: text('source_label').notNull(),
+    subject: text('subject').notNull().default(''),
+    participants: text('participants').notNull().default('[]'),
+    summary: text('summary').notNull().default(''),
+    evidenceExcerpt: text('evidence_excerpt').notNull().default(''),
+    contentHash: text('content_hash').notNull(),
+    deepLink: text('deep_link'),
+    occurredAtUtc: text('occurred_at_utc'),
+    deletedAtUtc: text('deleted_at_utc'),
+    createdAtUtc: text('created_at_utc').notNull(),
+    updatedAtUtc: text('updated_at_utc').notNull(),
+  },
+  (t) => [
+    uniqueIndex('idx_connector_item_provider').on(t.accountId, t.providerItemId),
+    index('idx_connector_items_occurred').on(t.occurredAtUtc),
+  ],
+);
+
+export const commitments = sqliteTable(
+  'commitments',
+  {
+    id: text('id').primaryKey(),
+    direction: text('direction').notNull(),
+    title: text('title').notNull(),
+    details: text('details').notNull().default(''),
+    personEntityId: text('person_entity_id'),
+    dueAtUtc: text('due_at_utc'),
+    status: text('status').notNull().default('open'),
+    evidenceIds: text('evidence_ids').notNull().default('[]'),
+    createdAtUtc: text('created_at_utc').notNull(),
+    updatedAtUtc: text('updated_at_utc').notNull(),
+  },
+  (t) => [index('idx_commitments_status_due').on(t.status, t.dueAtUtc)],
+);
+
+export const decisions = sqliteTable(
+  'decisions',
+  {
+    id: text('id').primaryKey(),
+    title: text('title').notNull(),
+    decision: text('decision').notNull(),
+    rationale: text('rationale').notNull().default(''),
+    alternatives: text('alternatives').notNull().default('[]'),
+    participantEntityIds: text('participant_entity_ids').notNull().default('[]'),
+    outcome: text('outcome'),
+    decidedAtUtc: text('decided_at_utc').notNull(),
+    evidenceIds: text('evidence_ids').notNull().default('[]'),
+    createdAtUtc: text('created_at_utc').notNull(),
+    updatedAtUtc: text('updated_at_utc').notNull(),
+  },
+  (t) => [index('idx_decisions_decided').on(t.decidedAtUtc)],
+);
+
+export const proactiveInsights = sqliteTable(
+  'proactive_insights',
+  {
+    id: text('id').primaryKey(),
+    kind: text('kind').notNull(),
+    title: text('title').notNull(),
+    body: text('body').notNull(),
+    priority: text('priority').notNull().default('medium'),
+    status: text('status').notNull().default('new'),
+    evidenceIds: text('evidence_ids').notNull().default('[]'),
+    cooldownKey: text('cooldown_key').notNull(),
+    surfacedAtUtc: text('surfaced_at_utc'),
+    expiresAtUtc: text('expires_at_utc'),
+    helpful: integer('helpful'),
+    createdAtUtc: text('created_at_utc').notNull(),
+  },
+  (t) => [uniqueIndex('idx_proactive_cooldown').on(t.cooldownKey), index('idx_proactive_status').on(t.status)],
+);

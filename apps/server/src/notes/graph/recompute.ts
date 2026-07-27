@@ -2,9 +2,10 @@ import { sql } from 'drizzle-orm';
 import type { DB } from '../../db/client.js';
 import { getSettings } from '../../settings.js';
 import { graphEdges, nodeMetrics } from '../../db/schema.js';
-import { computeMetrics } from './metrics.js';
+import { computeMetrics, computeTimeAttention } from './metrics.js';
 import { buildTypedEdges } from './edges.js';
 import { computeCommunities, persistCommunities, triggerCommunityNaming } from './communities.js';
+import { completeGraphJob, failGraphJob, queueGraphJob, startGraphJob } from './jobs.js';
 
 /** Open `- [ ]` checkbox count per note, read from the FTS body (no file IO). */
 function countOpenTasks(db: DB): Map<string, number> {
@@ -22,9 +23,12 @@ function countOpenTasks(db: DB): Map<string, number> {
  * (no network, offline-safe). Atomic via a transaction so `/notes/graph` never reads a half-written cache.
  */
 export function recomputeGraph(db: DB): void {
+  startGraphJob(db, 'graph');
+  try {
   const settings = getSettings(db);
   const metrics = computeMetrics(db);
   const openTasks = countOpenTasks(db);
+  const timeAttention = computeTimeAttention(db);
   const edges = buildTypedEdges(db, settings);
   // G4: hierarchical communities over the combined note+concept graph — colours nodes and backs global GraphRAG.
   const community = computeCommunities(db, edges);
@@ -41,6 +45,7 @@ export function recomputeGraph(db: DB): void {
           betweenness: m.betweenness,
           communityId: community.noteToCoarse.get(m.noteId) ?? null,
           openTasks: openTasks.get(m.noteId) ?? 0,
+          timeSpentMin: timeAttention.get(m.noteId) ?? 0,
           updatedAtUtc: nowIso,
         })
         .run();
@@ -51,6 +56,11 @@ export function recomputeGraph(db: DB): void {
     }
     persistCommunities(tx as unknown as DB, community.rows);
   });
+    completeGraphJob(db, 'graph');
+  } catch (error) {
+    failGraphJob(db, 'graph', error);
+    throw error;
+  }
 }
 
 let timer: ReturnType<typeof setTimeout> | null = null;
@@ -60,6 +70,7 @@ let timer: ReturnType<typeof setTimeout> | null = null;
  * Coalesces bursts of note writes into a single recompute ~1.5s after the last change.
  */
 export function triggerGraphRecompute(db: DB): void {
+  queueGraphJob(db, 'graph');
   if (timer) clearTimeout(timer);
   timer = setTimeout(() => {
     timer = null;

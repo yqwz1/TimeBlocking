@@ -135,6 +135,63 @@ export interface TrashEntry {
   deletedAt: string;
 }
 
+export interface NoteSnapshotEntry {
+  id: string;
+  createdAt: string;
+  sizeBytes: number;
+}
+
+function snapshotDir(root: string, relPath: string): string {
+  return path.join(root, SNAPSHOTS_DIRNAME, relPath);
+}
+
+function snapshotTimestampFromName(fileName: string): string | null {
+  const stem = fileName.replace(/\.md$/i, '');
+  const match = /^(\d{4}-\d{2}-\d{2})T(\d{2})-(\d{2})-(\d{2})-(\d{3})Z$/.exec(stem);
+  if (!match) return null;
+  const iso = `${match[1]}T${match[2]}:${match[3]}:${match[4]}.${match[5]}Z`;
+  return Number.isFinite(Date.parse(iso)) ? new Date(iso).toISOString() : null;
+}
+
+export async function listNoteSnapshots(root: string, relPath: string): Promise<NoteSnapshotEntry[]> {
+  const dir = snapshotDir(root, relPath);
+  if (!fs.existsSync(dir)) return [];
+  const names = (await fsp.readdir(dir)).filter((name) => name.toLowerCase().endsWith('.md')).sort().reverse();
+  const out: NoteSnapshotEntry[] = [];
+  for (const name of names) {
+    const abs = path.join(dir, name);
+    const stat = await fsp.stat(abs);
+    out.push({
+      id: name,
+      createdAt: snapshotTimestampFromName(name) ?? stat.mtime.toISOString(),
+      sizeBytes: stat.size,
+    });
+  }
+  return out;
+}
+
+export async function readNoteSnapshot(root: string, relPath: string, snapshotId: string): Promise<NoteSnapshotEntry & { content: string } | null> {
+  const abs = path.join(snapshotDir(root, relPath), path.basename(snapshotId));
+  try {
+    const [content, stat] = await Promise.all([fsp.readFile(abs, 'utf8'), fsp.stat(abs)]);
+    return {
+      id: path.basename(snapshotId),
+      content,
+      createdAt: snapshotTimestampFromName(snapshotId) ?? stat.mtime.toISOString(),
+      sizeBytes: stat.size,
+    };
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === 'ENOENT') return null;
+    throw err;
+  }
+}
+
+export async function restoreNoteSnapshot(root: string, relPath: string, snapshotId: string, snapshotRetention: number): Promise<void> {
+  const snapshot = await readNoteSnapshot(root, relPath, snapshotId);
+  if (!snapshot) throw new VaultPathError('snapshot not found');
+  await writeNoteFile(root, relPath, snapshot.content, snapshotRetention);
+}
+
 async function findFilesRecursive(dir: string, rel = ''): Promise<string[]> {
   const out: string[] = [];
   const entries = await fsp.readdir(dir, { withFileTypes: true });

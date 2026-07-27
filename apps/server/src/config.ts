@@ -18,6 +18,8 @@ export const env = {
   port: Number(process.env.PORT || 4141),
   googleClientId: process.env.GOOGLE_CLIENT_ID || '',
   googleClientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
+  /** 32+ byte secret used to AES-GCM encrypt persisted OAuth refresh tokens. */
+  tokenEncryptionKey: process.env.TB_TOKEN_ENCRYPTION_KEY || '',
   geminiKey: process.env.GEMINI_API_KEY || '',
   openRouterKey: process.env.OPENROUTER_API_KEY || '',
   aiProvider: (process.env.AI_PROVIDER || '').toLowerCase(),
@@ -25,6 +27,11 @@ export const env = {
   aiEmbeddingModel: process.env.AI_EMBEDDING_MODEL || '',
   openRouterSiteUrl: process.env.OPENROUTER_SITE_URL || '',
   openRouterAppName: process.env.OPENROUTER_APP_NAME || 'TimeBlocking',
+  integrationToken: process.env.TB_INTEGRATION_TOKEN || '',
+  integrationOrigin: process.env.TB_INTEGRATION_ORIGIN || '',
+  publicAppUrl: (process.env.TB_PUBLIC_APP_URL || `http://127.0.0.1:${process.env.PORT || 4141}`).replace(/\/$/, ''),
+  timeblockAppUrl: (process.env.TB_TIMEBLOCK_APP_URL || `http://127.0.0.1:${process.env.PORT || 4141}`).replace(/\/$/, ''),
+  integrationEventLog: process.env.TB_INTEGRATION_EVENT_LOG !== 'false',
   isProd: process.env.NODE_ENV === 'production',
 };
 

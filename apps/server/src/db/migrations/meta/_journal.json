@@ -169,6 +169,48 @@
       "when": 1783970000000,
       "tag": "0023_add_suggested_edge_dismissals",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "6",
+      "when": 1783980000000,
+      "tag": "0024_add_graph_jobs_layout",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "6",
+      "when": 1783990000000,
+      "tag": "0025_add_study_cards",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "6",
+      "when": 1785260400000,
+      "tag": "0026_add_note_shares",
+      "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "6",
+      "when": 1785014371550,
+      "tag": "0027_married_rhodey",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "6",
+      "when": 1785015488326,
+      "tag": "0028_orange_freak",
+      "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "6",
+      "when": 1785400000000,
+      "tag": "0029_ai_gateway_observability",
+      "breakpoints": true
     }
   ]
 }

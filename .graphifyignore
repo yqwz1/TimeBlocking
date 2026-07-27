@@ -1,0 +1,13 @@
+# Graphify's own Codex integration is tooling, not application knowledge.
+.codex/
+.agents/
+.claude/
+
+# Mirror generated/private paths because this Graphify build does not merge
+# .gitignore when a project-specific .graphifyignore is present on Windows.
+node_modules/
+dist/
+release/
+data/
+.env
+*.log

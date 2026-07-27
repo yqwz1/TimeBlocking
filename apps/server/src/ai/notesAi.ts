@@ -1,4 +1,13 @@
-import { generateJson, generateText } from './client.js';
+import type { JsonSchema } from './client.js';
+import { ModelGateway } from '../assistant/modelGateway.js';
+
+async function structured<T>(gateway: ModelGateway, task: string, model: string, prompt: string, schema: JsonSchema): Promise<T> {
+  return gateway.generateStructured({ task, promptVersion: 'notes-ai-v2', model, prompt, schema, validate: (value) => value as T });
+}
+
+async function text(gateway: ModelGateway, task: string, model: string, prompt: string): Promise<string> {
+  return (await gateway.generateText({ task, promptVersion: 'notes-ai-v2', model, prompt })).value;
+}
 
 export interface ChatContextChunk {
   noteId: string;
@@ -23,6 +32,7 @@ export interface CommunityContext {
  * "what are the themes / what am I neglecting" question primarily from the community summaries. Both cite notes.
  */
 export async function answerGraphChat(
+  gateway: ModelGateway,
   model: string,
   aboutMe: string,
   message: string,
@@ -64,7 +74,7 @@ export async function answerGraphChat(
     `\nUser question: ${message}`,
   ].join('\n');
 
-  const parsed = await generateJson<{ answer?: string; citedNoteIds?: string[] }>(model, prompt, {
+  const parsed = await structured<{ answer?: string; citedNoteIds?: string[] }>(gateway, 'vault_synthesis', model, prompt, {
         type: 'object',
         properties: {
           answer: { type: 'string' },
@@ -102,7 +112,7 @@ export interface CompiledGraphQuery {
  * filters, choosing from the vault's real tags / folders / community labels. The caller clamps anything the
  * model invents back to those facets, so a hallucinated tag simply drops out.
  */
-export async function compileGraphQuery(model: string, message: string, facets: GraphQueryFacets): Promise<CompiledGraphQuery> {
+export async function compileGraphQuery(gateway: ModelGateway, model: string, message: string, facets: GraphQueryFacets): Promise<CompiledGraphQuery> {
   const prompt = [
     'Translate the user\'s request into graph filters for their notes graph. Use ONLY values from these lists (exact strings); leave a field empty if the request does not constrain it.',
     `Tags: ${facets.tags.join(', ') || '(none)'}`,
@@ -113,7 +123,7 @@ export async function compileGraphQuery(model: string, message: string, facets: 
     '',
     `Request: ${message}`,
   ].join('\n');
-  const p = await generateJson<Partial<CompiledGraphQuery>>(model, prompt, {
+  const p = await structured<Partial<CompiledGraphQuery>>(gateway, 'extraction', model, prompt, {
         type: 'object',
         properties: {
           tags: { type: 'array', items: { type: 'string' } },
@@ -159,7 +169,7 @@ export async function compileGraphQuery(model: string, message: string, facets: 
 }
 
 /** G6 §6 — one-line narration of a connection path ("A links to B, which shares the ECS concept with C"). */
-export async function narratePath(model: string, steps: { title: string; kind: 'note' | 'concept'; viaType: string | null }[]): Promise<string> {
+export async function narratePath(gateway: ModelGateway, model: string, steps: { title: string; kind: 'note' | 'concept'; viaType: string | null }[]): Promise<string> {
   const chain = steps
     .map((s, i) => (i === 0 ? `"${s.title}"` : `—[${s.viaType}]→ ${s.kind === 'concept' ? `concept "${s.title}"` : `"${s.title}"`}`))
     .join(' ');
@@ -167,18 +177,18 @@ export async function narratePath(model: string, steps: { title: string; kind: '
     'Narrate this path between two notes in one natural sentence, explaining how each step connects to the next (explicit = a wikilink, concept = a shared extracted concept, semantic = similar meaning, tag = shared tags).',
     chain,
   ].join('\n');
-  return generateText(model, prompt);
+  return text(gateway, 'vault_synthesis', model, prompt);
 }
 
 /** Names + summarises a detected community (G4) from its member note titles. Cached upstream by community id. */
-export async function nameCommunity(model: string, memberTitles: string[]): Promise<{ label: string; summary: string }> {
+export async function nameCommunity(gateway: ModelGateway, model: string, memberTitles: string[]): Promise<{ label: string; summary: string }> {
   const prompt = [
     'These note titles belong to one cluster in a personal knowledge vault (topics may be in Arabic or English):',
     memberTitles.map((t) => `- ${t}`).join('\n') || '(untitled notes)',
     '',
     'Give this cluster a short label (1–4 words naming the shared theme) and a one-sentence summary of what ties these notes together. Be specific to the actual titles, not generic.',
   ].join('\n');
-  const parsed = await generateJson<{ label?: string; summary?: string }>(model, prompt, {
+  const parsed = await structured<{ label?: string; summary?: string }>(gateway, 'extraction', model, prompt, {
         type: 'object',
         properties: {
           label: { type: 'string' },
@@ -192,6 +202,7 @@ export async function nameCommunity(model: string, memberTitles: string[]): Prom
 
 /** Never auto-applied — the caller shows these as accept/reject chips. */
 export async function suggestLinksAndTags(
+  gateway: ModelGateway,
   model: string,
   noteTitle: string,
   noteBody: string,
@@ -208,7 +219,7 @@ export async function suggestLinksAndTags(
     'Suggest up to 6 [[wikilink]] targets and up to 6 #tags for this note. Only suggest links/tags that are genuinely relevant — quality over quantity.',
   ].join('\n');
 
-  const parsed = await generateJson<{ links?: string[]; tags?: string[] }>(model, prompt, {
+  const parsed = await structured<{ links?: string[]; tags?: string[] }>(gateway, 'extraction', model, prompt, {
         type: 'object',
         properties: {
           links: { type: 'array', items: { type: 'string' } },
@@ -220,6 +231,52 @@ export async function suggestLinksAndTags(
   return { links: parsed.links ?? [], tags: parsed.tags ?? [] };
 }
 
+/** Phase 6 — suggest how to process one inbox note without auto-filing it. */
+export async function suggestInboxTriage(
+  gateway: ModelGateway,
+  model: string,
+  aboutMe: string,
+  noteTitle: string,
+  noteBody: string,
+  allowedFolders: string[],
+  existingTitles: string[],
+): Promise<{ suggestedTitle: string; destinationFolder: string; tags: string[]; links: string[]; summary: string }> {
+  const prompt = [
+    `You are helping process one inbox note from a personal second-brain vault. About the user: ${aboutMe}`,
+    `Current note title: ${noteTitle}`,
+    'Allowed destination folders (use exactly one):',
+    allowedFolders.join(', ') || 'Inbox',
+    '',
+    'Existing note titles in the vault (only suggest links to genuinely related ones):',
+    existingTitles.slice(0, 300).join(', ') || '(none)',
+    '',
+    'Note body:',
+    noteBody.slice(0, 7000),
+    '',
+    'Return a better title, the single best destination folder, up to 6 tags, up to 6 wikilink targets, and a one-sentence summary of what this capture is about.',
+  ].join('\n');
+
+  const parsed = await structured<{ suggestedTitle?: string; destinationFolder?: string; tags?: string[]; links?: string[]; summary?: string }>(gateway, 'extraction', model, prompt, {
+    type: 'object',
+    properties: {
+      suggestedTitle: { type: 'string' },
+      destinationFolder: { type: 'string' },
+      tags: { type: 'array', items: { type: 'string' } },
+      links: { type: 'array', items: { type: 'string' } },
+      summary: { type: 'string' },
+    },
+    required: ['suggestedTitle', 'destinationFolder', 'tags', 'links', 'summary'],
+    additionalProperties: false,
+  });
+  return {
+    suggestedTitle: (parsed.suggestedTitle ?? noteTitle).trim() || noteTitle,
+    destinationFolder: (parsed.destinationFolder ?? 'Inbox').trim() || 'Inbox',
+    tags: parsed.tags ?? [],
+    links: parsed.links ?? [],
+    summary: (parsed.summary ?? '').trim(),
+  };
+}
+
 export interface DigestSourceNote {
   id: string;
   title: string;
@@ -228,7 +285,7 @@ export interface DigestSourceNote {
 }
 
 /** Markdown body (no frontmatter) for a weekly digest note — themes, open tasks, and a touched-notes list. */
-export async function generateWeeklyDigest(model: string, aboutMe: string, weekLabel: string, sourceNotes: DigestSourceNote[]): Promise<string> {
+export async function generateWeeklyDigest(gateway: ModelGateway, model: string, aboutMe: string, weekLabel: string, sourceNotes: DigestSourceNote[]): Promise<string> {
   const notesBlock = sourceNotes
     .map((n) => `### ${n.title} (id: ${n.id})\n${n.excerpt}${n.openTasks.length ? `\nOpen tasks: ${n.openTasks.join('; ')}` : ''}`)
     .join('\n\n');
@@ -240,5 +297,5 @@ export async function generateWeeklyDigest(model: string, aboutMe: string, weekL
     "This week's notes:",
     notesBlock || '(no notes were touched this week)',
   ].join('\n');
-  return generateText(model, prompt);
+  return text(gateway, 'draft', model, prompt);
 }

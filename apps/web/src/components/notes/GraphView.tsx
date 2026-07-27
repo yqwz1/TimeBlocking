@@ -4,13 +4,14 @@ import Sigma from 'sigma';
 import { NodeCircleProgram } from 'sigma/rendering';
 import FA2Layout from 'graphology-layout-forceatlas2/worker';
 import { inferSettings } from 'graphology-layout-forceatlas2';
-import { Check, FilePlus2, Lightbulb, Link2, Maximize2, Minus, Plus, Search, Sparkles, Trash2, Waypoints, X } from 'lucide-react';
+import { Check, Copy, FilePlus2, Lightbulb, Link2, Maximize2, Minus, Pause, Play, Plus, Presentation, Save, Search, Sparkles, Trash2, Users, Waypoints, X } from 'lucide-react';
 import type { ConceptType, GraphPathResultDTO, GraphQueryFilterDTO, GraphWhyDTO, NoteGraphDTO, NoteGraphEdgeType, SuggestedEdgeDTO } from '@timeblock/shared';
 import { useTheme } from '../../hooks/useTheme';
-import { useSettings } from '../../hooks';
-import { useAcceptSuggestion, useCreateNote, useDismissSuggestion, useGraphInsights, useGraphPath, useGraphQuery, useGraphSuggestions, useGraphWhy } from '../../hooks/notes';
+import { useCreateTask, useSettings } from '../../hooks';
+import { useAcceptSuggestion, useCreateNote, useDismissSuggestion, useGraphEra, useGraphIndexFreshness, useGraphInsights, useGraphPath, useGraphQuery, useGraphSuggestions, useGraphTimeline, useGraphWhy, useSaveGraphLayout } from '../../hooks/notes';
 import NodeDiamondProgram from './nodeDiamondProgram';
 import ConceptInspector, { type InspectorTarget } from './ConceptInspector';
+import { graphViewUrl, type SavedGraphView, type SerializableGraphView, viewFromUrl } from './graphViewState';
 
 /**
  * The Graph — G3. Adds the concept layer: AI-extracted entities render as WebGL diamond nodes bridging
@@ -29,6 +30,7 @@ interface Palette {
   semanticEdge: string;
   tagEdge: string;
   taskRing: string;
+  timeHalo: string;
   concept: string;
   conceptEdge: string;
   minimapNode: string;
@@ -46,6 +48,7 @@ const PALETTES: Record<'light' | 'dark', Palette> = {
     semanticEdge: 'rgba(13,148,136,0.55)',
     tagEdge: 'rgba(217,119,6,0.6)',
     taskRing: '#0d9488',
+    timeHalo: '#f59e0b',
     concept: '#9333ea',
     conceptEdge: 'rgba(147,51,234,0.32)',
     minimapNode: 'rgba(71,85,105,0.7)',
@@ -61,6 +64,7 @@ const PALETTES: Record<'light' | 'dark', Palette> = {
     semanticEdge: 'rgba(45,212,191,0.6)',
     tagEdge: 'rgba(251,191,36,0.55)',
     taskRing: '#2dd4bf',
+    timeHalo: '#fbbf24',
     concept: '#c084fc',
     conceptEdge: 'rgba(192,132,252,0.4)',
     minimapNode: 'rgba(148,163,184,0.7)',
@@ -92,11 +96,16 @@ interface NodeAttrs {
   degree: number;
   betweenness: number;
   openTasks: number;
+  timeSpentMin: number;
   freshnessDays: number;
   kind: 'note' | 'concept';
   conceptType: ConceptType | null;
   communityId: string | null;
   communityLabel: string | null;
+  preview: string;
+  createdAt: string | null;
+  updatedAt: string | null;
+  fixed?: boolean;
 }
 
 /** Unordered pair key for path/ghost edge sets. '|' is illegal in a note id, so it never collides. */
@@ -145,17 +154,22 @@ interface HoverCard {
   tags: string[];
   degree: number;
   openTasks: number;
+  timeSpentMin: number;
   pagerank: number;
   freshnessDays: number;
   conceptType: ConceptType | null;
+  preview: string;
+  updatedAt: string | null;
 }
 
 export default function GraphView({
-  graph: dto,
+  graph: liveDto,
   onNavigate,
   onClose,
   focusIds,
   onClearFocus,
+  currentNoteId,
+  onChatScope,
 }: {
   graph: NoteGraphDTO;
   onNavigate: (id: string) => void;
@@ -163,11 +177,20 @@ export default function GraphView({
   /** G4 spatial citations: fly to + highlight this subgraph (from a chat answer). */
   focusIds?: string[];
   onClearFocus?: () => void;
+  currentNoteId?: string | null;
+  onChatScope?: (noteIds: string[], initialMessage: string) => void;
 }) {
   const { resolved } = useTheme();
   const palette = PALETTES[resolved];
   const { data: settings } = useSettings();
   const fadeDays = settings?.graphFreshnessFadeDays ?? 45;
+  const initialViewRef = useRef<SerializableGraphView | null>(viewFromUrl());
+  const [eraAt, setEraAt] = useState<string | null>(initialViewRef.current?.eraAt ?? null);
+  const timelineQuery = useGraphTimeline(true);
+  const freshnessQuery = useGraphIndexFreshness(true);
+  const eraQuery = useGraphEra(eraAt);
+  const dto = eraAt ? eraQuery.data ?? liveDto : liveDto;
+  const freshness = freshnessQuery.data ?? dto.freshness;
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const overlayRef = useRef<HTMLCanvasElement | null>(null);
@@ -180,10 +203,10 @@ export default function GraphView({
   const reheatTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const onNavigateRef = useRef(onNavigate);
 
-  const [sizeBy, setSizeBy] = useState<SizeBy>('pagerank');
-  const [colorBy, setColorBy] = useState<ColorBy>('folder');
-  const [edgeTypes, setEdgeTypes] = useState<EdgeToggles>({ explicit: true, semantic: true, tag: true });
-  const [conceptLayer, setConceptLayer] = useState(true);
+  const [sizeBy, setSizeBy] = useState<SizeBy>(initialViewRef.current?.sizeBy ?? 'pagerank');
+  const [colorBy, setColorBy] = useState<ColorBy>(initialViewRef.current?.colorBy ?? 'folder');
+  const [edgeTypes, setEdgeTypes] = useState<EdgeToggles>(initialViewRef.current?.edges ?? { explicit: true, semantic: true, tag: true });
+  const [conceptLayer, setConceptLayer] = useState(initialViewRef.current?.concepts ?? true);
   const [inspector, setInspector] = useState<InspectorTarget | null>(null);
 
   const paletteRef = useRef(palette);
@@ -191,6 +214,8 @@ export default function GraphView({
   const colorByRef = useRef(colorBy);
   const edgeTypesRef = useRef(edgeTypes);
   const fadeDaysRef = useRef(fadeDays);
+  const lodLabelRef = useRef(settings?.graphLodLabelThreshold ?? 0.9);
+  const lodEdgeRef = useRef(settings?.graphLodEdgeThreshold ?? 1.35);
   const folderColorsRef = useRef<Map<string, string>>(new Map());
   const typedEdgesRef = useRef<Array<{ source: string; target: string; type: NoteGraphEdgeType }>>([]);
   const setInspectorRef = useRef(setInspector);
@@ -199,12 +224,51 @@ export default function GraphView({
   colorByRef.current = colorBy;
   edgeTypesRef.current = edgeTypes;
   fadeDaysRef.current = fadeDays;
+  lodLabelRef.current = settings?.graphLodLabelThreshold ?? 0.9;
+  lodEdgeRef.current = settings?.graphLodEdgeThreshold ?? 1.35;
   onNavigateRef.current = onNavigate;
   setInspectorRef.current = setInspector;
 
+  useEffect(() => {
+    if (!settings || initialViewRef.current) return;
+    setEdgeTypes({ explicit: true, semantic: settings.graphDefaultSemanticEdges, tag: settings.graphDefaultTagEdges });
+    setConceptLayer(settings.graphDefaultConceptLayer);
+  }, [settings]);
+
   const [hoverCard, setHoverCard] = useState<HoverCard | null>(null);
-  const [activeTags, setActiveTags] = useState<Set<string>>(new Set());
-  const [folder, setFolder] = useState<string | 'all'>('all');
+  const [activeTags, setActiveTags] = useState<Set<string>>(new Set(initialViewRef.current?.tags ?? []));
+  const [folder, setFolder] = useState<string | 'all'>(initialViewRef.current?.folder ?? 'all');
+  const [presentation, setPresentation] = useState(false);
+  const [searchText, setSearchText] = useState('');
+  const [contextMenu, setContextMenu] = useState<{ id: string; x: number; y: number } | null>(null);
+  const [multiMode, setMultiMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [savedViews, setSavedViews] = useState<SavedGraphView[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem('second-brain.graph.views') ?? '[]') as SavedGraphView[];
+    } catch {
+      return [];
+    }
+  });
+  const [saveViewName, setSaveViewName] = useState('');
+  const [showViews, setShowViews] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [playing, setPlaying] = useState(false);
+  const [notice, setNotice] = useState('');
+  const selectedRef = useRef<Set<string>>(new Set());
+  const multiModeRef = useRef(false);
+  const saveLayout = useSaveGraphLayout();
+  const createTask = useCreateTask();
+  const saveLayoutRef = useRef(saveLayout);
+  const eraAtRef = useRef(eraAt);
+  saveLayoutRef.current = saveLayout;
+  eraAtRef.current = eraAt;
+  selectedRef.current = selectedIds;
+  multiModeRef.current = multiMode;
+  const flash = useCallback((message: string) => {
+    setNotice(message);
+    setTimeout(() => setNotice(''), 2_200);
+  }, []);
 
   // ── G6 §5 NL query · §6 connect · §7 suggestions state ──────────────────────
   const [queryText, setQueryText] = useState('');
@@ -257,6 +321,64 @@ export default function GraphView({
   showSuggestRef.current = showSuggestions;
 
   const titleById = useMemo(() => new Map(dto.nodes.map((n) => [n.id, n.title])), [dto.nodes]);
+
+  const serializableState = useCallback((): SerializableGraphView => {
+    const graph = graphRef.current;
+    const pinned: Record<string, { x: number; y: number }> = {};
+    graph?.forEachNode((id, attrs) => {
+      if (attrs.fixed) pinned[id] = { x: attrs.x, y: attrs.y };
+    });
+    return {
+      v: 1,
+      folder,
+      tags: [...activeTags].sort(),
+      sizeBy,
+      colorBy,
+      edges: edgeTypes,
+      concepts: conceptLayer,
+      camera: sigmaRef.current?.getCamera().getState() ?? null,
+      eraAt,
+      pinned,
+    };
+  }, [activeTags, colorBy, conceptLayer, edgeTypes, eraAt, folder, sizeBy]);
+
+  const applySavedView = useCallback((state: SerializableGraphView) => {
+    setFolder(state.folder);
+    setActiveTags(new Set(state.tags));
+    setSizeBy(state.sizeBy);
+    setColorBy(state.colorBy);
+    setEdgeTypes(state.edges);
+    setConceptLayer(state.concepts);
+    setEraAt(state.eraAt);
+    const graph = graphRef.current;
+    for (const [id, point] of Object.entries(state.pinned)) {
+      if (!graph?.hasNode(id)) continue;
+      graph.mergeNodeAttributes(id, { x: point.x, y: point.y, fixed: true });
+    }
+    if (state.camera) sigmaRef.current?.getCamera().animate(state.camera, { duration: 450 });
+    setShowViews(false);
+  }, []);
+
+  const persistView = useCallback(() => {
+    const name = saveViewName.trim();
+    if (!name) return;
+    const next: SavedGraphView[] = [
+      ...savedViews.filter((view) => view.name.toLowerCase() !== name.toLowerCase()),
+      { id: crypto.randomUUID(), name, createdAt: new Date().toISOString(), state: serializableState() },
+    ];
+    setSavedViews(next);
+    localStorage.setItem('second-brain.graph.views', JSON.stringify(next));
+    setSaveViewName('');
+    flash(`Saved view “${name}”`);
+  }, [flash, saveViewName, savedViews, serializableState]);
+
+  const shareView = useCallback(async () => {
+    const url = graphViewUrl(serializableState());
+    window.history.replaceState(null, '', url);
+    await navigator.clipboard?.writeText(url);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1800);
+  }, [serializableState]);
 
   const allTags = useMemo(() => Array.from(new Set(dto.nodes.flatMap((n) => n.tags))).sort(), [dto.nodes]);
   const allFolders = useMemo(() => Array.from(new Set(dto.nodes.filter((n) => n.kind === 'note').map((n) => n.folder))).sort(), [dto.nodes]);
@@ -318,7 +440,16 @@ export default function GraphView({
     if (!layout) return;
     if (!layout.isRunning()) layout.start();
     if (reheatTimer.current) clearTimeout(reheatTimer.current);
-    reheatTimer.current = setTimeout(() => layout.isRunning() && layout.stop(), ms);
+    reheatTimer.current = setTimeout(() => {
+      if (layout.isRunning()) layout.stop();
+      const graph = graphRef.current;
+      if (!graph || eraAtRef.current) return;
+      const points = graph.nodes().map((nodeId) => {
+        const attrs = graph.getNodeAttributes(nodeId) as unknown as NodeAttrs;
+        return { nodeId, x: attrs.x, y: attrs.y, pinned: attrs.fixed === true };
+      });
+      saveLayoutRef.current.mutate(points);
+    }, ms);
   }, []);
 
   // ── G6 §6: apply a computed path — highlight its nodes/edges + fly to it. ────
@@ -430,6 +561,7 @@ export default function GraphView({
         const size = noteSizeUnits(a, sizeByRef.current);
         const base = baseColorFor(a, colorByRef.current, folderColorsRef.current, paletteRef.current);
         const op = freshnessOpacity(a.freshnessDays, fadeDaysRef.current);
+        if (selectedRef.current.has(node)) return { ...data, size: size + 2, color: hexToRgba(base, 1), zIndex: 3, forceLabel: true, highlighted: true };
         if (hovered) {
           if (node === hovered) return { ...data, size: size + 1, color: hexToRgba(base, 1), zIndex: 2, forceLabel: true };
           if (graph.areNeighbors(hovered, node)) return { ...data, size, color: hexToRgba(base, Math.max(op, 0.65)), zIndex: 1, forceLabel: true };
@@ -471,13 +603,27 @@ export default function GraphView({
     });
     sigmaRef.current = sigma;
 
+    if (initialViewRef.current?.camera) sigma.getCamera().setState(initialViewRef.current.camera);
+
     const layout = new FA2Layout(graph, {
       settings: { ...inferSettings(graph), gravity: 1.2, scalingRatio: 12, slowDown: 4, barnesHutOptimize: true, edgeWeightInfluence: 1 },
     });
     layoutRef.current = layout;
 
-    sigma.on('clickNode', ({ node }) => {
+    let suppressClick = false;
+    sigma.on('clickNode', ({ node, event }) => {
+      if (suppressClick) return;
       const a = graph.getNodeAttributes(node) as unknown as NodeAttrs;
+      if (multiModeRef.current || event.original.shiftKey) {
+        setSelectedIds((previous) => {
+          const next = new Set(previous);
+          if (next.has(node)) next.delete(node);
+          else next.add(node);
+          return next;
+        });
+        sigma.refresh();
+        return;
+      }
       // G6 §6: in Connect mode a click picks path endpoints instead of navigating.
       if (connectModeRef.current) {
         onPickConnectRef.current(node);
@@ -489,27 +635,71 @@ export default function GraphView({
         onNavigateRef.current(node);
       }
     });
+    sigma.on('rightClickNode', ({ node, event }) => {
+      event.preventSigmaDefault();
+      setContextMenu({ id: node, x: event.x, y: event.y });
+    });
+    sigma.on('clickStage', () => setContextMenu(null));
+
+    let draggedNode: string | null = null;
+    let dragMoved = false;
+    sigma.on('downNode', ({ node, event }) => {
+      const attrs = graph.getNodeAttributes(node) as unknown as NodeAttrs;
+      if (attrs.kind !== 'note') return;
+      draggedNode = node;
+      dragMoved = false;
+      event.preventSigmaDefault();
+      if (layout.isRunning()) layout.stop();
+    });
+    const mouse = sigma.getMouseCaptor();
+    mouse.on('mousemovebody', (event) => {
+      if (!draggedNode) return;
+      dragMoved = true;
+      const point = sigma.viewportToGraph(event);
+      graph.mergeNodeAttributes(draggedNode, { x: point.x, y: point.y, fixed: true });
+      event.preventSigmaDefault();
+      event.original.preventDefault();
+      event.original.stopPropagation();
+      sigma.refresh();
+    });
+    mouse.on('mouseup', () => {
+      if (!draggedNode) return;
+      if (dragMoved) {
+        suppressClick = true;
+        setTimeout(() => (suppressClick = false), 0);
+        const attrs = graph.getNodeAttributes(draggedNode) as unknown as NodeAttrs;
+        if (!eraAtRef.current) saveLayoutRef.current.mutate([{ nodeId: draggedNode, x: attrs.x, y: attrs.y, pinned: true }]);
+      }
+      draggedNode = null;
+    });
+    let hoverTimer: ReturnType<typeof setTimeout> | null = null;
     sigma.on('enterNode', ({ node }) => {
       hoveredRef.current = node;
       const a = graph.getNodeAttributes(node) as unknown as NodeAttrs;
       const pos = sigma.graphToViewport({ x: a.x, y: a.y });
-      setHoverCard({
-        x: pos.x,
-        y: pos.y,
-        kind: a.kind,
-        title: a.label ?? node,
-        folder: a.folder ?? '',
-        tags: a.tags ?? [],
-        degree: a.degree ?? graph.degree(node),
-        openTasks: a.openTasks ?? 0,
-        pagerank: a.pagerank ?? 0,
-        freshnessDays: a.freshnessDays ?? 0,
-        conceptType: a.conceptType ?? null,
-      });
+      hoverTimer = setTimeout(() =>
+        setHoverCard({
+          x: pos.x,
+          y: pos.y,
+          kind: a.kind,
+          title: a.label ?? node,
+          folder: a.folder ?? '',
+          tags: a.tags ?? [],
+          degree: a.degree ?? graph.degree(node),
+          openTasks: a.openTasks ?? 0,
+          timeSpentMin: a.timeSpentMin ?? 0,
+          pagerank: a.pagerank ?? 0,
+          freshnessDays: a.freshnessDays ?? 0,
+          conceptType: a.conceptType ?? null,
+          preview: a.preview ?? '',
+          updatedAt: a.updatedAt ?? null,
+        }),
+      300);
       sigma.refresh();
       container.style.cursor = 'pointer';
     });
     sigma.on('leaveNode', () => {
+      if (hoverTimer) clearTimeout(hoverTimer);
       hoveredRef.current = null;
       setHoverCard(null);
       sigma.refresh();
@@ -530,11 +720,13 @@ export default function GraphView({
       ctx.clearRect(0, 0, w, h);
       const hovered = hoveredRef.current;
       const toggles = edgeTypesRef.current;
+      const hideOptionalForLod = sigma.getCamera().getState().ratio > lodEdgeRef.current && !hovered;
 
       let drawn = 0;
       for (const e of typedEdgesRef.current) {
         if (e.type === 'semantic' && !toggles.semantic) continue;
         if (e.type === 'tag' && !toggles.tag) continue;
+        if (hideOptionalForLod) continue;
         if (!graph.hasNode(e.source) || !graph.hasNode(e.target)) continue;
         if (hovered && e.source !== hovered && e.target !== hovered) continue;
         const p1 = sigma.graphToViewport(graph.getNodeAttributes(e.source) as { x: number; y: number });
@@ -593,11 +785,19 @@ export default function GraphView({
 
       graph.forEachNode((id, attr) => {
         const a = attr as unknown as NodeAttrs;
-        if (a.kind === 'concept' || (!a.openTasks && !a.pinned)) return;
+        if (a.kind === 'concept' || (!a.openTasks && !a.pinned && !a.timeSpentMin)) return;
         if (hovered && id !== hovered && !graph.areNeighbors(hovered, id)) return;
         const p = sigma.graphToViewport({ x: a.x, y: a.y });
         const dd = sigma.getNodeDisplayData(id);
         const r = (dd ? sigma.scaleSize(dd.size) : 5) + 3;
+        if (a.timeSpentMin) {
+          const heat = Math.min(1, Math.log1p(a.timeSpentMin) / Math.log(481));
+          ctx.strokeStyle = hexToRgba(paletteRef.current.timeHalo, 0.25 + heat * 0.55);
+          ctx.lineWidth = 2 + heat * 5;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, r + 3 + heat * 5, 0, Math.PI * 2);
+          ctx.stroke();
+        }
         if (a.pinned) {
           ctx.strokeStyle = paletteRef.current.pinned;
           ctx.lineWidth = 1.5;
@@ -662,6 +862,12 @@ export default function GraphView({
       drawOverlay();
       drawMinimap();
     });
+    const updateLabelLod = () => {
+      const render = sigma.getCamera().getState().ratio <= lodLabelRef.current;
+      if (sigma.getSetting('renderLabels') !== render) sigma.setSetting('renderLabels', render);
+    };
+    sigma.getCamera().on('updated', updateLabelLod);
+    updateLabelLod();
 
     return () => {
       if (reheatTimer.current) clearTimeout(reheatTimer.current);
@@ -703,20 +909,26 @@ export default function GraphView({
         degree: n.degree,
         betweenness: n.betweenness,
         openTasks: n.openTasks,
+        timeSpentMin: n.timeSpentMin,
         freshnessDays: n.freshnessDays,
         kind: n.kind,
         conceptType: n.conceptType,
         communityId: n.communityId,
         communityLabel: n.communityLabel,
+        preview: n.preview,
+        createdAt: n.createdAt,
+        updatedAt: n.updatedAt,
       };
       if (graph.hasNode(n.id)) {
         graph.mergeNodeAttributes(n.id, attrs);
       } else {
+        const cached = dto.layout[n.id] ?? initialViewRef.current?.pinned[n.id];
         graph.addNode(n.id, {
           ...attrs,
           type: n.kind === 'concept' ? 'diamond' : 'circle',
-          x: cam.x + (Math.random() - 0.5) * 0.4,
-          y: cam.y + (Math.random() - 0.5) * 0.4,
+          x: cached?.x ?? cam.x + (Math.random() - 0.5) * 0.4,
+          y: cached?.y ?? cam.y + (Math.random() - 0.5) * 0.4,
+          fixed: 'pinned' in (cached ?? {}) ? (cached as { pinned?: boolean }).pinned === true : !!initialViewRef.current?.pinned[n.id],
           size: n.kind === 'concept' ? 5 : 4,
           color: n.kind === 'concept' ? paletteRef.current.concept : paletteRef.current.node,
         });
@@ -810,7 +1022,8 @@ export default function GraphView({
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
-      if (evidence) setEvidence(null);
+      if (contextMenu) setContextMenu(null);
+      else if (evidence) setEvidence(null);
       else if (inspector) setInspector(null);
       else if (connectMode) {
         setConnectMode(false);
@@ -819,11 +1032,140 @@ export default function GraphView({
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [onClose, inspector, evidence, connectMode, clearConnect]);
+  }, [onClose, inspector, evidence, connectMode, clearConnect, contextMenu]);
+
+  useEffect(() => {
+    sigmaRef.current?.refresh();
+  }, [selectedIds]);
+
+  const timeline = timelineQuery.data?.weeks ?? [];
+  const eraIndex = eraAt ? Math.max(0, timeline.findIndex((week) => week.at === eraAt)) : timeline.length;
+
+  useEffect(() => {
+    if (!playing || timeline.length === 0) return;
+    const timer = setInterval(() => {
+      const current = eraAt ? timeline.findIndex((week) => week.at === eraAt) : timeline.length;
+      if (current < 0 || current >= timeline.length - 1) {
+        setEraAt(null);
+        setPlaying(false);
+      } else setEraAt(timeline[current + 1].at);
+    }, 900);
+    return () => clearInterval(timer);
+  }, [eraAt, playing, timeline]);
+
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const keyboardIndexRef = useRef(-1);
+  useEffect(() => {
+    const onGraphKey = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      const typing = target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA' || target?.isContentEditable;
+      if (typing) return;
+      const ids = nodes.filter((node) => node.kind === 'note').map((node) => node.id);
+      if (event.key === '/') {
+        event.preventDefault();
+        searchInputRef.current?.focus();
+        return;
+      }
+      if (event.key.toLowerCase() === 'p') {
+        event.preventDefault();
+        setPresentation((value) => !value);
+        return;
+      }
+      if (!['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp', 'Enter', ' '].includes(event.key) || ids.length === 0) return;
+      if (event.key === 'Enter' && keyboardIndexRef.current >= 0) {
+        event.preventDefault();
+        onNavigate(ids[keyboardIndexRef.current]);
+        return;
+      }
+      if (event.key === ' ' && keyboardIndexRef.current >= 0) {
+        event.preventDefault();
+        const id = ids[keyboardIndexRef.current];
+        setSelectedIds((previous) => {
+          const next = new Set(previous);
+          if (next.has(id)) next.delete(id);
+          else next.add(id);
+          return next;
+        });
+        return;
+      }
+      event.preventDefault();
+      const delta = event.key === 'ArrowRight' || event.key === 'ArrowDown' ? 1 : -1;
+      keyboardIndexRef.current = (keyboardIndexRef.current + delta + ids.length) % ids.length;
+      const id = ids[keyboardIndexRef.current];
+      const graph = graphRef.current;
+      const sigma = sigmaRef.current;
+      if (graph?.hasNode(id) && sigma) {
+        hoveredRef.current = id;
+        const attrs = graph.getNodeAttributes(id) as unknown as NodeAttrs;
+        sigma.refresh();
+        sigma.getCamera().animate({ x: attrs.x, y: attrs.y, ratio: Math.min(0.45, sigma.getCamera().getState().ratio) }, { duration: 250 });
+      }
+    };
+    window.addEventListener('keydown', onGraphKey);
+    return () => window.removeEventListener('keydown', onGraphKey);
+  }, [nodes, onNavigate]);
 
   const zoomIn = () => sigmaRef.current?.getCamera().animatedZoom({ duration: 200 });
   const zoomOut = () => sigmaRef.current?.getCamera().animatedUnzoom({ duration: 200 });
   const resetView = () => sigmaRef.current?.getCamera().animatedReset({ duration: 300 });
+  const navigateFromMinimap = (event: React.MouseEvent<HTMLCanvasElement>) => {
+    const graph = graphRef.current;
+    const sigma = sigmaRef.current;
+    if (!graph || !sigma || graph.order === 0) return;
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    graph.forEachNode((_id, attrs) => {
+      minX = Math.min(minX, attrs.x);
+      minY = Math.min(minY, attrs.y);
+      maxX = Math.max(maxX, attrs.x);
+      maxY = Math.max(maxY, attrs.y);
+    });
+    const rect = event.currentTarget.getBoundingClientRect();
+    const x = minX + ((event.clientX - rect.left) / rect.width) * (maxX - minX || 1);
+    const y = minY + ((event.clientY - rect.top) / rect.height) * (maxY - minY || 1);
+    sigma.getCamera().animate({ x, y }, { duration: 350 });
+  };
+  const flyTo = (id: string) => {
+    const graph = graphRef.current;
+    const sigma = sigmaRef.current;
+    if (!graph?.hasNode(id) || !sigma) return;
+    const attrs = graph.getNodeAttributes(id) as unknown as NodeAttrs;
+    hoveredRef.current = id;
+    sigma.refresh();
+    sigma.getCamera().animate({ x: attrs.x, y: attrs.y, ratio: 0.28 }, { duration: 500 });
+    setSearchText('');
+  };
+
+  const togglePresentation = async () => {
+    const next = !presentation;
+    setPresentation(next);
+    if (next && document.documentElement.requestFullscreen) await document.documentElement.requestFullscreen().catch(() => {});
+    else if (!next && document.fullscreenElement) await document.exitFullscreen().catch(() => {});
+  };
+
+  const contextNode = contextMenu ? dto.nodes.find((node) => node.id === contextMenu.id) : null;
+  const contextCommunityIds = contextNode?.communityId
+    ? dto.nodes.filter((node) => node.kind === 'note' && node.communityId === contextNode.communityId).map((node) => node.id)
+    : contextNode?.kind === 'note'
+      ? [contextNode.id]
+      : [];
+  const addContextToToday = () => {
+    if (!contextNode || contextNode.kind !== 'note') return;
+    createTask.mutate(
+      {
+        content: `Review ${contextNode.title}`,
+        description: `Second Brain note: ${contextNode.id}`,
+        plannedForDate: new Date().toLocaleDateString('en-CA'),
+        durationMin: 30,
+        labels: ['second-brain'],
+      },
+      { onSuccess: () => flash(`Added “${contextNode.title}” to today’s plan`) },
+    );
+    setContextMenu(null);
+  };
+
+  const searchMatches = searchText.trim()
+    ? dto.nodes.filter((node) => node.kind === 'note' && `${node.title} ${node.tags.join(' ')}`.toLowerCase().includes(searchText.trim().toLowerCase())).slice(0, 8)
+    : [];
 
   const toggleTag = (t: string) =>
     setActiveTags((prev) => {
@@ -857,8 +1199,34 @@ export default function GraphView({
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-white dark:bg-neutral-950">
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-slate-200 px-4 py-2 dark:border-neutral-800">
-        <h2 className="text-sm font-semibold text-slate-800 dark:text-neutral-200">Graph</h2>
+      <div className={`${presentation ? 'hidden' : 'flex'} flex-wrap items-center gap-x-4 gap-y-2 border-b border-slate-200 px-4 py-2 dark:border-neutral-800`}>
+        <h2 className="text-sm font-semibold tracking-tight text-slate-800 dark:text-neutral-200">Mind atlas</h2>
+
+        <div className="relative">
+          <Search size={13} className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input
+            ref={searchInputRef}
+            value={searchText}
+            onChange={(event) => setSearchText(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' && searchMatches[0]) flyTo(searchMatches[0].id);
+              if (event.key === 'Escape') setSearchText('');
+            }}
+            placeholder="Fly to a note…  /"
+            aria-label="Search and fly to a graph node"
+            className="w-48 rounded-md border border-slate-300 bg-white py-1 pl-7 pr-2 text-xs dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100"
+          />
+          {searchMatches.length > 0 && (
+            <div className="absolute left-0 top-8 z-40 w-72 overflow-hidden rounded-lg border border-slate-200 bg-white py-1 shadow-xl dark:border-neutral-700 dark:bg-neutral-900">
+              {searchMatches.map((node) => (
+                <button key={node.id} onClick={() => flyTo(node.id)} className="flex w-full items-center justify-between px-3 py-2 text-left text-xs hover:bg-teal-50 dark:hover:bg-teal-500/10">
+                  <span className="truncate font-medium text-slate-700 dark:text-neutral-200">{node.title}</span>
+                  <span className="ml-3 truncate text-[10px] text-slate-400">{node.folder || 'root'}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
 
         <div className="flex items-center gap-2">
           <select
@@ -947,18 +1315,41 @@ export default function GraphView({
           </button>
         </div>
 
+        <div className="relative ml-auto flex items-center gap-1">
+          <button onClick={() => setMultiMode((value) => !value)} className={`rounded-md border px-2 py-1 text-xs ${multiMode ? 'border-teal-600 bg-teal-600 text-white' : 'border-slate-300 text-slate-500 dark:border-neutral-700 dark:text-neutral-300'}`} title="Select several nodes; Space toggles the keyboard-focused node">
+            <Users size={13} className="mr-1 inline" /> Select{selectedIds.size ? ` ${selectedIds.size}` : ''}
+          </button>
+          <button onClick={() => setShowViews((value) => !value)} className="rounded-md border border-slate-300 p-1.5 text-slate-500 dark:border-neutral-700 dark:text-neutral-300" title="Saved named views"><Save size={14} /></button>
+          <button onClick={shareView} className="rounded-md border border-slate-300 p-1.5 text-slate-500 dark:border-neutral-700 dark:text-neutral-300" title="Copy a shareable URL containing the complete view state">{copied ? <Check size={14} /> : <Copy size={14} />}</button>
+          <button onClick={togglePresentation} className="rounded-md border border-slate-300 p-1.5 text-slate-500 dark:border-neutral-700 dark:text-neutral-300" title="Presentation mode (P)"><Presentation size={14} /></button>
+          {showViews && (
+            <div className="absolute right-0 top-9 z-50 w-72 rounded-xl border border-slate-200 bg-white p-3 shadow-2xl dark:border-neutral-700 dark:bg-neutral-900">
+              <div className="mb-2 text-xs font-semibold text-slate-700 dark:text-neutral-200">Saved views</div>
+              <div className="mb-3 max-h-40 space-y-1 overflow-auto">
+                {savedViews.length === 0 && <p className="text-xs text-slate-400">Save the filters, camera, era, and pinned nodes.</p>}
+                {savedViews.map((view) => <button key={view.id} onClick={() => applySavedView(view.state)} className="block w-full rounded-md px-2 py-1.5 text-left text-xs text-slate-600 hover:bg-slate-100 dark:text-neutral-300 dark:hover:bg-white/5">{view.name}</button>)}
+              </div>
+              <div className="flex gap-1">
+                <input value={saveViewName} onChange={(event) => setSaveViewName(event.target.value)} onKeyDown={(event) => event.key === 'Enter' && persistView()} placeholder="Name this view" className="min-w-0 flex-1 rounded-md border border-slate-300 px-2 py-1 text-xs dark:border-neutral-700 dark:bg-neutral-800" />
+                <button onClick={persistView} disabled={!saveViewName.trim()} className="rounded-md bg-teal-600 px-2 text-xs text-white disabled:opacity-40">Save</button>
+              </div>
+            </div>
+          )}
+        </div>
+
         {focusIds && focusIds.length > 0 && (
           <button
             onClick={() => onClearFocus?.()}
-            className="ml-auto flex items-center gap-1 rounded-full bg-teal-50 px-2 py-0.5 text-xs font-medium text-teal-700 hover:bg-teal-100 dark:bg-teal-500/15 dark:text-teal-300 dark:hover:bg-teal-500/25"
+            className="flex items-center gap-1 rounded-full bg-teal-50 px-2 py-0.5 text-xs font-medium text-teal-700 hover:bg-teal-100 dark:bg-teal-500/15 dark:text-teal-300 dark:hover:bg-teal-500/25"
             title="Clear the chat highlight"
           >
             Focused · {focusIds.length} note{focusIds.length === 1 ? '' : 's'}
             <X size={12} />
           </button>
         )}
-        <span className={`${focusIds && focusIds.length > 0 ? '' : 'ml-auto'} text-xs text-slate-400 dark:text-neutral-500`}>
-          {noteCount} notes{dto.indexReady ? '' : ' · indexing…'}
+        <span className="flex items-center gap-1 text-xs text-slate-400 dark:text-neutral-500" title={freshness.indexedAt ? `Indexed ${new Date(freshness.indexedAt).toLocaleString()}` : 'Index has not completed yet'}>
+          <span className={`h-2 w-2 rounded-full ${freshness.status === 'fresh' ? 'bg-emerald-500' : freshness.status === 'updating' ? 'animate-pulse bg-amber-400' : freshness.status === 'error' ? 'bg-rose-500' : 'bg-slate-400'}`} />
+          {noteCount} notes · {freshness.status}
         </span>
         <button
           onClick={onClose}
@@ -970,7 +1361,7 @@ export default function GraphView({
       </div>
 
       {/* G6 §5/§6/§7 row: ask-the-graph query bar + compiled chips + Connect / Suggestions toggles. */}
-      <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 px-4 py-2 dark:border-neutral-800">
+      <div className={`${presentation ? 'hidden' : 'flex'} flex-wrap items-center gap-2 border-b border-slate-200 px-4 py-2 dark:border-neutral-800`}>
         <div className="flex items-center gap-1.5">
           <div className="relative">
             <Search size={13} className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -1013,6 +1404,14 @@ export default function GraphView({
         )}
 
         <div className="ml-auto flex items-center gap-1.5">
+          {selectedIds.size > 1 && (
+            <button
+              onClick={() => onChatScope?.([...selectedIds], 'Summarize these notes together. Call out their shared themes, tensions, and useful connections, with citations.')}
+              className="flex items-center gap-1 rounded-md border border-teal-600 bg-teal-50 px-2 py-1 text-xs font-medium text-teal-700 dark:bg-teal-500/10 dark:text-teal-300"
+            >
+              <Sparkles size={13} /> Summarize {selectedIds.size}
+            </button>
+          )}
           <button
             onClick={() => {
               setConnectMode((v) => {
@@ -1049,14 +1448,47 @@ export default function GraphView({
         </div>
       </div>
 
+      {!presentation && timeline.length > 0 && (
+        <div className="hidden items-center gap-3 border-b border-slate-200 bg-slate-50/80 px-4 py-2 md:flex dark:border-neutral-800 dark:bg-neutral-900/60">
+          <button onClick={() => setPlaying((value) => !value)} className="rounded-full border border-slate-300 p-1.5 text-slate-500 hover:bg-white dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800" title={playing ? 'Pause playback' : 'Play vault growth'}>
+            {playing ? <Pause size={13} /> : <Play size={13} />}
+          </button>
+          <span className="w-28 text-xs font-medium text-slate-600 dark:text-neutral-300">{dto.era?.label ?? 'Live vault'}</span>
+          <input
+            type="range"
+            min={0}
+            max={timeline.length}
+            value={eraIndex}
+            onChange={(event) => {
+              setPlaying(false);
+              const index = Number(event.target.value);
+              setEraAt(index >= timeline.length ? null : timeline[index].at);
+            }}
+            aria-label="Time travel through vault history by week"
+            className="min-w-0 flex-1 accent-teal-600"
+          />
+          <span className="w-20 text-right text-[11px] tabular-nums text-slate-400">{dto.era ? `${dto.era.noteCount} notes` : `${liveDto.nodes.filter((node) => node.kind === 'note').length} notes`}</span>
+          <div className="flex max-w-xs gap-1 overflow-hidden">
+            {dto.era?.communityLabels.slice(0, 3).map((label) => <span key={label} className="truncate rounded-full bg-teal-50 px-2 py-0.5 text-[10px] text-teal-700 dark:bg-teal-500/10 dark:text-teal-300">{label}</span>)}
+          </div>
+          {eraQuery.isFetching && <span className="text-[11px] text-slate-400">Rebuilding era…</span>}
+        </div>
+      )}
+
       <div className="relative min-h-0 flex-1">
         {noteCount === 0 && (
           <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center text-sm text-slate-400 dark:text-neutral-500">
             No notes match this filter.
           </div>
         )}
-        <div ref={containerRef} className="h-full w-full" />
+        <div ref={containerRef} tabIndex={0} role="application" aria-label="Interactive knowledge graph. Use arrow keys to move, Enter to open, and Space to select." data-renderer="webgl" className="h-full w-full outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-teal-500" />
         <canvas ref={overlayRef} className="pointer-events-none absolute inset-0 h-full w-full" />
+
+        {presentation && (
+          <button onClick={togglePresentation} className="absolute right-4 top-4 z-30 rounded-full border border-white/20 bg-black/35 px-3 py-1.5 text-xs text-white backdrop-blur hover:bg-black/50" title="Exit presentation mode (P)">
+            <X size={13} className="mr-1 inline" /> Exit presentation
+          </button>
+        )}
 
         <div className="absolute right-3 top-3 flex flex-col overflow-hidden rounded-lg border border-slate-200 bg-white/90 shadow-sm backdrop-blur dark:border-neutral-800 dark:bg-neutral-900/90">
           <button onClick={zoomIn} className="p-2 text-slate-500 hover:bg-slate-100 dark:text-neutral-400 dark:hover:bg-white/5" title="Zoom in">
@@ -1070,7 +1502,7 @@ export default function GraphView({
           </button>
         </div>
 
-        <div className="absolute bottom-3 left-3 rounded-lg border border-slate-200 bg-white/85 px-3 py-2 text-[11px] text-slate-500 shadow-sm backdrop-blur dark:border-neutral-800 dark:bg-neutral-900/85 dark:text-neutral-400">
+        <div className={`${presentation ? 'hidden' : 'absolute'} bottom-3 left-3 rounded-lg border border-slate-200 bg-white/85 px-3 py-2 text-[11px] text-slate-500 shadow-sm backdrop-blur dark:border-neutral-800 dark:bg-neutral-900/85 dark:text-neutral-400`}>
           <div className="mb-1 font-medium text-slate-600 dark:text-neutral-300">Encoding</div>
           <div>Size · {sizeBy === 'pagerank' ? 'PageRank' : 'degree'}</div>
           <div>Color · {colorBy === 'uniform' ? 'uniform' : colorBy}</div>
@@ -1087,7 +1519,9 @@ export default function GraphView({
           ref={minimapRef}
           width={180}
           height={120}
-          className="absolute bottom-3 right-3 rounded-lg border border-slate-200 bg-white/80 shadow-sm backdrop-blur dark:border-neutral-800 dark:bg-neutral-900/80"
+          onClick={navigateFromMinimap}
+          aria-label="Graph mini-map; click to move the camera"
+          className={`${presentation ? 'hidden' : 'absolute'} bottom-3 right-3 cursor-crosshair rounded-lg border border-slate-200 bg-white/80 shadow-sm backdrop-blur dark:border-neutral-800 dark:bg-neutral-900/80`}
         />
 
         {hoverCard && (
@@ -1104,6 +1538,7 @@ export default function GraphView({
               <div className="mt-0.5 text-[11px] text-slate-400 dark:text-neutral-500">
                 {hoverCard.folder || '(root)'} · {hoverCard.degree} link{hoverCard.degree === 1 ? '' : 's'} · PR {hoverCard.pagerank.toFixed(2)}
                 {hoverCard.openTasks > 0 && ` · ${hoverCard.openTasks} open task${hoverCard.openTasks === 1 ? '' : 's'}`}
+                {hoverCard.timeSpentMin > 0 && ` · ${hoverCard.timeSpentMin}m focused`}
                 {hoverCard.freshnessDays > 0 && ` · ${hoverCard.freshnessDays}d old`}
               </div>
             )}
@@ -1116,8 +1551,25 @@ export default function GraphView({
                 ))}
               </div>
             )}
+            {hoverCard.preview && <p dir="auto" className="mt-2 line-clamp-4 border-t border-slate-100 pt-2 text-xs leading-relaxed text-slate-600 dark:border-neutral-800 dark:text-neutral-300">{hoverCard.preview}</p>}
           </div>
         )}
+
+        {contextMenu && contextNode && (
+          <div className="absolute z-40 w-56 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-2xl dark:border-neutral-700 dark:bg-neutral-900" style={{ left: Math.min(contextMenu.x, Math.max(8, (containerRef.current?.clientWidth ?? 300) - 232)), top: Math.min(contextMenu.y, Math.max(8, (containerRef.current?.clientHeight ?? 300) - 190)) }} role="menu">
+            <div className="truncate border-b border-slate-100 px-3 py-2 text-xs font-semibold text-slate-700 dark:border-neutral-800 dark:text-neutral-200">{contextNode.title}</div>
+            {contextNode.kind === 'note' && <button onClick={() => onNavigate(contextNode.id)} className="block w-full px-3 py-2 text-left text-xs text-slate-600 hover:bg-slate-50 dark:text-neutral-300 dark:hover:bg-white/5" role="menuitem">Open note</button>}
+            {contextNode.kind === 'note' && currentNoteId && currentNoteId !== contextNode.id && (
+              <button onClick={() => { acceptSug.mutate({ source: currentNoteId, target: contextNode.id }, { onSuccess: () => flash(`Linked “${contextNode.title}”`) }); setContextMenu(null); }} className="block w-full px-3 py-2 text-left text-xs text-slate-600 hover:bg-slate-50 dark:text-neutral-300 dark:hover:bg-white/5" role="menuitem">Link from current note</button>
+            )}
+            {contextNode.kind === 'note' && <button onClick={addContextToToday} className="block w-full px-3 py-2 text-left text-xs text-slate-600 hover:bg-slate-50 dark:text-neutral-300 dark:hover:bg-white/5" role="menuitem">Add review to today’s plan</button>}
+            {contextCommunityIds.length > 0 && (
+              <button onClick={() => { onChatScope?.(contextCommunityIds, `Let’s discuss the ${contextNode.communityLabel ?? contextNode.title} community. Start with its main themes and the most useful connections.`); setContextMenu(null); }} className="block w-full px-3 py-2 text-left text-xs text-slate-600 hover:bg-slate-50 dark:text-neutral-300 dark:hover:bg-white/5" role="menuitem">Chat with this community</button>
+            )}
+          </div>
+        )}
+
+        {notice && <div role="status" className="absolute bottom-5 left-1/2 z-50 -translate-x-1/2 rounded-full bg-slate-900 px-3 py-1.5 text-xs text-white shadow-xl dark:bg-white dark:text-neutral-900">{notice}</div>}
 
         {/* G6 §6 — Connect mode helper / path narration. */}
         {connectMode && (

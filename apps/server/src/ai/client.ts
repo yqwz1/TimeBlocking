@@ -3,6 +3,24 @@ import { env } from '../config.js';
 
 export type AiProvider = 'gemini' | 'openrouter';
 
+/** Provider usage is kept separate from request content so telemetry never stores prompts. */
+export interface ProviderUsage {
+  inputTokens: number;
+  outputTokens: number;
+  reasoningTokens: number;
+  cachedTokens: number;
+  billableTokens: number;
+  estimatedUsd: number | null;
+  exact: boolean;
+}
+
+export interface ProviderResult<T> {
+  value: T;
+  usage: ProviderUsage;
+  provider: AiProvider;
+  model: string;
+}
+
 export interface JsonSchema {
   type: 'object' | 'array' | 'string' | 'number' | 'integer' | 'boolean';
   properties?: Record<string, JsonSchema>;
@@ -19,12 +37,52 @@ interface OpenRouterMessage {
 
 interface OpenRouterChatResponse {
   choices?: Array<{ message?: OpenRouterMessage }>;
+  usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number; cost?: number; prompt_tokens_details?: { cached_tokens?: number }; completion_tokens_details?: { reasoning_tokens?: number } };
   error?: { message?: string };
 }
 
 interface OpenRouterEmbeddingResponse {
   data?: Array<{ index?: number; embedding?: number[] }>;
+  usage?: { prompt_tokens?: number; total_tokens?: number; cost?: number; prompt_tokens_details?: { cached_tokens?: number } };
   error?: { message?: string };
+}
+
+function emptyUsage(): ProviderUsage {
+  return { inputTokens: 0, outputTokens: 0, reasoningTokens: 0, cachedTokens: 0, billableTokens: 0, estimatedUsd: null, exact: false };
+}
+
+function openRouterUsage(usage: OpenRouterChatResponse['usage'] | OpenRouterEmbeddingResponse['usage'] | undefined): ProviderUsage {
+  if (!usage) return emptyUsage();
+  const inputTokens = usage.prompt_tokens ?? 0;
+  const outputTokens = 'completion_tokens' in usage ? usage.completion_tokens ?? 0 : 0;
+  const cachedTokens = usage.prompt_tokens_details?.cached_tokens ?? 0;
+  const reasoningTokens = 'completion_tokens_details' in usage ? usage.completion_tokens_details?.reasoning_tokens ?? 0 : 0;
+  return {
+    inputTokens,
+    outputTokens,
+    reasoningTokens,
+    cachedTokens,
+    billableTokens: Math.max(0, (usage.total_tokens ?? inputTokens + outputTokens) - cachedTokens),
+    estimatedUsd: typeof usage.cost === 'number' ? usage.cost : null,
+    exact: true,
+  };
+}
+
+function geminiUsage(response: { usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number; thoughtsTokenCount?: number; cachedContentTokenCount?: number; totalTokenCount?: number } }): ProviderUsage {
+  const meta = response.usageMetadata;
+  if (!meta) return emptyUsage();
+  const inputTokens = meta.promptTokenCount ?? 0;
+  const outputTokens = meta.candidatesTokenCount ?? 0;
+  const cachedTokens = meta.cachedContentTokenCount ?? 0;
+  return {
+    inputTokens,
+    outputTokens,
+    reasoningTokens: meta.thoughtsTokenCount ?? 0,
+    cachedTokens,
+    billableTokens: Math.max(0, (meta.totalTokenCount ?? inputTokens + outputTokens) - cachedTokens),
+    estimatedUsd: null,
+    exact: true,
+  };
 }
 
 export function getAiProvider(): AiProvider {
@@ -121,7 +179,7 @@ function messageText(message: OpenRouterMessage | undefined): string {
   return '';
 }
 
-async function openRouterChat(model: string, content: unknown, schema?: JsonSchema): Promise<string> {
+async function openRouterChat(model: string, content: unknown, schema?: JsonSchema): Promise<ProviderResult<string>> {
   const payload = await openRouterPost<OpenRouterChatResponse>('/chat/completions', {
     model: resolveGenerationModel(model, 'openrouter'),
     messages: [{ role: 'user', content }],
@@ -140,27 +198,34 @@ async function openRouterChat(model: string, content: unknown, schema?: JsonSche
   });
   const text = messageText(payload.choices?.[0]?.message);
   if (!text) throw new Error(payload.error?.message || 'OpenRouter returned an empty response');
-  return text;
+  return { value: text, usage: openRouterUsage(payload.usage), provider: 'openrouter', model: resolveGenerationModel(model, 'openrouter') };
+}
+
+export async function generateTextWithUsage(model: string, prompt: string): Promise<ProviderResult<string>> {
+  if (getAiProvider() === 'openrouter') return openRouterChat(model, prompt);
+  const response = await getGeminiClient().models.generateContent({ model: resolveGenerationModel(model, 'gemini'), contents: prompt });
+  return { value: (response.text ?? '').trim(), usage: geminiUsage(response), provider: 'gemini', model: resolveGenerationModel(model, 'gemini') };
+}
+
+export async function generateJsonWithUsage<T>(model: string, prompt: string, schema: JsonSchema): Promise<ProviderResult<T>> {
+  if (getAiProvider() === 'openrouter') {
+    const result = await openRouterChat(model, prompt, schema);
+    return { ...result, value: JSON.parse(result.value || '{}') as T };
+  }
+  const response = await getGeminiClient().models.generateContent({
+    model: resolveGenerationModel(model, 'gemini'),
+    contents: prompt,
+    config: { responseMimeType: 'application/json', responseSchema: toGeminiSchema(schema) },
+  });
+  return { value: JSON.parse(response.text ?? '{}') as T, usage: geminiUsage(response), provider: 'gemini', model: resolveGenerationModel(model, 'gemini') };
 }
 
 export async function generateText(model: string, prompt: string): Promise<string> {
-  if (getAiProvider() === 'openrouter') return openRouterChat(model, prompt);
-  const response = await getGeminiClient().models.generateContent({ model: resolveGenerationModel(model, 'gemini'), contents: prompt });
-  return (response.text ?? '').trim();
+  return (await generateTextWithUsage(model, prompt)).value;
 }
 
 export async function generateJson<T>(model: string, prompt: string, schema: JsonSchema): Promise<T> {
-  const text =
-    getAiProvider() === 'openrouter'
-      ? await openRouterChat(model, prompt, schema)
-      : (
-          await getGeminiClient().models.generateContent({
-            model: resolveGenerationModel(model, 'gemini'),
-            contents: prompt,
-            config: { responseMimeType: 'application/json', responseSchema: toGeminiSchema(schema) },
-          })
-        ).text ?? '';
-  return JSON.parse(text || '{}') as T;
+  return (await generateJsonWithUsage<T>(model, prompt, schema)).value;
 }
 
 function audioFormat(mimeType: string): string {
@@ -177,38 +242,71 @@ export async function generateAudioJson<T>(
   mimeType: string,
   schema: JsonSchema,
 ): Promise<T> {
+  return (await generateAudioJsonWithUsage<T>(model, prompt, audio, mimeType, schema)).value;
+}
+
+export async function generateAudioJsonWithUsage<T>(model: string, prompt: string, audio: Buffer, mimeType: string, schema: JsonSchema): Promise<ProviderResult<T>> {
   if (getAiProvider() === 'openrouter') {
     const content = [
       { type: 'text', text: prompt },
       { type: 'input_audio', input_audio: { data: audio.toString('base64'), format: audioFormat(mimeType) } },
     ];
-    return JSON.parse(await openRouterChat(model, content, schema)) as T;
+    const result = await openRouterChat(model, content, schema);
+    return { ...result, value: JSON.parse(result.value) as T };
   }
   const response = await getGeminiClient().models.generateContent({
     model: resolveGenerationModel(model, 'gemini'),
     contents: [{ text: prompt }, { inlineData: { mimeType, data: audio.toString('base64') } }],
     config: { responseMimeType: 'application/json', responseSchema: toGeminiSchema(schema) },
   });
-  return JSON.parse(response.text ?? '{}') as T;
+  return { value: JSON.parse(response.text ?? '{}') as T, usage: geminiUsage(response), provider: 'gemini', model: resolveGenerationModel(model, 'gemini') };
+}
+
+export async function generateVisionText(model: string, prompt: string, image: Buffer, mimeType: string): Promise<string> {
+  return (await generateVisionTextWithUsage(model, prompt, image, mimeType)).value;
+}
+
+export async function generateVisionTextWithUsage(model: string, prompt: string, image: Buffer, mimeType: string): Promise<ProviderResult<string>> {
+  if (getAiProvider() === 'openrouter') {
+    return await openRouterChat(model, [
+      { type: 'text', text: prompt },
+      { type: 'image_url', image_url: { url: `data:${mimeType};base64,${image.toString('base64')}` } },
+    ]);
+  }
+  const response = await getGeminiClient().models.generateContent({
+    model: resolveGenerationModel(model, 'gemini'),
+    contents: [{ text: prompt }, { inlineData: { mimeType, data: image.toString('base64') } }],
+  });
+  return { value: (response.text ?? '').trim(), usage: geminiUsage(response), provider: 'gemini', model: resolveGenerationModel(model, 'gemini') };
 }
 
 export async function embedContent(model: string, texts: string[], dimensions: number): Promise<number[][]> {
-  if (!texts.length) return [];
+  return (await embedContentWithUsage(model, texts, dimensions)).value;
+}
+
+export async function embedContentWithUsage(model: string, texts: string[], dimensions: number): Promise<ProviderResult<number[][]>> {
+  if (!texts.length) return { value: [], usage: emptyUsage(), provider: getAiProvider(), model: resolveEmbeddingModel(model) };
   if (getAiProvider() === 'openrouter') {
     const payload = await openRouterPost<OpenRouterEmbeddingResponse>('/embeddings', {
       model: resolveEmbeddingModel(model, 'openrouter'),
       input: texts,
       dimensions,
     });
-    return (payload.data ?? [])
+    const value = (payload.data ?? [])
       .slice()
       .sort((a, b) => (a.index ?? 0) - (b.index ?? 0))
       .map((item) => item.embedding ?? []);
+    return { value, usage: openRouterUsage(payload.usage), provider: 'openrouter', model: resolveEmbeddingModel(model, 'openrouter') };
   }
   const response = await getGeminiClient().models.embedContent({
     model: resolveEmbeddingModel(model, 'gemini'),
     contents: texts,
     config: { outputDimensionality: dimensions },
   });
-  return (response.embeddings ?? []).map((embedding) => embedding.values ?? []);
+  return {
+    value: (response.embeddings ?? []).map((embedding) => embedding.values ?? []),
+    usage: geminiUsage(response as unknown as { usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number; thoughtsTokenCount?: number; cachedContentTokenCount?: number; totalTokenCount?: number } }),
+    provider: 'gemini',
+    model: resolveEmbeddingModel(model, 'gemini'),
+  };
 }

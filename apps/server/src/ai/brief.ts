@@ -1,8 +1,8 @@
 import type { TodayPlanDTO } from '@timeblock/shared';
-import { generateText } from './client.js';
+import { ModelGateway } from '../assistant/modelGateway.js';
 
 /** Advisory-only: never mutates schedule state, purely narrates the day. */
-export async function generateBrief(today: TodayPlanDTO, model: string): Promise<string> {
+export async function generateBrief(gateway: ModelGateway, today: TodayPlanDTO, model: string): Promise<string> {
   const prompt = [
     'You are a terse, encouraging personal daily-planning assistant.',
     "Given today's plan as JSON, write a short brief (4-6 sentences, plain text, no headers or markdown):",
@@ -13,5 +13,5 @@ export async function generateBrief(today: TodayPlanDTO, model: string): Promise
     '',
     JSON.stringify(today),
   ].join('\n');
-  return generateText(model, prompt);
+  return (await gateway.generateText({ task: 'draft', promptVersion: 'daily-brief-v2', model, prompt })).value;
 }

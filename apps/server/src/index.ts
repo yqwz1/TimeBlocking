@@ -4,27 +4,45 @@ import fastifyStatic from '@fastify/static';
 import multipart from '@fastify/multipart';
 import { env, OAUTH_CALLBACK_PATH, WEB_DIST } from './config.js';
 import { createDb } from './db/client.js';
-import { ensureTimezoneDefault } from './settings.js';
+import { ensureTimezoneDefault, getSettings } from './settings.js';
 import { SyncManager } from './sync/manager.js';
 import { registerApiRoutes } from './routes/index.js';
 import { handleOAuthCallback } from './integrations/google/auth.js';
 import { getVaultRoot } from './notes/vault.js';
 import { reindexAll } from './notes/indexer.js';
+import { triggerGraphRecompute } from './notes/graph/recompute.js';
+import { triggerConceptExtraction } from './notes/concepts/recompute.js';
+import { completeGraphJob, failGraphJob, recoverInterruptedGraphJobs, startGraphJob } from './notes/graph/jobs.js';
+import { reembedAllNotes } from './notes/embeddings.js';
+import { aiConfigured } from './ai/client.js';
+import { DriveBackupService } from './integrations/google/driveBackups.js';
 
 async function main() {
   const db = createDb();
   ensureTimezoneDefault(db);
-  await reindexAll(db, getVaultRoot(db));
+  const vaultRoot = getVaultRoot(db);
+  await reindexAll(db, vaultRoot);
+  const interruptedJobs = recoverInterruptedGraphJobs(db);
+  triggerGraphRecompute(db);
+  triggerConceptExtraction(db, vaultRoot);
+  if (interruptedJobs.includes('embeddings')) {
+    const settings = getSettings(db);
+    startGraphJob(db, 'embeddings');
+    void reembedAllNotes(db, vaultRoot, settings.aiEnabled && aiConfigured(), settings.aiEmbeddingModel)
+      .then(() => completeGraphJob(db, 'embeddings'))
+      .catch((error) => failGraphJob(db, 'embeddings', error));
+  }
 
   const manager = new SyncManager(db);
+  const driveBackups = new DriveBackupService(db);
 
   const app = Fastify({ logger: { level: env.isProd ? 'warn' : 'info' } });
-  await app.register(cors, { origin: env.isProd ? false : true });
+  await app.register(cors, { origin: env.isProd ? (env.integrationOrigin || false) : true });
   await app.register(multipart, { limits: { fileSize: 25 * 1024 * 1024 } });
 
   await app.register(
     async (api) => {
-      registerApiRoutes(api, db, manager);
+      registerApiRoutes(api, db, manager, driveBackups);
     },
     { prefix: '/api' },
   );
@@ -52,6 +70,10 @@ async function main() {
   }
 
   manager.start();
+  // A lightweight scheduler only enqueues when the configured interval is due;
+  // DriveBackupService makes concurrent/manual requests single-flight.
+  setInterval(() => { void driveBackups.runScheduled(); }, 60 * 60 * 1000).unref();
+  void driveBackups.runScheduled();
 
   await app.listen({ port: env.port, host: '127.0.0.1' });
   console.log(`TimeBlock server listening on http://127.0.0.1:${env.port}`);
