@@ -20,7 +20,9 @@
     "graphify:brain": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/graphify-second-brain.ps1",
     "graphify:brain:serve": "python -m graphify.serve data/graphify-second-brain/graphify-out/graph.json --transport http --host 127.0.0.1 --port 8765",
     "desktop:dev": "npm -w @timeblock/server run build && npm -w @timeblock/desktop run dev",
-    "desktop:dist": "npm run build && npm -w @timeblock/server run build && npm -w @timeblock/desktop run dist",
+    "workout:test": "npm -w @timeblock/workout-engine test",
+    "workout:build": "npm -w @timeblock/workout-engine run build:win",
+    "desktop:dist": "npm run build && npm -w @timeblock/server run build && npm run workout:build && npm -w @timeblock/desktop run dist",
     "native:node": "npm rebuild better-sqlite3"
   },
   "devDependencies": {

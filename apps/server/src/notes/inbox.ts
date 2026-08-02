@@ -28,12 +28,13 @@ export function normalizeVaultFolder(value: string, fallback: string): string {
 }
 
 export function buildInboxCaptureContent(input: {
-  kind: 'quick' | 'web-clip' | 'voice';
+  kind: 'quick' | 'web-clip' | 'voice' | 'youtube';
   title: string;
   body: string;
   capturedAt: string;
   source?: string | null;
   sourceTitle?: string | null;
+  bookmark?: boolean;
   tags?: string[];
   summary?: string | null;
   transcript?: string | null;
@@ -49,6 +50,7 @@ export function buildInboxCaptureContent(input: {
     `capture: ${input.kind}`,
     `capturedAt: ${yamlString(input.capturedAt)}`,
     `processed: false`,
+    input.bookmark ? 'bookmark: true' : null,
     input.source ? `source: ${yamlString(input.source)}` : null,
     input.sourceTitle ? `sourceTitle: ${yamlString(input.sourceTitle)}` : null,
     input.language ? `language: ${yamlString(input.language)}` : null,

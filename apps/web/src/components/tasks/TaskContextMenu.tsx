@@ -26,7 +26,7 @@ import {
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { TaskDTO } from '@timeblock/shared';
-import { taskToInput, useCreateTask, useDeleteTask, useProjects, useUpdateTask } from '../../hooks.js';
+import { taskToInput, useCreateTask, useDeleteTask, useProjects, useRescheduleTask, useUnscheduleTask, useUpdateTask } from '../../hooks.js';
 import { PRIORITY_LABEL, quickDateOptions } from './taskDisplay.js';
 
 /** Everything the menu needs to render for one task. */
@@ -105,6 +105,8 @@ function MenuPanel({ state, onClose }: { state: MenuState; onClose: () => void }
   const update = useUpdateTask();
   const del = useDeleteTask();
   const create = useCreateTask();
+  const reschedule = useRescheduleTask();
+  const unschedule = useUnscheduleTask();
   const { data: projects } = useProjects();
   const ref = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState({ x: state.x, y: state.y });
@@ -156,7 +158,10 @@ function MenuPanel({ state, onClose }: { state: MenuState; onClose: () => void }
   };
 
   const copyText = () => {
-    void navigator.clipboard?.writeText(task.content);
+    const details = [task.content, task.description, task.dueDate ? `Due: ${task.dueDate}` : null, task.projectName ? `Project: ${task.projectName}` : null]
+      .filter(Boolean)
+      .join('\n');
+    void navigator.clipboard?.writeText(details);
     onClose();
   };
 
@@ -186,6 +191,27 @@ function MenuPanel({ state, onClose }: { state: MenuState; onClose: () => void }
           <Divider />
         </>
       )}
+
+      <SectionLabel>Planning</SectionLabel>
+      <MenuItem
+        icon={CalendarArrowUp}
+        label={task.view === 'scheduled' ? 'Replan task' : 'Schedule next available'}
+        onClick={() => {
+          reschedule.mutate(task.id);
+          onClose();
+        }}
+      />
+      {task.view === 'scheduled' && (
+        <MenuItem
+          icon={Ban}
+          label="Clear schedule"
+          onClick={() => {
+            unschedule.mutate(task.id);
+            onClose();
+          }}
+        />
+      )}
+      <Divider />
 
       <SectionLabel>Due date</SectionLabel>
       <div className="flex items-center gap-1 px-3 pb-1.5 pt-0.5">
@@ -292,7 +318,7 @@ function MenuPanel({ state, onClose }: { state: MenuState; onClose: () => void }
           ))}
         </div>
       )}
-      <MenuItem icon={ClipboardCopy} label="Copy task text" onClick={copyText} />
+      <MenuItem icon={ClipboardCopy} label="Copy task details" onClick={copyText} />
 
       <Divider />
       <MenuItem

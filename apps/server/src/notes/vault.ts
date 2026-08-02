@@ -62,6 +62,30 @@ export async function listMarkdownFiles(root: string): Promise<string[]> {
   return out;
 }
 
+/** Lists visible vault folders, including folders that do not yet contain a note. */
+export async function listVaultFolders(root: string): Promise<string[]> {
+  const folders: string[] = [];
+  async function walk(dir: string, rel: string) {
+    const entries = await fsp.readdir(dir, { withFileTypes: true });
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue;
+      if ((rel === '' && isHiddenTopLevel(entry.name)) || (rel !== '' && entry.name.startsWith('.'))) continue;
+      const childRel = rel ? `${rel}/${entry.name}` : entry.name;
+      folders.push(childRel);
+      await walk(path.join(dir, entry.name), childRel);
+    }
+  }
+  await walk(root, '');
+  return folders.sort((a, b) => a.localeCompare(b));
+}
+
+/** Creates a visible, empty folder in the vault without adding a placeholder note. */
+export async function createVaultFolder(root: string, relPath: string): Promise<void> {
+  const abs = safeResolve(root, relPath);
+  if (fs.existsSync(abs) && !fs.statSync(abs).isDirectory()) throw new VaultConflictError(`a file already exists at ${relPath}`);
+  await fsp.mkdir(abs, { recursive: true });
+}
+
 export interface NoteFileStat {
   content: string;
   createdAtUtc: string;

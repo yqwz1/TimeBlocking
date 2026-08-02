@@ -15,10 +15,15 @@ import {
   NoteChatSchema,
   QuickCaptureSchema,
   ClipUrlSchema,
+  YouTubeCaptureSchema,
+  getYouTubeCanonicalUrl,
+  getYouTubeVideoId,
   InboxTriageApplySchema,
   NoteCreateSchema,
+  VaultFolderSchema,
   NoteFromTemplateSchema,
   NoteMoveSchema,
+  NoteAppearanceSchema,
   NoteQuerySchema,
   NoteRestoreSnapshotSchema,
   NoteSaveSchema,
@@ -105,7 +110,9 @@ import {
 import { exportNotes } from '../notes/export.js';
 import {
   createNoteFile,
+  createVaultFolder,
   getVaultRoot,
+  listVaultFolders,
   listNoteSnapshots,
   listTrash,
   moveNoteFile,
@@ -136,11 +143,25 @@ const ASSET_MIME_TYPES: Record<string, string> = {
   '.png': 'image/png',
   '.jpg': 'image/jpeg',
   '.jpeg': 'image/jpeg',
+  '.bmp': 'image/bmp',
   '.gif': 'image/gif',
   '.svg': 'image/svg+xml',
+  '.tiff': 'image/tiff',
   '.webp': 'image/webp',
+  '.avif': 'image/avif',
   '.pdf': 'application/pdf',
 };
+
+const SUPPORTED_NOTE_IMAGE_MIME_TYPES = new Set([
+  'image/png',
+  'image/jpeg',
+  'image/bmp',
+  'image/gif',
+  'image/svg+xml',
+  'image/tiff',
+  'image/webp',
+  'image/avif',
+]);
 import { getBacklinks, getOutgoingLinks, getUnlinkedMentions, indexNote, reindexAll, removeNoteFromIndex, searchNotes } from '../notes/indexer.js';
 
 type NoteRow = typeof notes.$inferSelect;
@@ -177,13 +198,24 @@ function toSummaryDTO(row: NoteRow): NoteSummaryDTO {
   } catch {
     tags = [];
   }
-  let pinned = false;
-  try {
-    pinned = (JSON.parse(row.frontmatter) as Record<string, unknown>)?.pinned === true;
-  } catch {
-    pinned = false;
-  }
-  return { id: row.id, title: row.title, tags, pinned, createdAt: row.createdAtUtc, updatedAt: row.updatedAtUtc };
+  const frontmatter = frontmatterOf(row);
+  const rawTagColors = frontmatter.tagColors;
+  const tagColors = rawTagColors && typeof rawTagColors === 'object' && !Array.isArray(rawTagColors)
+    ? Object.fromEntries(Object.entries(rawTagColors).flatMap(([tag, color]) => {
+      const normalizedTag = tag.trim().toLocaleLowerCase();
+      return normalizedTag && typeof color === 'string' && /^#[0-9a-f]{6}$/i.test(color.trim())
+        ? [[normalizedTag, color.trim()]]
+        : [];
+    }))
+    : undefined;
+  const pinned = frontmatter.pinned === true;
+  const source = typeof frontmatter.source === 'string' && frontmatter.source.trim() ? frontmatter.source : null;
+  const capture = typeof frontmatter.capture === 'string' ? frontmatter.capture : null;
+  // Web captures created before the bookmark flag existed remain visible as bookmarks.
+  const bookmark = frontmatter.bookmark === true || (!!source && (capture === 'page' || capture === 'link' || capture === 'web-clip'));
+  const color = typeof frontmatter.color === 'string' && /^#[0-9a-f]{6}$/i.test(frontmatter.color) ? frontmatter.color : null;
+  const icon = typeof frontmatter.icon === 'string' && frontmatter.icon.trim() ? frontmatter.icon : null;
+  return { id: row.id, title: row.title, tags, tagColors, pinned, bookmark, source, color, icon, createdAt: row.createdAtUtc, updatedAt: row.updatedAtUtc };
 }
 
 function frontmatterOf(row: NoteRow): Record<string, unknown> {
@@ -333,6 +365,22 @@ export function registerNoteRoutes(app: FastifyInstance, db: DB, manager: SyncMa
     return db.select().from(notes).orderBy(asc(notes.id)).all().map(toSummaryDTO);
   });
 
+  app.get('/notes/folders', async (): Promise<string[]> => listVaultFolders(getVaultRoot(db)));
+
+  app.post<{ Body: unknown }>('/notes/folders', async (req, reply): Promise<{ path: string } | { error: string }> => {
+    const parsed = VaultFolderSchema.safeParse(req.body);
+    if (!parsed.success) return reply.code(400).send({ error: parsed.error.message });
+    const folder = normalizeVaultFolder(parsed.data.path, '');
+    if (!folder) return reply.code(400).send({ error: 'folder name is required' });
+    try {
+      await createVaultFolder(getVaultRoot(db), folder);
+      return reply.code(201).send({ path: folder });
+    } catch (err) {
+      if (err instanceof VaultConflictError || err instanceof VaultPathError) return reply.code(409).send({ error: err.message });
+      throw err;
+    }
+  });
+
   app.get('/notes/inbox', async (): Promise<InboxNoteDTO[]> => {
     const settings = getSettings(db);
     const prefix = `${normalizeVaultFolder(settings.notesInboxFolder, 'Inbox')}/`;
@@ -410,8 +458,44 @@ export function registerNoteRoutes(app: FastifyInstance, db: DB, manager: SyncMa
       capturedAt: now.toUTC().toISO()!,
       source: parsed.data.url,
       sourceTitle: readable.title,
+      bookmark: true,
       tags: ['web-capture'],
       summary,
+    });
+    try {
+      await createNoteFile(root, relPath, content);
+    } catch (err) {
+      if (err instanceof VaultConflictError || err instanceof VaultPathError) return reply.code(409).send({ error: err.message });
+      throw err;
+    }
+    await indexNote(db, root, relPath);
+    notifyNoteChanged(db, root, relPath);
+    const row = getNoteRow(db, relPath);
+    return reply.code(201).send({ ...toSummaryDTO(row!), content });
+  });
+
+  app.post<{ Body: unknown }>('/notes/capture-youtube', async (req, reply): Promise<NoteDTO | { error: string }> => {
+    const parsed = YouTubeCaptureSchema.safeParse(req.body);
+    if (!parsed.success) return reply.code(400).send({ error: parsed.error.message });
+    const videoId = getYouTubeVideoId(parsed.data.url);
+    if (!videoId) return reply.code(400).send({ error: 'Enter a valid YouTube video URL.' });
+
+    const settings = getSettings(db);
+    const root = getVaultRoot(db);
+    const now = DateTime.now().setZone(settings.timezone);
+    const canonicalUrl = getYouTubeCanonicalUrl(videoId);
+    const title = (parsed.data.title?.trim() || `YouTube video · ${videoId}`).slice(0, 120);
+    const existingIds = db.select({ id: notes.id }).from(notes).all().map((row) => row.id);
+    const relPath = capturePath(settings, parsed.data.folder || `${settings.notesInboxFolder}/Videos`, title, existingIds, now);
+    const content = buildInboxCaptureContent({
+      kind: 'youtube',
+      title,
+      body: `@[youtube](${canonicalUrl})\n\n## Notes\n\n`,
+      capturedAt: now.toUTC().toISO()!,
+      source: canonicalUrl,
+      sourceTitle: title,
+      bookmark: true,
+      tags: ['youtube', 'video'],
     });
     try {
       await createNoteFile(root, relPath, content);
@@ -966,6 +1050,9 @@ export function registerNoteRoutes(app: FastifyInstance, db: DB, manager: SyncMa
     if (!file) return reply.code(400).send({ error: 'no file uploaded' });
     const settings = getSettings(db);
     const kind = req.query.kind === 'audio' ? 'audio' : 'image';
+    if (kind === 'image' && !SUPPORTED_NOTE_IMAGE_MIME_TYPES.has(file.mimetype.toLowerCase())) {
+      return reply.code(415).send({ error: 'unsupported image type' });
+    }
     const buffer = await file.toBuffer();
     const assetPath = await saveNoteAsset(root, settings.notesAttachmentsFolder, kind, file.filename || `${kind}-${Date.now()}`, buffer);
     let ocrText: string | null = null;
@@ -1085,6 +1172,29 @@ export function registerNoteRoutes(app: FastifyInstance, db: DB, manager: SyncMa
     return { ...toSummaryDTO(row!), content: parsed.data.content };
   });
 
+  // Keeps visual organization in the note itself, alongside the existing `pinned` frontmatter.
+  app.put<{ Body: unknown }>('/notes/appearance', async (req, reply): Promise<NoteDTO | { error: string }> => {
+    const parsed = NoteAppearanceSchema.safeParse(req.body);
+    if (!parsed.success) return reply.code(400).send({ error: parsed.error.message });
+    const root = getVaultRoot(db);
+    const relPath = normalizeNotePath(parsed.data.id);
+    const file = await readNoteFile(root, relPath);
+    if (!file) return reply.code(404).send({ error: 'not found' });
+
+    const parsedNote = matter(file.content);
+    const nextData: Record<string, unknown> = { ...parsedNote.data };
+    if (parsed.data.color) nextData.color = parsed.data.color;
+    else delete nextData.color;
+    if (parsed.data.icon) nextData.icon = parsed.data.icon;
+    else delete nextData.icon;
+    const nextContent = Object.keys(nextData).length > 0 ? matter.stringify(parsedNote.content, nextData) : parsedNote.content;
+    const settings = getSettings(db);
+    await writeNoteFile(root, relPath, nextContent, settings.notesSnapshotRetention);
+    await indexNote(db, root, relPath);
+    const row = getNoteRow(db, relPath);
+    return { ...toSummaryDTO(row!), content: nextContent };
+  });
+
   app.delete<{ Params: { '*': string } }>('/notes/file/*', async (req, reply) => {
     const root = getVaultRoot(db);
     const relPath = normalizeNotePath(req.params['*']);
@@ -1185,6 +1295,27 @@ export function registerNoteRoutes(app: FastifyInstance, db: DB, manager: SyncMa
     const nextData: Record<string, unknown> = { ...parsedNote.data };
     if (nextPinned) nextData.pinned = true;
     else delete nextData.pinned;
+    const nextContent = Object.keys(nextData).length > 0 ? matter.stringify(parsedNote.content, nextData) : parsedNote.content;
+    const settings = getSettings(db);
+    await writeNoteFile(root, relPath, nextContent, settings.notesSnapshotRetention);
+    await indexNote(db, root, relPath);
+    const row = getNoteRow(db, relPath);
+    return { ...toSummaryDTO(row!), content: nextContent };
+  });
+
+  // Bookmarks are intentionally stored with the note so they travel with the Markdown vault.
+  app.post<{ Body: unknown }>('/notes/bookmark', async (req, reply): Promise<NoteDTO | { error: string }> => {
+    const body = req.body as { id?: string };
+    if (!body.id) return reply.code(400).send({ error: 'id is required' });
+    const root = getVaultRoot(db);
+    const relPath = normalizeNotePath(body.id);
+    const file = await readNoteFile(root, relPath);
+    if (!file) return reply.code(404).send({ error: 'not found' });
+    const parsedNote = matter(file.content);
+    const nextBookmarked = parsedNote.data?.bookmark !== true;
+    const nextData: Record<string, unknown> = { ...parsedNote.data };
+    if (nextBookmarked) nextData.bookmark = true;
+    else delete nextData.bookmark;
     const nextContent = Object.keys(nextData).length > 0 ? matter.stringify(parsedNote.content, nextData) : parsedNote.content;
     const settings = getSettings(db);
     await writeNoteFile(root, relPath, nextContent, settings.notesSnapshotRetention);

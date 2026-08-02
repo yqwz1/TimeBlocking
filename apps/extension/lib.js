@@ -111,6 +111,7 @@ export function buildCaptureNote(capture, settings) {
     `source: ${yamlString(pageUrl)}`,
     `sourceTitle: ${yamlString(sourceTitle)}`,
     `capturedAt: ${yamlString(iso)}`,
+    (kind === 'page' || kind === 'link') ? 'bookmark: true' : null,
     'tags:',
     '  - web-capture',
     `  - ${tag}`,
@@ -133,4 +134,43 @@ export function recentLabel(capture) {
   if (capture.kind === 'link') return 'LINK';
   if (capture.kind === 'thought') return 'NOTE';
   return 'CLIP';
+}
+
+export function buildWishlistItem(product, wishlistCurrency = 'SAR') {
+  const title = String(product?.title || '').replace(/\s+/g, ' ').trim().slice(0, 240);
+  if (!title) throw new Error('No product title was found on this page');
+  const productUrl = String(product?.url || '').trim();
+  const parsedUrl = new URL(productUrl);
+  if (!['http:', 'https:'].includes(parsedUrl.protocol)) throw new Error('This is not a public product page');
+  const imageCandidate = String(product?.imageUrl || '').trim();
+  let imageUrl = null;
+  try {
+    const parsedImage = new URL(imageCandidate, parsedUrl);
+    if (['http:', 'https:'].includes(parsedImage.protocol)) imageUrl = parsedImage.toString();
+  } catch { /* An image is optional. */ }
+  const detectedCurrency = String(product?.currency || '').toUpperCase();
+  const currency = String(wishlistCurrency || 'SAR').toUpperCase();
+  const amount = Number(product?.price);
+  let priceMinor = null;
+  if (detectedCurrency === currency && Number.isFinite(amount) && amount >= 0) {
+    let digits = 2;
+    try { digits = new Intl.NumberFormat('en', { style: 'currency', currency }).resolvedOptions().maximumFractionDigits ?? 2; } catch { /* Keep two decimals. */ }
+    priceMinor = Math.round(amount * 10 ** digits);
+  }
+  const notes = detectedCurrency && detectedCurrency !== currency && Number.isFinite(amount)
+    ? `Listed price: ${detectedCurrency} ${amount}. Convert to ${currency} before planning this purchase.`
+    : '';
+  return {
+    title,
+    notes,
+    productUrl: parsedUrl.toString(),
+    imageUrl,
+    retailer: parsedUrl.hostname.replace(/^www\./, '').slice(0, 120),
+    category: 'Other',
+    priority: 1,
+    status: 'considering',
+    priceMinor,
+    targetDate: null,
+    goalIds: [],
+  };
 }

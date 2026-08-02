@@ -1,14 +1,20 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-const MIN_WIDTH = 180;
-const MAX_WIDTH = 420;
-const DEFAULT_WIDTH = 224;
-const COLLAPSED_WIDTH = 56;
+const DEFAULT_OPTIONS = {
+  minWidth: 180,
+  maxWidth: 420,
+  defaultWidth: 224,
+  collapsedWidth: 56,
+};
 
-export function useResizableSidebar(storageKey: string) {
+export function useResizableSidebar(
+  storageKey: string,
+  options: Partial<typeof DEFAULT_OPTIONS> = {},
+) {
+  const { minWidth, maxWidth, defaultWidth, collapsedWidth } = { ...DEFAULT_OPTIONS, ...options };
   const [width, setWidth] = useState(() => {
     const stored = Number(localStorage.getItem(`${storageKey}.width`));
-    return stored >= MIN_WIDTH && stored <= MAX_WIDTH ? stored : DEFAULT_WIDTH;
+    return stored >= minWidth && stored <= maxWidth ? stored : defaultWidth;
   });
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem(`${storageKey}.collapsed`) === '1');
   const [dragging, setDragging] = useState(false);
@@ -37,7 +43,7 @@ export function useResizableSidebar(storageKey: string) {
     const onMove = (e: MouseEvent) => {
       if (!dragState.current) return;
       const delta = e.clientX - dragState.current.startX;
-      const next = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, dragState.current.startWidth + delta));
+      const next = Math.min(maxWidth, Math.max(minWidth, dragState.current.startWidth + delta));
       setWidth(next);
     };
     const onUp = () => {
@@ -54,12 +60,12 @@ export function useResizableSidebar(storageKey: string) {
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
     };
-  }, [dragging]);
+  }, [dragging, maxWidth, minWidth]);
 
   const toggleCollapsed = useCallback(() => setCollapsed((v) => !v), []);
 
   return {
-    width: collapsed ? COLLAPSED_WIDTH : width,
+    width: collapsed ? collapsedWidth : width,
     collapsed,
     dragging,
     toggleCollapsed,

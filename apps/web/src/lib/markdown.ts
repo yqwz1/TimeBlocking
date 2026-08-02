@@ -4,6 +4,7 @@
  * inline code, fenced code blocks, lists incl. checkboxes, blockquotes, hr, links, images,
  * wikilinks, inline #tags) plus wikilink/tag click-through hooks the editor wires up.
  */
+import { getYouTubeCanonicalUrl, getYouTubeEmbedUrl, getYouTubeVideoId } from '@timeblock/shared';
 
 export interface WikilinkResolution {
   id: string | null;
@@ -11,6 +12,8 @@ export interface WikilinkResolution {
 
 export interface MarkdownOptions {
   resolveWikilink: (target: string) => WikilinkResolution;
+  /** Optional per-tag color, supplied by the note's YAML `tagColors` map. */
+  tagColor?: (tag: string) => string | null;
 }
 
 function escapeHtml(s: string): string {
@@ -35,7 +38,16 @@ export function stripFrontmatter(raw: string): { body: string; frontmatterLineCo
 }
 
 function renderInline(text: string, opts: MarkdownOptions): string {
-  let out = escapeHtml(text);
+  const styledSpans: string[] = [];
+  // The formatting toolbar emits a deliberately small, safe HTML subset so notes stay portable.
+  // Keep the inner text in the normal Markdown rendering path rather than trusting arbitrary HTML.
+  const protectedText = text.replace(/<span style="(color|background-color):\s*([^"<>]+)">(.*?)<\/span>/gi, (_match, property: string, color: string, inner: string) => {
+    if (!CSS.supports('color', color.trim())) return _match;
+    const token = `\uE100${styledSpans.length}\uE101`;
+    styledSpans.push(`<span style="${property.toLowerCase()}: ${escapeHtml(color.trim())}">${renderInline(inner, opts)}</span>`);
+    return token;
+  });
+  let out = escapeHtml(protectedText);
   const assetHref = (src: string) => (/^(https?:)?\/\//.test(src) ? src : `/api/notes/asset/${src.split('/').map(encodeURIComponent).join('/')}`);
   // images ![alt](src)
   out = out.replace(/!\[([^\]]*)\]\(([^)\s]+)\)/g, (_m, alt: string, src: string) => {
@@ -60,11 +72,16 @@ function renderInline(text: string, opts: MarkdownOptions): string {
     return `<a href="#" class="${cls}" data-wikilink-target="${escapeHtml(t)}" data-wikilink-id="${id ?? ''}">${label}</a>`;
   });
   // inline tags #tag (not inside a URL/word)
-  out = out.replace(/(^|[\s(])#([a-zA-Z][\w\-/]*)/g, (_m, pre: string, tag: string) => `${pre}<span class="tag" data-tag="${tag}">#${tag}</span>`);
+  out = out.replace(/(^|[\s(])#([a-zA-Z][\w\-/]*)/g, (_m, pre: string, tag: string) => {
+    const color = opts.tagColor?.(tag);
+    const style = color && /^#[0-9a-f]{6}$/i.test(color) ? ` style="color: ${color}"` : '';
+    return `${pre}<span class="tag" data-tag="${tag}"${style}>#${tag}</span>`;
+  });
   // bold, italic, inline code (order matters: bold before italic)
   out = out.replace(/`([^`]+)`/g, '<code>$1</code>');
   out = out.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
   out = out.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em>$1</em>');
+  out = out.replace(/\uE100(\d+)\uE101/g, (_match, index: string) => styledSpans[Number(index)] ?? '');
   return out;
 }
 
@@ -90,6 +107,15 @@ function flushList(items: ListItem[], opts: MarkdownOptions): string {
     })
     .join('');
   return `<${tag}>${rows}</${tag}>`;
+}
+
+function tableCells(line: string): string[] {
+  return line.trim().replace(/^\||\|$/g, '').split('|').map((cell) => cell.trim());
+}
+
+function isTableDivider(line: string): boolean {
+  const cells = tableCells(line);
+  return cells.length > 0 && cells.every((cell) => /^:?-{3,}:?$/.test(cell));
 }
 
 export function renderMarkdown(body: string, opts: MarkdownOptions): string {
@@ -140,6 +166,24 @@ export function renderMarkdown(body: string, opts: MarkdownOptions): string {
       continue;
     }
 
+    const youtube = /^@\[youtube\]\(([^)\s]+)\)\s*$/i.exec(line.trim());
+    if (youtube) {
+      const videoId = getYouTubeVideoId(youtube[1]);
+      if (videoId) {
+        flushListBuf();
+        flushQuote();
+        const canonicalUrl = getYouTubeCanonicalUrl(videoId);
+        out.push(
+          `<figure class="youtube-note">`
+          + `<div class="youtube-note-player"><iframe src="${getYouTubeEmbedUrl(videoId)}" title="YouTube video player" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div>`
+          + `<figcaption><a href="${canonicalUrl}" target="_blank" rel="noopener noreferrer">Open on YouTube</a></figcaption>`
+          + `</figure>`,
+        );
+        i++;
+        continue;
+      }
+    }
+
     if (/^\s*(---|\*\*\*|___)\s*$/.test(line) && line.trim().length >= 3) {
       flushListBuf();
       flushQuote();
@@ -156,6 +200,21 @@ export function renderMarkdown(body: string, opts: MarkdownOptions): string {
       continue;
     }
     flushQuote();
+
+    // GitHub-style pipe tables. A table starts with a header followed by its divider row.
+    if (line.includes('|') && i + 1 < lines.length && isTableDivider(lines[i + 1])) {
+      flushListBuf();
+      const headers = tableCells(line);
+      const rows: string[][] = [];
+      i += 2;
+      while (i < lines.length && lines[i].includes('|') && lines[i].trim() !== '') {
+        rows.push(tableCells(lines[i]));
+        i++;
+      }
+      const renderRow = (cells: string[], tag: 'th' | 'td') => `<tr>${headers.map((_, index) => `<${tag}>${renderInline(cells[index] ?? '', opts)}</${tag}>`).join('')}</tr>`;
+      out.push(`<div class="markdown-table-wrap"><table><thead>${renderRow(headers, 'th')}</thead><tbody>${rows.map((row) => renderRow(row, 'td')).join('')}</tbody></table></div>`);
+      continue;
+    }
 
     const checkbox = line.match(/^\s*[-*]\s+\[( |x|X)\]\s+(.*)$/);
     const bullet = !checkbox && line.match(/^\s*[-*]\s+(.*)$/);
@@ -175,6 +234,17 @@ export function renderMarkdown(body: string, opts: MarkdownOptions): string {
       continue;
     }
     if (/^<!--[\s\S]*-->$/.test(line.trim())) {
+      i++;
+      continue;
+    }
+
+    // Alignment commands use portable HTML that Obsidian and most Markdown viewers understand.
+    const aligned = /^<p align="(justify|left|right|center)">(.*)<\/p>$/.exec(line) ?? /^<center>(.*)<\/center>$/.exec(line);
+    if (aligned) {
+      const isCenter = line.startsWith('<center>');
+      const align = isCenter ? 'center' : aligned[1];
+      const text = isCenter ? aligned[1] : aligned[2];
+      out.push(`<p align="${align}">${renderInline(text, opts)}</p>`);
       i++;
       continue;
     }

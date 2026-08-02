@@ -6,6 +6,7 @@ export interface SerializableGraphView {
   colorBy: 'folder' | 'tag' | 'community' | 'uniform';
   edges: { explicit: boolean; semantic: boolean; tag: boolean };
   concepts: boolean;
+  regions: boolean;
   camera: { x: number; y: number; ratio: number; angle: number } | null;
   eraAt: string | null;
   pinned: Record<string, { x: number; y: number }>;
@@ -41,7 +42,7 @@ export function decodeGraphView(encoded: string | null): SerializableGraphView |
   try {
     const value = JSON.parse(fromBase64Url(encoded)) as Partial<SerializableGraphView>;
     if (value.v !== 1 || !value.edges || !Array.isArray(value.tags)) return null;
-    return value as SerializableGraphView;
+    return { ...value, regions: value.regions ?? true } as SerializableGraphView;
   } catch {
     return null;
   }

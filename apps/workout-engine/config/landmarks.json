@@ -1,0 +1,22 @@
+{
+  "_comment": "Weekly hard-set landmarks per muscle (MEV=minimum effective volume, MAV=adaptive, MRV=max recoverable). Direct sets count 1.0, secondary muscles count 0.5.",
+  "muscles": {
+    "chest":      {"mev": 10, "mav": 16, "mrv": 22, "region": "upper", "side": "push"},
+    "back":       {"mev": 10, "mav": 18, "mrv": 25, "region": "upper", "side": "pull"},
+    "shoulders":  {"mev": 8,  "mav": 16, "mrv": 22, "region": "upper", "side": "push"},
+    "biceps":     {"mev": 8,  "mav": 14, "mrv": 20, "region": "upper", "side": "pull"},
+    "triceps":    {"mev": 8,  "mav": 14, "mrv": 20, "region": "upper", "side": "push"},
+    "traps":      {"mev": 4,  "mav": 12, "mrv": 20, "region": "upper", "side": "pull"},
+    "forearms":   {"mev": 4,  "mav": 10, "mrv": 16, "region": "upper", "side": "pull"},
+    "quads":      {"mev": 8,  "mav": 14, "mrv": 20, "region": "lower", "side": "legs"},
+    "hamstrings": {"mev": 6,  "mav": 12, "mrv": 16, "region": "lower", "side": "legs"},
+    "calves":     {"mev": 8,  "mav": 14, "mrv": 20, "region": "lower", "side": "legs"},
+    "abs":        {"mev": 0,  "mav": 16, "mrv": 25, "region": "core",  "side": "core"},
+    "neck":       {"mev": 0,  "mav": 8,  "mrv": 12, "region": "upper", "side": "neck"}
+  },
+  "ratios": {
+    "push_pull_target": 1.0,
+    "upper_lower_target": 1.5,
+    "ratio_tolerance": 0.35
+  }
+}

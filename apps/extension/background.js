@@ -1,6 +1,7 @@
 import {
   DEFAULT_SETTINGS,
   buildCaptureNote,
+  buildWishlistItem,
   isHostExcluded,
   makeCaptureId,
   normalizeSettings,
@@ -141,10 +142,49 @@ async function testConnection() {
   }
 }
 
+async function addWishlistProduct(product) {
+  const settings = await getSettings();
+  const settingsResponse = await fetch(`${settings.serverUrl}/api/wishlist/settings`);
+  if (!settingsResponse.ok) throw new Error('Could not read wishlist settings');
+  const wishlistSettings = await settingsResponse.json();
+  let enriched = product;
+  const missingCoreFields = Number(!product?.title) + Number(!product?.imageUrl) + Number(!(Number.isFinite(Number(product?.price)) && product?.currency));
+  let renderedPreview = null;
+  if (missingCoreFields >= 2 && product?.context) {
+    const previewResponse = await fetch(`${settings.serverUrl}/api/wishlist/preview/rendered`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: product.url, html: product.context }),
+    });
+    if (previewResponse.ok) {
+      renderedPreview = await previewResponse.json();
+      enriched = {
+        ...product,
+        title: product.title || renderedPreview.title,
+        imageUrl: product.imageUrl || renderedPreview.imageUrl,
+        currency: product.currency || renderedPreview.detectedCurrency,
+      };
+    }
+  }
+  const item = buildWishlistItem(enriched, wishlistSettings.currency);
+  if (renderedPreview?.priceMinor != null) item.priceMinor = renderedPreview.priceMinor;
+  if (!item.notes && renderedPreview?.warnings?.length) item.notes = renderedPreview.warnings.join(' ');
+  const response = await fetch(`${settings.serverUrl}/api/wishlist/items`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(item),
+  });
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    throw new Error(body.error || `Wishlist returned ${response.status}`);
+  }
+  return { ok: true, item: await response.json() };
+}
+
 function createMenus() {
   chrome.contextMenus.removeAll(() => {
     chrome.contextMenus.create({ id: 'brainclip-selection', title: 'Clip selection to Second Brain', contexts: ['selection'] });
-    chrome.contextMenus.create({ id: 'brainclip-page', title: 'Save page to Second Brain', contexts: ['page'] });
+    chrome.contextMenus.create({ id: 'brainclip-page', title: 'Bookmark page in Second Brain', contexts: ['page'] });
     chrome.contextMenus.create({ id: 'brainclip-link', title: 'Save link to Second Brain', contexts: ['link'] });
   });
 }
@@ -191,6 +231,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     if (message?.type === 'CAPTURE') return saveCapture(message.capture || {});
     if (message?.type === 'TEST_CONNECTION') return testConnection();
     if (message?.type === 'RETRY_PENDING') return retryPending();
+    if (message?.type === 'ADD_WISHLIST_PRODUCT') return addWishlistProduct(message.product || {});
     if (message?.type === 'GET_STATE') {
       const [settings, recent, pending, connection] = await Promise.all([
         getSettings(),

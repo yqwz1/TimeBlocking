@@ -45,6 +45,9 @@ const WEB_DIST = isPackaged
 const MIGRATIONS_DIR = isPackaged
   ? path.join(RESOURCES_DIR, 'migrations')
   : path.join(REPO_ROOT, 'apps', 'server', 'src', 'db', 'migrations');
+const WORKOUT_ENGINE_PATH = isPackaged
+  ? path.join(RESOURCES_DIR, 'workout-engine', 'workout-engine.exe')
+  : '';
 
 const REPO_DATA_DIR = path.join(REPO_ROOT, 'data');
 const REPO_ENV_PATH = path.join(REPO_ROOT, '.env');
@@ -123,6 +126,7 @@ function startServer(port: number): Promise<number> {
         TB_DATA_DIR: APP_DATA_DIR,
         TB_WEB_DIST: WEB_DIST,
         TB_MIGRATIONS_DIR: MIGRATIONS_DIR,
+        ...(WORKOUT_ENGINE_PATH ? { TB_WORKOUT_ENGINE_PATH: WORKOUT_ENGINE_PATH } : {}),
       },
       stdio: 'pipe',
     });

@@ -179,10 +179,11 @@ function messageText(message: OpenRouterMessage | undefined): string {
   return '';
 }
 
-async function openRouterChat(model: string, content: unknown, schema?: JsonSchema): Promise<ProviderResult<string>> {
+async function openRouterChat(model: string, content: unknown, schema?: JsonSchema, maxOutputTokens?: number): Promise<ProviderResult<string>> {
   const payload = await openRouterPost<OpenRouterChatResponse>('/chat/completions', {
     model: resolveGenerationModel(model, 'openrouter'),
     messages: [{ role: 'user', content }],
+    ...(maxOutputTokens ? { max_tokens: maxOutputTokens } : {}),
     ...(schema
       ? {
           response_format: {
@@ -207,15 +208,15 @@ export async function generateTextWithUsage(model: string, prompt: string): Prom
   return { value: (response.text ?? '').trim(), usage: geminiUsage(response), provider: 'gemini', model: resolveGenerationModel(model, 'gemini') };
 }
 
-export async function generateJsonWithUsage<T>(model: string, prompt: string, schema: JsonSchema): Promise<ProviderResult<T>> {
+export async function generateJsonWithUsage<T>(model: string, prompt: string, schema: JsonSchema, maxOutputTokens?: number): Promise<ProviderResult<T>> {
   if (getAiProvider() === 'openrouter') {
-    const result = await openRouterChat(model, prompt, schema);
+    const result = await openRouterChat(model, prompt, schema, maxOutputTokens);
     return { ...result, value: JSON.parse(result.value || '{}') as T };
   }
   const response = await getGeminiClient().models.generateContent({
     model: resolveGenerationModel(model, 'gemini'),
     contents: prompt,
-    config: { responseMimeType: 'application/json', responseSchema: toGeminiSchema(schema) },
+    config: { responseMimeType: 'application/json', responseSchema: toGeminiSchema(schema), ...(maxOutputTokens ? { maxOutputTokens } : {}) },
   });
   return { value: JSON.parse(response.text ?? '{}') as T, usage: geminiUsage(response), provider: 'gemini', model: resolveGenerationModel(model, 'gemini') };
 }

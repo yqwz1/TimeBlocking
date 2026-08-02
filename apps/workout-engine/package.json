@@ -1,0 +1,10 @@
+{
+  "name": "@timeblock/workout-engine",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Self-contained WorkOut coaching engine for TimeBlock",
+  "scripts": {
+    "test": "python -m unittest discover -s tests -v",
+    "build:win": "python -m PyInstaller --noconfirm workout-engine.spec"
+  }
+}

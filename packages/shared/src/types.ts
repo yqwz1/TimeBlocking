@@ -114,6 +114,9 @@ export const SettingsSchema = z.object({
   notesZenModeDefault: z.boolean(),
   /** Enables a lightweight built-in Vim-style editing layer for CodeMirror. */
   notesVimModeDefault: z.boolean(),
+  /** Presentation and placement of the note formatting toolbar. */
+  notesToolbarStyle: z.enum(['standard', 'tiny']),
+  notesToolbarPosition: z.enum(['top', 'following']),
   /** System-prompt seed for Vault Chat — who you are, so answers are framed the way you'd want. */
   aiAboutMe: z.string(),
   /** Example posts/snippets used to imitate the user's writing voice for content repurposing. */
@@ -225,6 +228,8 @@ export const DEFAULT_SETTINGS: Settings = {
   notesImageOcrEnabled: true,
   notesZenModeDefault: false,
   notesVimModeDefault: false,
+  notesToolbarStyle: 'standard',
+  notesToolbarPosition: 'top',
   aiAboutMe:
     'Software engineering student and game developer (Unity/C#), also works with web stacks. Juggles university, a co-op placement, side projects, community leadership, and content creation. Notes mix project logs, university material, game design ideas, career/job-hunt notes, and daily planning — in both Arabic and English. Prefers direct, practical answers and step-by-step breakdowns.',
   aiWritingSamples: '',
@@ -234,7 +239,7 @@ export const DEFAULT_SETTINGS: Settings = {
   graphTagCoocMin: 1,
   graphFreshnessFadeDays: 45,
   graphSuggestThreshold: 0.82,
-  graphLodLabelThreshold: 0.9,
+  graphLodLabelThreshold: 2.4,
   graphLodEdgeThreshold: 1.35,
   graphDefaultSemanticEdges: true,
   graphDefaultTagEdges: true,
@@ -1140,7 +1145,16 @@ export interface NoteSummaryDTO {
   id: string;
   title: string;
   tags: string[];
+  /** Optional per-tag hex colors, saved in the note's YAML frontmatter. */
+  tagColors?: Record<string, string>;
   pinned: boolean;
+  /** Saved for later; web captures are treated as bookmarks automatically. */
+  bookmark: boolean;
+  /** Original URL for a bookmarked or captured web note, when available. */
+  source: string | null;
+  /** Optional visual metadata, stored in the note's YAML frontmatter. */
+  color: string | null;
+  icon: string | null;
   createdAt: string | null;
   updatedAt: string | null;
 }
@@ -1157,12 +1171,26 @@ export const NoteCreateSchema = z.object({
 });
 export type NoteCreateInput = z.infer<typeof NoteCreateSchema>;
 
+/** Vault-relative folder path. Empty folders are first-class Second Brain items. */
+export const VaultFolderSchema = z.object({
+  path: z.string().min(1),
+});
+export type VaultFolderInput = z.infer<typeof VaultFolderSchema>;
+
 export const NoteSaveSchema = z.object({
   content: z.string(),
   /** The updatedAt the client last loaded — mismatch means someone else saved first (stale-write conflict). */
   expectedUpdatedAt: z.string().nullable().optional(),
 });
 export type NoteSaveInput = z.infer<typeof NoteSaveSchema>;
+
+/** Sets the note's sidebar appearance without changing its Markdown body. */
+export const NoteAppearanceSchema = z.object({
+  id: z.string().min(1),
+  color: z.string().regex(/^#[0-9a-fA-F]{6}$/).nullable(),
+  icon: z.string().min(1).max(48).nullable(),
+});
+export type NoteAppearanceInput = z.infer<typeof NoteAppearanceSchema>;
 
 export const NoteMoveSchema = z.object({
   /** New vault-relative path (rename and/or move — same operation). */
@@ -1602,6 +1630,14 @@ export const ClipUrlSchema = z.object({
   folder: z.string().optional(),
 });
 export type ClipUrlInput = z.infer<typeof ClipUrlSchema>;
+
+export const YouTubeCaptureSchema = z.object({
+  url: z.string().url(),
+  title: z.string().max(120).optional(),
+  /** Vault-relative destination; defaults to Inbox/Videos. */
+  folder: z.string().optional(),
+});
+export type YouTubeCaptureInput = z.infer<typeof YouTubeCaptureSchema>;
 
 export interface NoteAssetUploadDTO {
   /** Vault-relative asset path. */
@@ -2069,6 +2105,122 @@ export interface TemplateSummaryDTO {
   /** Vault-relative path within the templates folder, e.g. "Templates/Meeting.md". */
   id: string;
   title: string;
+  /** Optional Lucide icon name declared by the template itself. */
+  icon?: string;
+}
+
+// ---------- Wishlist ----------
+
+export const WishlistStatusSchema = z.enum(['considering', 'planned', 'purchased', 'skipped']);
+export type WishlistStatus = z.infer<typeof WishlistStatusSchema>;
+
+export const WishlistVerdictSchema = z.enum(['buy_now', 'wait', 'skip']);
+export type WishlistVerdict = z.infer<typeof WishlistVerdictSchema>;
+
+const HttpUrlSchema = z
+  .string()
+  .url()
+  .refine((value) => /^https?:\/\//i.test(value), 'Only HTTP(S) URLs are supported');
+
+export const WishlistItemInputSchema = z
+  .object({
+    title: z.string().trim().min(1).max(240),
+    notes: z.string().max(10_000).default(''),
+    productUrl: HttpUrlSchema.nullable().default(null),
+    imageUrl: HttpUrlSchema.nullable().default(null),
+    retailer: z.string().trim().max(120).nullable().default(null),
+    category: z.string().trim().min(1).max(80).default('Other'),
+    priority: z.number().int().min(1).max(4).default(1),
+    status: WishlistStatusSchema.default('considering'),
+    priceMinor: z.number().int().nonnegative().nullable().default(null),
+    targetDate: z.string().date().nullable().default(null),
+    goalIds: z.array(z.string().min(1)).max(20).default([]),
+  })
+  .superRefine((value, ctx) => {
+    if (value.status === 'planned' && !value.targetDate) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['targetDate'], message: 'Planned items require a target date' });
+    }
+  });
+export type WishlistItemInput = z.infer<typeof WishlistItemInputSchema>;
+
+export const WishlistItemPatchSchema = WishlistItemInputSchema.innerType().partial();
+export type WishlistItemPatch = z.infer<typeof WishlistItemPatchSchema>;
+
+export const WishlistBudgetInputSchema = z.object({
+  amountMinor: z.number().int().nonnegative(),
+});
+export type WishlistBudgetInput = z.infer<typeof WishlistBudgetInputSchema>;
+
+export const WishlistSettingsInputSchema = z.object({
+  currency: z.string().regex(/^[A-Z]{3}$/),
+});
+export type WishlistSettingsInput = z.infer<typeof WishlistSettingsInputSchema>;
+
+export const WishlistPurchaseInputSchema = z.object({
+  actualPriceMinor: z.number().int().nonnegative(),
+  purchasedAt: z.string().date(),
+});
+export type WishlistPurchaseInput = z.infer<typeof WishlistPurchaseInputSchema>;
+
+export interface WishlistAdviceDTO {
+  verdict: WishlistVerdict;
+  score: number;
+  summary: string;
+  benefits: string[];
+  risks: string[];
+  suggestedGoalIds: string[];
+  reviewDate: string | null;
+  analyzedAtUtc: string;
+  inputHash: string;
+  stale: boolean;
+}
+
+export interface WishlistItemDTO extends WishlistItemInput {
+  id: string;
+  uploadedImage: boolean;
+  purchasedAt: string | null;
+  actualPriceMinor: number | null;
+  advice: WishlistAdviceDTO | null;
+  createdAtUtc: string;
+  updatedAtUtc: string;
+}
+
+export interface WishlistBudgetDTO {
+  month: string;
+  amountMinor: number;
+  currency: string;
+  updatedAtUtc: string | null;
+}
+
+export interface WishlistSettingsDTO {
+  currency: string;
+}
+
+export interface WishlistLinkPreviewDTO {
+  url: string;
+  title: string | null;
+  retailer: string | null;
+  imageUrl: string | null;
+  priceMinor: number | null;
+  detectedCurrency: string | null;
+  warnings: string[];
+}
+
+export type WishlistBudgetFit = 'needs_data' | 'over_budget' | 'tight' | 'fits';
+
+export interface WishlistSummaryDTO {
+  month: string;
+  currency: string;
+  budgetMinor: number;
+  actualMinor: number;
+  plannedMinor: number;
+  committedMinor: number;
+  remainingMinor: number;
+  activeValueMinor: number;
+  missingPriceCount: number;
+  byCategory: Array<{ category: string; valueMinor: number; count: number }>;
+  verdictCounts: Array<{ verdict: WishlistVerdict | 'not_analyzed'; count: number }>;
+  monthly: Array<{ month: string; actualMinor: number; plannedMinor: number; budgetMinor: number }>;
 }
 
 export const NoteFromTemplateSchema = z.object({

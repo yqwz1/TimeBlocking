@@ -8,6 +8,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export const ROOT_DIR = path.resolve(__dirname, '..', '..', '..');
 export const DATA_DIR = process.env.TB_DATA_DIR || path.join(ROOT_DIR, 'data');
 export const DB_PATH = path.join(DATA_DIR, 'timeblock.db');
+export const WORKOUT_DATA_DIR = process.env.TB_WORKOUT_DATA_DIR || path.join(DATA_DIR, 'workout');
+export const WORKOUT_ENGINE_PATH = process.env.TB_WORKOUT_ENGINE_PATH || '';
+export const WORKOUT_CONFIG_DIR = process.env.TB_WORKOUT_CONFIG_DIR || path.join(ROOT_DIR, 'apps', 'workout-engine', 'config');
+export const WORKOUT_BRIDGE_PATH = process.env.TB_WORKOUT_BRIDGE_PATH || path.join(ROOT_DIR, 'apps', 'workout-engine', 'bridge.py');
 export const WEB_DIST = process.env.TB_WEB_DIST || path.join(ROOT_DIR, 'apps', 'web', 'dist');
 export const MIGRATIONS_DIR = process.env.TB_MIGRATIONS_DIR || path.join(__dirname, 'db', 'migrations');
 

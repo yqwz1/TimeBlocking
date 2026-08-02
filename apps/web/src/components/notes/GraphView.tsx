@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Graph from 'graphology';
 import Sigma from 'sigma';
-import { NodeCircleProgram } from 'sigma/rendering';
+import type { NodeLabelDrawingFunction } from 'sigma/rendering';
 import FA2Layout from 'graphology-layout-forceatlas2/worker';
 import { inferSettings } from 'graphology-layout-forceatlas2';
 import { Check, Copy, FilePlus2, Lightbulb, Link2, Maximize2, Minus, Pause, Play, Plus, Presentation, Save, Search, Sparkles, Trash2, Users, Waypoints, X } from 'lucide-react';
@@ -9,6 +9,7 @@ import type { ConceptType, GraphPathResultDTO, GraphQueryFilterDTO, GraphWhyDTO,
 import { useTheme } from '../../hooks/useTheme';
 import { useCreateTask, useSettings } from '../../hooks';
 import { useAcceptSuggestion, useCreateNote, useDismissSuggestion, useGraphEra, useGraphIndexFreshness, useGraphInsights, useGraphPath, useGraphQuery, useGraphSuggestions, useGraphTimeline, useGraphWhy, useSaveGraphLayout } from '../../hooks/notes';
+import NodeAuraProgram from './nodeAuraProgram';
 import NodeDiamondProgram from './nodeDiamondProgram';
 import ConceptInspector, { type InspectorTarget } from './ConceptInspector';
 import { graphViewUrl, type SavedGraphView, type SerializableGraphView, viewFromUrl } from './graphViewState';
@@ -35,6 +36,9 @@ interface Palette {
   conceptEdge: string;
   minimapNode: string;
   minimapView: string;
+  labelSurface: string;
+  labelSurfaceStrong: string;
+  labelBorder: string;
 }
 
 const PALETTES: Record<'light' | 'dark', Palette> = {
@@ -53,6 +57,9 @@ const PALETTES: Record<'light' | 'dark', Palette> = {
     conceptEdge: 'rgba(147,51,234,0.32)',
     minimapNode: 'rgba(71,85,105,0.7)',
     minimapView: 'rgba(13,148,136,0.9)',
+    labelSurface: 'rgba(255,255,255,0.78)',
+    labelSurfaceStrong: 'rgba(255,255,255,0.96)',
+    labelBorder: 'rgba(148,163,184,0.28)',
   },
   dark: {
     node: '#2dd4bf',
@@ -69,6 +76,9 @@ const PALETTES: Record<'light' | 'dark', Palette> = {
     conceptEdge: 'rgba(192,132,252,0.4)',
     minimapNode: 'rgba(148,163,184,0.7)',
     minimapView: 'rgba(45,212,191,0.9)',
+    labelSurface: 'rgba(10,10,12,0.72)',
+    labelSurfaceStrong: 'rgba(10,10,12,0.94)',
+    labelBorder: 'rgba(255,255,255,0.12)',
   },
 };
 
@@ -128,8 +138,8 @@ function hexToRgba(hex: string, alpha: number): string {
   return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${alpha})`;
 }
 function noteSizeUnits(a: NodeAttrs, sizeBy: SizeBy): number {
-  const base = sizeBy === 'pagerank' ? 3 + (a.pagerank || 0) * 13 : 3 + Math.min(a.degree || 0, 12) * 0.9;
-  return base + (a.pinned ? 1 : 0);
+  const base = sizeBy === 'pagerank' ? 2.8 + (a.pagerank || 0) * 8.5 : 2.8 + Math.min(a.degree || 0, 12) * 0.68;
+  return base + (a.pinned ? 0.8 : 0);
 }
 function conceptSizeUnits(a: NodeAttrs): number {
   return 5 + Math.min(a.degree || 0, 10) * 0.7;
@@ -143,6 +153,106 @@ function baseColorFor(a: NodeAttrs, colorBy: ColorBy, folderColors: Map<string, 
 function freshnessOpacity(days: number, fadeDays: number): number {
   if (fadeDays <= 0) return 1;
   return 1 - 0.7 * Math.min(1, days / fadeDays);
+}
+
+function roundedRect(
+  context: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  radius: number,
+) {
+  const r = Math.min(radius, width / 2, height / 2);
+  context.beginPath();
+  context.moveTo(x + r, y);
+  context.lineTo(x + width - r, y);
+  context.quadraticCurveTo(x + width, y, x + width, y + r);
+  context.lineTo(x + width, y + height - r);
+  context.quadraticCurveTo(x + width, y + height, x + width - r, y + height);
+  context.lineTo(x + r, y + height);
+  context.quadraticCurveTo(x, y + height, x, y + height - r);
+  context.lineTo(x, y + r);
+  context.quadraticCurveTo(x, y, x + r, y);
+  context.closePath();
+}
+
+function fitCanvasLabel(context: CanvasRenderingContext2D, value: string, maxWidth: number): string {
+  if (context.measureText(value).width <= maxWidth) return value;
+  let low = 1;
+  let high = value.length;
+  while (low < high) {
+    const mid = Math.ceil((low + high) / 2);
+    if (context.measureText(`${value.slice(0, mid)}…`).width <= maxWidth) low = mid;
+    else high = mid - 1;
+  }
+  return `${value.slice(0, Math.max(1, low)).trimEnd()}…`;
+}
+
+function drawPrettyNodeLabel(
+  context: CanvasRenderingContext2D,
+  data: Parameters<NodeLabelDrawingFunction>[1],
+  settings: Parameters<NodeLabelDrawingFunction>[2],
+  palette: Palette,
+  hovered = false,
+) {
+  if (!data.label) return;
+  const fontSize = hovered ? settings.labelSize + 1 : settings.labelSize;
+  const weight = hovered ? '650' : settings.labelWeight;
+  context.save();
+  context.font = `${weight} ${fontSize}px ${settings.labelFont}`;
+  const label = fitCanvasLabel(context, data.label, hovered ? 230 : 174);
+  const textWidth = Math.ceil(context.measureText(label).width);
+  const horizontalPadding = hovered ? 10 : 8;
+  const height = fontSize + (hovered ? 10 : 8);
+  const width = textWidth + horizontalPadding * 2;
+  const centerY = data.y + data.size + height / 2 + (hovered ? 8 : 6);
+  const left = data.x - width / 2;
+  const top = centerY - height / 2;
+
+  if (hovered) {
+    context.shadowBlur = 22;
+    context.shadowColor = data.color;
+    context.strokeStyle = hexToRgba(data.color, 0.62);
+    context.lineWidth = 2;
+    context.beginPath();
+    context.arc(data.x, data.y, data.size + 5, 0, Math.PI * 2);
+    context.stroke();
+    context.shadowBlur = 0;
+  }
+
+  roundedRect(context, left, top, width, height, hovered ? 8 : 7);
+  context.fillStyle = hovered ? palette.labelSurfaceStrong : palette.labelSurface;
+  context.fill();
+  context.strokeStyle = hovered ? hexToRgba(data.color, 0.48) : palette.labelBorder;
+  context.lineWidth = 1;
+  context.stroke();
+
+  context.fillStyle = settings.labelColor.attribute
+    ? String(data[settings.labelColor.attribute] ?? settings.labelColor.color ?? palette.label)
+    : settings.labelColor.color ?? palette.label;
+  context.textAlign = 'center';
+  context.textBaseline = 'middle';
+  context.direction = /[\u0590-\u08ff]/.test(label) ? 'rtl' : 'ltr';
+  context.fillText(label, data.x, centerY + 0.5);
+  context.restore();
+}
+
+function seededPosition(id: string, community: string | null, folder: string, origin: { x: number; y: number }) {
+  const clusterKey = (community ?? folder) || 'root';
+  const clusterAngle = ((hashString(clusterKey) % 360) * Math.PI) / 180;
+  const localSeed = hashString(id);
+  const localAngle = (((localSeed >> 3) % 360) * Math.PI) / 180;
+  const clusterRadius = 0.48 + ((hashString(`${clusterKey}:radius`) % 19) / 100);
+  const localRadius = 0.07 + ((localSeed % 23) / 100);
+  return {
+    x: origin.x + Math.cos(clusterAngle) * clusterRadius + Math.cos(localAngle) * localRadius,
+    y: origin.y + Math.sin(clusterAngle) * clusterRadius + Math.sin(localAngle) * localRadius,
+  };
+}
+
+function cameraPointForGraph(sigma: Sigma, point: { x: number; y: number }) {
+  return sigma.viewportToFramedGraph(sigma.graphToViewport(point));
 }
 
 interface HoverCard {
@@ -193,6 +303,7 @@ export default function GraphView({
   const freshness = freshnessQuery.data ?? dto.freshness;
 
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const clusterRef = useRef<HTMLCanvasElement | null>(null);
   const overlayRef = useRef<HTMLCanvasElement | null>(null);
   const minimapRef = useRef<HTMLCanvasElement | null>(null);
   const sigmaRef = useRef<Sigma | null>(null);
@@ -200,21 +311,26 @@ export default function GraphView({
   const layoutRef = useRef<FA2Layout | null>(null);
   const hoveredRef = useRef<string | null>(null);
   const focusRef = useRef<Set<string>>(new Set());
+  const ambientNodeIdsRef = useRef<string[]>([]);
+  const motionTimeRef = useRef(0);
+  const lastInteractionRef = useRef(0);
   const reheatTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const onNavigateRef = useRef(onNavigate);
 
   const [sizeBy, setSizeBy] = useState<SizeBy>(initialViewRef.current?.sizeBy ?? 'pagerank');
-  const [colorBy, setColorBy] = useState<ColorBy>(initialViewRef.current?.colorBy ?? 'folder');
+  const [colorBy, setColorBy] = useState<ColorBy>(initialViewRef.current?.colorBy ?? 'community');
   const [edgeTypes, setEdgeTypes] = useState<EdgeToggles>(initialViewRef.current?.edges ?? { explicit: true, semantic: true, tag: true });
   const [conceptLayer, setConceptLayer] = useState(initialViewRef.current?.concepts ?? true);
+  const [communityRegions, setCommunityRegions] = useState(initialViewRef.current?.regions ?? true);
   const [inspector, setInspector] = useState<InspectorTarget | null>(null);
 
   const paletteRef = useRef(palette);
   const sizeByRef = useRef(sizeBy);
   const colorByRef = useRef(colorBy);
   const edgeTypesRef = useRef(edgeTypes);
+  const communityRegionsRef = useRef(communityRegions);
   const fadeDaysRef = useRef(fadeDays);
-  const lodLabelRef = useRef(settings?.graphLodLabelThreshold ?? 0.9);
+  const lodLabelRef = useRef(settings?.graphLodLabelThreshold ?? 1.15);
   const lodEdgeRef = useRef(settings?.graphLodEdgeThreshold ?? 1.35);
   const folderColorsRef = useRef<Map<string, string>>(new Map());
   const typedEdgesRef = useRef<Array<{ source: string; target: string; type: NoteGraphEdgeType }>>([]);
@@ -223,8 +339,9 @@ export default function GraphView({
   sizeByRef.current = sizeBy;
   colorByRef.current = colorBy;
   edgeTypesRef.current = edgeTypes;
+  communityRegionsRef.current = communityRegions;
   fadeDaysRef.current = fadeDays;
-  lodLabelRef.current = settings?.graphLodLabelThreshold ?? 0.9;
+  lodLabelRef.current = settings?.graphLodLabelThreshold ?? 1.15;
   lodEdgeRef.current = settings?.graphLodEdgeThreshold ?? 1.35;
   onNavigateRef.current = onNavigate;
   setInspectorRef.current = setInspector;
@@ -336,11 +453,12 @@ export default function GraphView({
       colorBy,
       edges: edgeTypes,
       concepts: conceptLayer,
+      regions: communityRegions,
       camera: sigmaRef.current?.getCamera().getState() ?? null,
       eraAt,
       pinned,
     };
-  }, [activeTags, colorBy, conceptLayer, edgeTypes, eraAt, folder, sizeBy]);
+  }, [activeTags, colorBy, communityRegions, conceptLayer, edgeTypes, eraAt, folder, sizeBy]);
 
   const applySavedView = useCallback((state: SerializableGraphView) => {
     setFolder(state.folder);
@@ -349,13 +467,14 @@ export default function GraphView({
     setColorBy(state.colorBy);
     setEdgeTypes(state.edges);
     setConceptLayer(state.concepts);
+    setCommunityRegions(state.regions ?? true);
     setEraAt(state.eraAt);
     const graph = graphRef.current;
     for (const [id, point] of Object.entries(state.pinned)) {
       if (!graph?.hasNode(id)) continue;
       graph.mergeNodeAttributes(id, { x: point.x, y: point.y, fixed: true });
     }
-    if (state.camera) sigmaRef.current?.getCamera().animate(state.camera, { duration: 450 });
+    if (state.camera) sigmaRef.current?.getCamera().animate(state.camera, { duration: 520, easing: 'quadraticInOut' });
     setShowViews(false);
   }, []);
 
@@ -471,11 +590,15 @@ export default function GraphView({
     for (const s of chain) {
       if (!graph.hasNode(s.id)) continue;
       const a = graph.getNodeAttributes(s.id) as unknown as NodeAttrs;
-      sx += a.x;
-      sy += a.y;
+      const point = cameraPointForGraph(sigma, a);
+      sx += point.x;
+      sy += point.y;
       n++;
     }
-    if (n > 0) sigma.getCamera().animate({ x: sx / n, y: sy / n, ratio: 0.5 }, { duration: 500 });
+    if (n > 0) {
+      const ratio = chain.length <= 3 ? 0.34 : chain.length <= 6 ? 0.45 : 0.56;
+      sigma.getCamera().animate({ x: sx / n, y: sy / n, ratio }, { duration: 650, easing: 'quadraticInOut' });
+    }
   }, []);
 
   const clearConnect = useCallback(() => {
@@ -530,16 +653,24 @@ export default function GraphView({
 
     const sigma = new Sigma(graph, container, {
       renderLabels: true,
-      labelRenderedSizeThreshold: 6,
-      labelFont: 'Inter, system-ui, sans-serif',
+      labelRenderedSizeThreshold: 4.5,
+      labelDensity: 0.62,
+      labelGridCellSize: 88,
+      labelFont: '"Segoe UI Variable Text", "Aptos", "Segoe UI", system-ui, sans-serif',
       labelSize: 12,
-      labelWeight: '500',
+      labelWeight: '600',
       labelColor: { color: paletteRef.current.label },
+      defaultDrawNodeLabel: (context, data, settings) => drawPrettyNodeLabel(context, data, settings, paletteRef.current),
+      defaultDrawNodeHover: (context, data, settings) => drawPrettyNodeLabel(context, data, settings, paletteRef.current, true),
       defaultNodeColor: paletteRef.current.node,
       defaultNodeType: 'circle',
-      nodeProgramClasses: { circle: NodeCircleProgram, diamond: NodeDiamondProgram },
+      nodeProgramClasses: { circle: NodeAuraProgram, diamond: NodeDiamondProgram },
       defaultEdgeColor: paletteRef.current.edge,
       zIndex: true,
+      stagePadding: 44,
+      inertiaDuration: 520,
+      inertiaRatio: 0.84,
+      zoomDuration: 320,
       minCameraRatio: 0.08,
       maxCameraRatio: 8,
       nodeReducer: (node, data) => {
@@ -606,12 +737,30 @@ export default function GraphView({
     if (initialViewRef.current?.camera) sigma.getCamera().setState(initialViewRef.current.camera);
 
     const layout = new FA2Layout(graph, {
-      settings: { ...inferSettings(graph), gravity: 1.2, scalingRatio: 12, slowDown: 4, barnesHutOptimize: true, edgeWeightInfluence: 1 },
+      settings: {
+        ...inferSettings(graph),
+        linLogMode: true,
+        outboundAttractionDistribution: true,
+        gravity: 0.82,
+        scalingRatio: 18,
+        slowDown: 5,
+        barnesHutOptimize: true,
+        edgeWeightInfluence: 1.15,
+      },
     });
     layoutRef.current = layout;
 
+    const markInteraction = () => {
+      lastInteractionRef.current = performance.now();
+    };
+    markInteraction();
+    container.addEventListener('pointerdown', markInteraction, { passive: true });
+    container.addEventListener('wheel', markInteraction, { passive: true });
+    container.addEventListener('keydown', markInteraction);
+
     let suppressClick = false;
     sigma.on('clickNode', ({ node, event }) => {
+      markInteraction();
       if (suppressClick) return;
       const a = graph.getNodeAttributes(node) as unknown as NodeAttrs;
       if (multiModeRef.current || event.original.shiftKey) {
@@ -674,6 +823,7 @@ export default function GraphView({
     });
     let hoverTimer: ReturnType<typeof setTimeout> | null = null;
     sigma.on('enterNode', ({ node }) => {
+      markInteraction();
       hoveredRef.current = node;
       const a = graph.getNodeAttributes(node) as unknown as NodeAttrs;
       const pos = sigma.graphToViewport({ x: a.x, y: a.y });
@@ -706,17 +856,103 @@ export default function GraphView({
       container.style.cursor = 'default';
     });
 
+    const prepareCanvas = (canvas: HTMLCanvasElement, width: number, height: number) => {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const pixelWidth = Math.max(1, Math.round(width * dpr));
+      const pixelHeight = Math.max(1, Math.round(height * dpr));
+      if (canvas.width !== pixelWidth || canvas.height !== pixelHeight) {
+        canvas.width = pixelWidth;
+        canvas.height = pixelHeight;
+      }
+      const context = canvas.getContext('2d');
+      context?.setTransform(dpr, 0, 0, dpr, 0, 0);
+      return context;
+    };
+
+    const drawCommunityRegions = () => {
+      const canvas = clusterRef.current;
+      if (!canvas) return;
+      const width = container.offsetWidth;
+      const height = container.offsetHeight;
+      const context = prepareCanvas(canvas, width, height);
+      if (!context) return;
+      context.clearRect(0, 0, width, height);
+      if (!communityRegionsRef.current || graph.order === 0) return;
+
+      const groups = new Map<string, { label: string; color: string; points: Array<{ x: number; y: number }> }>();
+      graph.forEachNode((_id, attr) => {
+        const node = attr as unknown as NodeAttrs;
+        if (node.kind !== 'note' || !node.communityId) return;
+        const point = sigma.graphToViewport({ x: node.x, y: node.y });
+        const existing = groups.get(node.communityId);
+        if (existing) existing.points.push(point);
+        else {
+          groups.set(node.communityId, {
+            label: node.communityLabel || 'Connected notes',
+            color: categoryColor(node.communityId),
+            points: [point],
+          });
+        }
+      });
+
+      const ratio = sigma.getCamera().getState().ratio;
+      for (const group of groups.values()) {
+        if (group.points.length < 3) continue;
+        const center = group.points.reduce((sum, point) => ({ x: sum.x + point.x, y: sum.y + point.y }), { x: 0, y: 0 });
+        center.x /= group.points.length;
+        center.y /= group.points.length;
+        let varianceX = 0;
+        let varianceY = 0;
+        for (const point of group.points) {
+          varianceX += (point.x - center.x) ** 2;
+          varianceY += (point.y - center.y) ** 2;
+        }
+        const radiusX = Math.min(width * 0.72, Math.max(76, Math.sqrt(varianceX / group.points.length) * 2.15 + 52));
+        const radiusY = Math.min(height * 0.72, Math.max(58, Math.sqrt(varianceY / group.points.length) * 2.15 + 42));
+        if (center.x + radiusX < 0 || center.x - radiusX > width || center.y + radiusY < 0 || center.y - radiusY > height) continue;
+
+        context.save();
+        context.beginPath();
+        context.ellipse(center.x, center.y, radiusX, radiusY, 0, 0, Math.PI * 2);
+        context.fillStyle = hexToRgba(group.color, colorByRef.current === 'community' ? 0.065 : 0.036);
+        context.fill();
+        context.setLineDash([7, 10]);
+        context.lineDashOffset = -4;
+        context.strokeStyle = hexToRgba(group.color, colorByRef.current === 'community' ? 0.26 : 0.16);
+        context.lineWidth = 1;
+        context.stroke();
+        context.restore();
+
+        if (ratio > 2.2) continue;
+        context.save();
+        context.font = '650 11px "Segoe UI Variable Text", "Aptos", "Segoe UI", system-ui, sans-serif';
+        const label = fitCanvasLabel(context, group.label, 160);
+        const labelWidth = Math.ceil(context.measureText(label).width) + 31;
+        const labelX = Math.min(width - labelWidth - 12, Math.max(12, center.x - radiusX + 15));
+        const labelY = Math.min(height - 36, Math.max(12, center.y - radiusY + 13));
+        roundedRect(context, labelX, labelY, labelWidth, 24, 8);
+        context.fillStyle = paletteRef.current.labelSurface;
+        context.fill();
+        context.strokeStyle = hexToRgba(group.color, 0.3);
+        context.stroke();
+        context.fillStyle = group.color;
+        context.beginPath();
+        context.arc(labelX + 10, labelY + 12, 3.5, 0, Math.PI * 2);
+        context.fill();
+        context.fillStyle = paletteRef.current.label;
+        context.textBaseline = 'middle';
+        context.fillText(label, labelX + 19, labelY + 12.5);
+        context.restore();
+      }
+    };
+
     const drawOverlay = () => {
       const canvas = overlayRef.current;
       if (!canvas) return;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
       const w = container.offsetWidth;
       const h = container.offsetHeight;
-      if (canvas.width !== w || canvas.height !== h) {
-        canvas.width = w;
-        canvas.height = h;
-      }
+      const ctx = prepareCanvas(canvas, w, h);
+      if (!ctx) return;
       ctx.clearRect(0, 0, w, h);
       const hovered = hoveredRef.current;
       const toggles = edgeTypesRef.current;
@@ -746,7 +982,7 @@ export default function GraphView({
       if (showSuggestRef.current && suggestRef.current.length) {
         ghostFrameRef.current = (ghostFrameRef.current + 1) % 100000;
         ctx.setLineDash([2, 6]);
-        ctx.lineDashOffset = -(ghostFrameRef.current * 0.6);
+        ctx.lineDashOffset = -((motionTimeRef.current || ghostFrameRef.current * 45) * 0.014);
         ctx.lineWidth = 1.4;
         ctx.strokeStyle = paletteRef.current.concept;
         for (const s of suggestRef.current) {
@@ -766,21 +1002,120 @@ export default function GraphView({
       // G6 §6: the connection path drawn bright over everything.
       const chain = pathChainRef.current;
       if (chain.length > 1) {
-        ctx.lineWidth = 2.5;
-        ctx.strokeStyle = paletteRef.current.hoverEdge;
-        ctx.beginPath();
-        let started = false;
+        const points: Array<{ id: string; x: number; y: number }> = [];
         for (const id of chain) {
-          if (!graph.hasNode(id)) {
-            started = false;
-            continue;
-          }
+          if (!graph.hasNode(id)) continue;
           const p = sigma.graphToViewport(graph.getNodeAttributes(id) as { x: number; y: number });
-          if (started) ctx.lineTo(p.x, p.y);
-          else ctx.moveTo(p.x, p.y);
-          started = true;
+          points.push({ id, x: p.x, y: p.y });
         }
-        ctx.stroke();
+        if (points.length > 1) {
+          const start = points[0];
+          const end = points[points.length - 1];
+          const gradient = ctx.createLinearGradient(start.x, start.y, end.x, end.y);
+          gradient.addColorStop(0, hexToRgba(paletteRef.current.node, 0.96));
+          gradient.addColorStop(1, hexToRgba(paletteRef.current.concept, 0.96));
+
+          ctx.save();
+          ctx.beginPath();
+          ctx.moveTo(start.x, start.y);
+          for (let i = 1; i < points.length; i++) ctx.lineTo(points[i].x, points[i].y);
+          ctx.lineCap = 'round';
+          ctx.lineJoin = 'round';
+          ctx.shadowBlur = 18;
+          ctx.shadowColor = paletteRef.current.hoverEdge;
+          ctx.strokeStyle = gradient;
+          ctx.lineWidth = 7;
+          ctx.globalAlpha = 0.28;
+          ctx.stroke();
+
+          ctx.shadowBlur = 0;
+          ctx.globalAlpha = 1;
+          ctx.setLineDash([10, 8]);
+          ctx.lineDashOffset = -((motionTimeRef.current || 0) * 0.035);
+          ctx.lineWidth = 2.4;
+          ctx.strokeStyle = gradient;
+          ctx.stroke();
+          ctx.setLineDash([]);
+
+          for (let i = 1; i < points.length; i++) {
+            const from = points[i - 1];
+            const to = points[i];
+            const progress = 0.64;
+            const x = from.x + (to.x - from.x) * progress;
+            const y = from.y + (to.y - from.y) * progress;
+            const angle = Math.atan2(to.y - from.y, to.x - from.x);
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.rotate(angle);
+            ctx.fillStyle = paletteRef.current.labelSurfaceStrong;
+            ctx.strokeStyle = hexToRgba(paletteRef.current.node, 0.72);
+            ctx.lineWidth = 1.2;
+            ctx.beginPath();
+            ctx.moveTo(6, 0);
+            ctx.lineTo(-4, -4);
+            ctx.lineTo(-2, 0);
+            ctx.lineTo(-4, 4);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+            ctx.restore();
+          }
+
+          points.forEach((point, index) => {
+            const display = sigma.getNodeDisplayData(point.id);
+            const nodeRadius = (display ? sigma.scaleSize(display.size) : 5) + 7;
+            const badgeX = point.x + nodeRadius * 0.72;
+            const badgeY = point.y - nodeRadius * 0.72;
+            ctx.shadowBlur = 9;
+            ctx.shadowColor = paletteRef.current.hoverEdge;
+            ctx.fillStyle =
+              index === 0
+                ? paletteRef.current.node
+                : index === points.length - 1
+                  ? paletteRef.current.concept
+                  : paletteRef.current.labelSurfaceStrong;
+            ctx.strokeStyle = hexToRgba(index === points.length - 1 ? paletteRef.current.concept : paletteRef.current.node, 0.9);
+            ctx.lineWidth = 1.2;
+            ctx.beginPath();
+            ctx.arc(badgeX, badgeY, 8.5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = index === 0 || index === points.length - 1 ? '#ffffff' : paletteRef.current.label;
+            ctx.font = '700 9px "Segoe UI Variable Text", "Aptos", "Segoe UI", sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(String(index + 1), badgeX, badgeY + 0.5);
+          });
+          ctx.restore();
+        }
+      }
+
+      const idle =
+        motionTimeRef.current - lastInteractionRef.current > 1_800 &&
+        !hovered &&
+        pathChainRef.current.length === 0 &&
+        focusRef.current.size === 0;
+      if (idle) {
+        for (const [index, id] of ambientNodeIdsRef.current.entries()) {
+          if (!graph.hasNode(id)) continue;
+          const attr = graph.getNodeAttributes(id) as unknown as NodeAttrs;
+          const display = sigma.getNodeDisplayData(id);
+          if (!display || display.hidden) continue;
+          const point = sigma.graphToViewport({ x: attr.x, y: attr.y });
+          const baseRadius = sigma.scaleSize(display.size) + 7;
+          const wave = (Math.sin(motionTimeRef.current / 820 + index * 0.9) + 1) / 2;
+          ctx.save();
+          ctx.shadowBlur = 12 + wave * 8;
+          ctx.shadowColor = display.color;
+          ctx.strokeStyle = display.color;
+          ctx.globalAlpha = 0.16 + wave * 0.15;
+          ctx.lineWidth = 1.2 + wave;
+          ctx.beginPath();
+          ctx.arc(point.x, point.y, baseRadius + wave * 4, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
+        }
       }
 
       graph.forEachNode((id, attr) => {
@@ -859,18 +1194,46 @@ export default function GraphView({
     };
 
     sigma.on('afterRender', () => {
+      drawCommunityRegions();
       drawOverlay();
       drawMinimap();
     });
     const updateLabelLod = () => {
-      const render = sigma.getCamera().getState().ratio <= lodLabelRef.current;
+      const render = sigma.getCamera().getState().ratio <= Math.max(2.4, lodLabelRef.current);
       if (sigma.getSetting('renderLabels') !== render) sigma.setSetting('renderLabels', render);
     };
-    sigma.getCamera().on('updated', updateLabelLod);
+    const onCameraUpdated = () => {
+      markInteraction();
+      updateLabelLod();
+    };
+    sigma.getCamera().on('updated', onCameraUpdated);
     updateLabelLod();
+
+    const reduceMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    let animationFrame = 0;
+    let lastAnimationFrame = 0;
+    const animateAmbientLayer = (time: number) => {
+      motionTimeRef.current = time;
+      const idle = time - lastInteractionRef.current > 1_800;
+      const needsMotion =
+        showSuggestRef.current ||
+        pathChainRef.current.length > 1 ||
+        (idle && ambientNodeIdsRef.current.length > 0);
+      if (!reduceMotionQuery.matches && !document.hidden && needsMotion && time - lastAnimationFrame >= 34) {
+        drawOverlay();
+        lastAnimationFrame = time;
+      }
+      animationFrame = requestAnimationFrame(animateAmbientLayer);
+    };
+    animationFrame = requestAnimationFrame(animateAmbientLayer);
 
     return () => {
       if (reheatTimer.current) clearTimeout(reheatTimer.current);
+      cancelAnimationFrame(animationFrame);
+      container.removeEventListener('pointerdown', markInteraction);
+      container.removeEventListener('wheel', markInteraction);
+      container.removeEventListener('keydown', markInteraction);
+      sigma.getCamera().off('updated', onCameraUpdated);
       layout.kill();
       sigma.kill();
       sigmaRef.current = null;
@@ -891,6 +1254,11 @@ export default function GraphView({
 
     const showConcepts = conceptLayer;
     const visibleNodes = nodes.filter((n) => n.kind === 'note' || showConcepts);
+    ambientNodeIdsRef.current = visibleNodes
+      .filter((node) => node.kind === 'note')
+      .sort((a, b) => b.pagerank - a.pagerank || b.degree - a.degree)
+      .slice(0, 7)
+      .map((node) => node.id);
     typedEdgesRef.current = links.filter((e) => e.type === 'semantic' || e.type === 'tag').map((e) => ({ source: e.source, target: e.target, type: e.type }));
     // Edges that live in sigma + drive the layout: explicit always, concept when the layer is on.
     const graphLinks = links.filter((e) => e.type === 'explicit' || (showConcepts && e.type === 'concept'));
@@ -923,11 +1291,12 @@ export default function GraphView({
         graph.mergeNodeAttributes(n.id, attrs);
       } else {
         const cached = dto.layout[n.id] ?? initialViewRef.current?.pinned[n.id];
+        const seeded = seededPosition(n.id, n.communityId, n.folder, cam);
         graph.addNode(n.id, {
           ...attrs,
           type: n.kind === 'concept' ? 'diamond' : 'circle',
-          x: cached?.x ?? cam.x + (Math.random() - 0.5) * 0.4,
-          y: cached?.y ?? cam.y + (Math.random() - 0.5) * 0.4,
+          x: cached?.x ?? seeded.x,
+          y: cached?.y ?? seeded.y,
           fixed: 'pinned' in (cached ?? {}) ? (cached as { pinned?: boolean }).pinned === true : !!initialViewRef.current?.pinned[n.id],
           size: n.kind === 'concept' ? 5 : 4,
           color: n.kind === 'concept' ? paletteRef.current.concept : paletteRef.current.node,
@@ -975,11 +1344,12 @@ export default function GraphView({
     let sy = 0;
     for (const id of present) {
       const a = graph.getNodeAttributes(id) as unknown as NodeAttrs;
-      sx += a.x;
-      sy += a.y;
+      const point = cameraPointForGraph(sigma, a);
+      sx += point.x;
+      sy += point.y;
     }
     const ratio = present.length <= 3 ? 0.28 : present.length <= 12 ? 0.42 : 0.6;
-    sigma.getCamera().animate({ x: sx / present.length, y: sy / present.length, ratio }, { duration: 500 });
+    sigma.getCamera().animate({ x: sx / present.length, y: sy / present.length, ratio }, { duration: 600, easing: 'quadraticInOut' });
     // The layout may still be settling — re-center shortly after so the fly-to lands on final positions.
     const t = setTimeout(() => {
       const g = graphRef.current;
@@ -991,11 +1361,12 @@ export default function GraphView({
       for (const id of present) {
         if (!g.hasNode(id)) continue;
         const a = g.getNodeAttributes(id) as unknown as NodeAttrs;
-        x += a.x;
-        y += a.y;
+        const point = cameraPointForGraph(s, a);
+        x += point.x;
+        y += point.y;
         n++;
       }
-      if (n > 0) s.getCamera().animate({ x: x / n, y: y / n, ratio }, { duration: 400 });
+      if (n > 0) s.getCamera().animate({ x: x / n, y: y / n, ratio }, { duration: 480, easing: 'quadraticInOut' });
     }, 900);
     return () => clearTimeout(t);
   }, [focusIds]);
@@ -1005,19 +1376,7 @@ export default function GraphView({
     const sigma = sigmaRef.current;
     if (!sigma) return;
     sigma.refresh();
-    if (!showSuggestions) return;
-    let raf = 0;
-    let last = 0;
-    const tick = (t: number) => {
-      if (t - last > 45) {
-        sigma.refresh();
-        last = t;
-      }
-      raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [showSuggestions, suggestions]);
+  }, [communityRegions, showSuggestions, suggestions]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -1097,17 +1456,21 @@ export default function GraphView({
       if (graph?.hasNode(id) && sigma) {
         hoveredRef.current = id;
         const attrs = graph.getNodeAttributes(id) as unknown as NodeAttrs;
+        const point = cameraPointForGraph(sigma, attrs);
         sigma.refresh();
-        sigma.getCamera().animate({ x: attrs.x, y: attrs.y, ratio: Math.min(0.45, sigma.getCamera().getState().ratio) }, { duration: 250 });
+        sigma.getCamera().animate(
+          { x: point.x, y: point.y, ratio: Math.min(0.45, sigma.getCamera().getState().ratio) },
+          { duration: 320, easing: 'quadraticInOut' },
+        );
       }
     };
     window.addEventListener('keydown', onGraphKey);
     return () => window.removeEventListener('keydown', onGraphKey);
   }, [nodes, onNavigate]);
 
-  const zoomIn = () => sigmaRef.current?.getCamera().animatedZoom({ duration: 200 });
-  const zoomOut = () => sigmaRef.current?.getCamera().animatedUnzoom({ duration: 200 });
-  const resetView = () => sigmaRef.current?.getCamera().animatedReset({ duration: 300 });
+  const zoomIn = () => sigmaRef.current?.getCamera().animatedZoom({ duration: 280, easing: 'quadraticInOut' });
+  const zoomOut = () => sigmaRef.current?.getCamera().animatedUnzoom({ duration: 280, easing: 'quadraticInOut' });
+  const resetView = () => sigmaRef.current?.getCamera().animatedReset({ duration: 440, easing: 'quadraticInOut' });
   const navigateFromMinimap = (event: React.MouseEvent<HTMLCanvasElement>) => {
     const graph = graphRef.current;
     const sigma = sigmaRef.current;
@@ -1122,16 +1485,18 @@ export default function GraphView({
     const rect = event.currentTarget.getBoundingClientRect();
     const x = minX + ((event.clientX - rect.left) / rect.width) * (maxX - minX || 1);
     const y = minY + ((event.clientY - rect.top) / rect.height) * (maxY - minY || 1);
-    sigma.getCamera().animate({ x, y }, { duration: 350 });
+    const point = cameraPointForGraph(sigma, { x, y });
+    sigma.getCamera().animate({ x: point.x, y: point.y }, { duration: 440, easing: 'quadraticInOut' });
   };
   const flyTo = (id: string) => {
     const graph = graphRef.current;
     const sigma = sigmaRef.current;
     if (!graph?.hasNode(id) || !sigma) return;
     const attrs = graph.getNodeAttributes(id) as unknown as NodeAttrs;
+    const point = cameraPointForGraph(sigma, attrs);
     hoveredRef.current = id;
     sigma.refresh();
-    sigma.getCamera().animate({ x: attrs.x, y: attrs.y, ratio: 0.28 }, { duration: 500 });
+    sigma.getCamera().animate({ x: point.x, y: point.y, ratio: 0.28 }, { duration: 600, easing: 'quadraticInOut' });
     setSearchText('');
   };
 
@@ -1198,9 +1563,12 @@ export default function GraphView({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-white dark:bg-neutral-950">
-      <div className={`${presentation ? 'hidden' : 'flex'} flex-wrap items-center gap-x-4 gap-y-2 border-b border-slate-200 px-4 py-2 dark:border-neutral-800`}>
-        <h2 className="text-sm font-semibold tracking-tight text-slate-800 dark:text-neutral-200">Mind atlas</h2>
+    <div className="graph-atlas-shell fixed inset-0 z-50 flex flex-col bg-white dark:bg-neutral-950">
+      <div className={`${presentation ? 'hidden' : 'flex'} graph-atlas-toolbar flex-wrap items-center gap-x-4 gap-y-2 border-b border-slate-200 px-4 py-2 dark:border-neutral-800`}>
+        <div className="mr-1">
+          <h2 className="text-sm font-semibold tracking-tight text-slate-800 dark:text-neutral-100">Mind atlas</h2>
+          <p className="text-[10px] tracking-wide text-slate-400 dark:text-neutral-500">follow ideas by region and connection</p>
+        </div>
 
         <div className="relative">
           <Search size={13} className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -1312,6 +1680,18 @@ export default function GraphView({
           >
             <span className="inline-block h-2 w-2 rotate-45" style={{ backgroundColor: conceptLayer ? palette.concept : 'transparent', border: `1px solid ${palette.concept}` }} />
             Concepts {conceptCount}
+          </button>
+          <button
+            onClick={() => setCommunityRegions((value) => !value)}
+            title="Show softly outlined community regions and their names"
+            className={`flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs ${
+              communityRegions
+                ? 'border-teal-300 bg-teal-50/70 text-teal-700 dark:border-teal-500/40 dark:bg-teal-500/10 dark:text-teal-300'
+                : 'border-slate-200 text-slate-300 line-through dark:border-neutral-800 dark:text-neutral-600'
+            }`}
+          >
+            <Users size={11} />
+            Regions
           </button>
         </div>
 
@@ -1475,14 +1855,26 @@ export default function GraphView({
         </div>
       )}
 
-      <div className="relative min-h-0 flex-1">
+      <div className="graph-atlas-stage relative min-h-0 flex-1">
         {noteCount === 0 && (
-          <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center text-sm text-slate-400 dark:text-neutral-500">
+          <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center text-sm text-slate-400 dark:text-neutral-500">
             No notes match this filter.
           </div>
         )}
-        <div ref={containerRef} tabIndex={0} role="application" aria-label="Interactive knowledge graph. Use arrow keys to move, Enter to open, and Space to select." data-renderer="webgl" className="h-full w-full outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-teal-500" />
-        <canvas ref={overlayRef} className="pointer-events-none absolute inset-0 h-full w-full" />
+        <canvas ref={clusterRef} className="pointer-events-none absolute inset-0 z-0 h-full w-full" aria-hidden="true" />
+        <div
+          ref={containerRef}
+          tabIndex={0}
+          role="application"
+          aria-label="Interactive knowledge graph. Use arrow keys to move, Enter to open, and Space to select."
+          aria-describedby="graph-atlas-help"
+          data-renderer="webgl"
+          className="relative z-10 h-full w-full outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-teal-500"
+        />
+        <span id="graph-atlas-help" className="sr-only">
+          Note names appear beneath their nodes. Hover a note to isolate its neighbors, drag to pin it, or use Connect to trace a numbered path.
+        </span>
+        <canvas ref={overlayRef} className="pointer-events-none absolute inset-0 z-20 h-full w-full" aria-hidden="true" />
 
         {presentation && (
           <button onClick={togglePresentation} className="absolute right-4 top-4 z-30 rounded-full border border-white/20 bg-black/35 px-3 py-1.5 text-xs text-white backdrop-blur hover:bg-black/50" title="Exit presentation mode (P)">
@@ -1490,7 +1882,7 @@ export default function GraphView({
           </button>
         )}
 
-        <div className="absolute right-3 top-3 flex flex-col overflow-hidden rounded-lg border border-slate-200 bg-white/90 shadow-sm backdrop-blur dark:border-neutral-800 dark:bg-neutral-900/90">
+        <div className="absolute right-3 top-3 z-30 flex flex-col overflow-hidden rounded-xl border border-slate-200/80 bg-white/90 shadow-sm backdrop-blur dark:border-neutral-700 dark:bg-neutral-900/90">
           <button onClick={zoomIn} className="p-2 text-slate-500 hover:bg-slate-100 dark:text-neutral-400 dark:hover:bg-white/5" title="Zoom in">
             <Plus size={15} />
           </button>
@@ -1502,16 +1894,20 @@ export default function GraphView({
           </button>
         </div>
 
-        <div className={`${presentation ? 'hidden' : 'absolute'} bottom-3 left-3 rounded-lg border border-slate-200 bg-white/85 px-3 py-2 text-[11px] text-slate-500 shadow-sm backdrop-blur dark:border-neutral-800 dark:bg-neutral-900/85 dark:text-neutral-400`}>
+        <div className={`${presentation ? 'hidden' : 'absolute'} bottom-3 left-3 z-30 rounded-xl border border-slate-200/80 bg-white/85 px-3 py-2 text-[11px] text-slate-500 shadow-sm backdrop-blur dark:border-neutral-700 dark:bg-neutral-900/85 dark:text-neutral-400`}>
           <div className="mb-1 font-medium text-slate-600 dark:text-neutral-300">Encoding</div>
           <div>Size · {sizeBy === 'pagerank' ? 'PageRank' : 'degree'}</div>
           <div>Color · {colorBy === 'uniform' ? 'uniform' : colorBy}</div>
           <div>Opacity · freshness ({fadeDays}d fade)</div>
+          <div>Region · detected community</div>
           <div className="flex items-center gap-1">
             <span className="inline-block h-2.5 w-2.5 rounded-full border-2" style={{ borderColor: palette.taskRing }} /> open tasks
           </div>
           <div className="flex items-center gap-1">
             <span className="inline-block h-2.5 w-2.5 rotate-45" style={{ backgroundColor: palette.concept }} /> concept
+          </div>
+          <div className="mt-1.5 border-t border-slate-200/70 pt-1.5 text-[10px] text-slate-400 dark:border-neutral-700/70 dark:text-neutral-500">
+            hover to trace neighbors · drag to pin · Shift to select
           </div>
         </div>
 
@@ -1521,12 +1917,12 @@ export default function GraphView({
           height={120}
           onClick={navigateFromMinimap}
           aria-label="Graph mini-map; click to move the camera"
-          className={`${presentation ? 'hidden' : 'absolute'} bottom-3 right-3 cursor-crosshair rounded-lg border border-slate-200 bg-white/80 shadow-sm backdrop-blur dark:border-neutral-800 dark:bg-neutral-900/80`}
+          className={`${presentation ? 'hidden' : 'absolute'} bottom-3 right-3 z-30 cursor-crosshair rounded-xl border border-slate-200/80 bg-white/80 shadow-sm backdrop-blur dark:border-neutral-700 dark:bg-neutral-900/80`}
         />
 
         {hoverCard && (
           <div
-            className="pointer-events-none absolute z-20 max-w-xs -translate-x-1/2 -translate-y-full rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-lg dark:border-neutral-800 dark:bg-neutral-900"
+            className="graph-atlas-hover-card pointer-events-none absolute z-40 max-w-xs -translate-x-1/2 -translate-y-full rounded-xl border border-slate-200/80 bg-white/95 px-3 py-2 shadow-xl backdrop-blur dark:border-neutral-700 dark:bg-neutral-900/95"
             style={{ left: hoverCard.x, top: hoverCard.y - 12 }}
           >
             <div className="truncate text-sm font-medium text-slate-800 dark:text-neutral-100">{hoverCard.title}</div>
@@ -1573,39 +1969,84 @@ export default function GraphView({
 
         {/* G6 §6 — Connect mode helper / path narration. */}
         {connectMode && (
-          <div className="absolute left-3 top-3 z-20 w-72 rounded-lg border border-slate-200 bg-white/95 p-3 text-xs shadow-lg backdrop-blur dark:border-neutral-800 dark:bg-neutral-900/95">
-            <div className="mb-1 flex items-center gap-1.5 font-medium text-slate-700 dark:text-neutral-200">
-              <Waypoints size={13} /> Connection explorer
+          <div className="graph-atlas-trace-panel absolute left-3 top-3 z-30 w-80 rounded-2xl border border-slate-200/80 bg-white/95 p-3.5 text-xs shadow-xl backdrop-blur dark:border-neutral-700 dark:bg-neutral-900/95" aria-live="polite">
+            <div className="mb-2.5 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5 font-semibold text-slate-700 dark:text-neutral-100">
+                <Waypoints size={14} className="text-teal-600 dark:text-teal-300" /> Trace a connection
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] tabular-nums text-slate-500 dark:bg-white/5 dark:text-neutral-400">
+                  {Math.min(connectSel.length, 2)} / 2 selected
+                </span>
+                <button
+                  onClick={() => {
+                    setConnectMode(false);
+                    clearConnect();
+                  }}
+                  className="rounded-md p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-white/5 dark:hover:text-neutral-200"
+                  title="Close connection tracer"
+                >
+                  <X size={13} />
+                </button>
+              </div>
             </div>
             {connectSel.length < 2 ? (
-              <p className="text-slate-500 dark:text-neutral-400">
-                Click {connectSel.length === 0 ? 'two nodes' : 'one more node'} to trace the strongest &amp; shortest path between them.
-                {connectSel.length === 1 && <span className="mt-1 block truncate text-slate-400">from “{titleById.get(connectSel[0]) ?? connectSel[0]}”</span>}
-              </p>
-            ) : graphPath.isPending ? (
-              <p className="text-slate-400">Finding paths…</p>
-            ) : pathResult && (pathResult.strongest.length || pathResult.shortest.length) ? (
-              <div className="space-y-2">
-                <p className="text-slate-600 dark:text-neutral-300">{pathResult.narration}</p>
-                <div className="flex flex-wrap items-center gap-1">
-                  {(pathResult.strongest.length ? pathResult.strongest : pathResult.shortest).map((s, i) => (
-                    <span key={s.id} className="flex items-center gap-1">
-                      {i > 0 && <span className="text-[10px] text-slate-400">→{s.viaType}→</span>}
-                      <button
-                        onClick={() => s.kind === 'note' && onNavigate(s.id)}
-                        className={`rounded px-1 py-0.5 ${s.kind === 'concept' ? 'text-purple-600 dark:text-purple-300' : 'text-teal-700 hover:underline dark:text-teal-300'}`}
-                      >
-                        {s.title}
-                      </button>
+              <div>
+                <p className="leading-relaxed text-slate-500 dark:text-neutral-400">
+                  {connectSel.length === 0
+                    ? 'Choose a starting note, then an ending note. The map will isolate and number every step.'
+                    : 'Now choose the destination. Your starting note stays illuminated.'}
+                </p>
+                <div className="mt-3 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+                  <div className={`min-w-0 rounded-lg border px-2 py-2 ${connectSel[0] ? 'border-teal-300 bg-teal-50/70 dark:border-teal-500/40 dark:bg-teal-500/10' : 'border-dashed border-slate-300 dark:border-neutral-700'}`}>
+                    <span className="block text-[9px] font-semibold uppercase tracking-[0.14em] text-slate-400">start</span>
+                    <span className="mt-0.5 block truncate font-medium text-slate-700 dark:text-neutral-200">
+                      {connectSel[0] ? titleById.get(connectSel[0]) ?? connectSel[0] : 'pick a node'}
                     </span>
-                  ))}
+                  </div>
+                  <span className="text-slate-300 dark:text-neutral-600">→</span>
+                  <div className="min-w-0 rounded-lg border border-dashed border-slate-300 px-2 py-2 dark:border-neutral-700">
+                    <span className="block text-[9px] font-semibold uppercase tracking-[0.14em] text-slate-400">end</span>
+                    <span className="mt-0.5 block truncate font-medium text-slate-400">pick a node</span>
+                  </div>
                 </div>
+              </div>
+            ) : graphPath.isPending ? (
+              <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-2.5 py-2 text-slate-400 dark:bg-white/5">
+                <span className="h-2 w-2 animate-pulse rounded-full bg-teal-500" /> Reading the strongest route…
+              </div>
+            ) : pathResult && (pathResult.strongest.length || pathResult.shortest.length) ? (
+              <div className="space-y-3">
+                <p className="text-pretty leading-relaxed text-slate-600 dark:text-neutral-300">{pathResult.narration}</p>
+                <ol className="relative space-y-1 before:absolute before:bottom-3 before:left-[13px] before:top-3 before:w-px before:bg-gradient-to-b before:from-teal-400 before:to-purple-400">
+                  {(pathResult.strongest.length ? pathResult.strongest : pathResult.shortest).map((s, i) => (
+                    <li key={s.id} className="relative grid grid-cols-[1.7rem_1fr] items-center gap-2">
+                      <span className={`relative z-10 flex h-[1.7rem] w-[1.7rem] items-center justify-center rounded-full border text-[10px] font-bold shadow-sm ${
+                        i === 0
+                          ? 'border-teal-500 bg-teal-600 text-white'
+                          : i === (pathResult.strongest.length ? pathResult.strongest : pathResult.shortest).length - 1
+                            ? 'border-purple-500 bg-purple-500 text-white'
+                            : 'border-slate-200 bg-white text-slate-500 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-300'
+                      }`}>
+                        {i + 1}
+                      </span>
+                      <button
+                        onClick={() => flyTo(s.id)}
+                        className="min-w-0 rounded-lg px-2 py-1.5 text-left transition hover:bg-slate-50 dark:hover:bg-white/5"
+                        title={`Fly to ${s.title}`}
+                      >
+                        {i > 0 && <span className="block text-[9px] uppercase tracking-[0.12em] text-slate-400">via {s.viaType}</span>}
+                        <span className={`block truncate font-medium ${s.kind === 'concept' ? 'text-purple-600 dark:text-purple-300' : 'text-slate-700 dark:text-neutral-200'}`}>{s.title}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ol>
                 <div className="flex gap-2 pt-1">
-                  <button onClick={() => openWhy(connectSel[0], connectSel[1])} className="rounded-md border border-slate-300 px-2 py-0.5 text-slate-600 hover:bg-slate-100 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-white/5">
+                  <button onClick={() => openWhy(connectSel[0], connectSel[1])} className="rounded-lg border border-teal-300 bg-teal-50 px-2.5 py-1.5 font-medium text-teal-700 transition hover:bg-teal-100 dark:border-teal-500/40 dark:bg-teal-500/10 dark:text-teal-300 dark:hover:bg-teal-500/20">
                     Why related?
                   </button>
-                  <button onClick={clearConnect} className="text-slate-400 underline hover:text-slate-600 dark:hover:text-neutral-300">
-                    reset
+                  <button onClick={clearConnect} className="rounded-lg px-2 py-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-white/5 dark:hover:text-neutral-300">
+                    Trace another
                   </button>
                 </div>
               </div>

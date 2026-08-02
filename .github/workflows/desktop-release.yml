@@ -20,7 +20,16 @@ jobs:
           node-version: 20
           cache: npm
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
       - run: npm ci
+
+      - name: Build self-contained workout engine
+        run: |
+          python -m pip install -r apps/workout-engine/requirements-build.txt
+          npm -w @timeblock/workout-engine run build:win
 
       - name: Build web app
         run: npm run build

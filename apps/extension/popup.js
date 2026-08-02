@@ -4,7 +4,7 @@ const elements = Object.fromEntries([
   'signal', 'connection-label', 'connection-detail', 'retry', 'page-title', 'page-host',
   'selection-preview', 'save-selection', 'save-page', 'quick-thought', 'char-count',
   'save-thought', 'copy-toggle', 'copy-state', 'queue-count', 'recent-list', 'toast',
-  'open-options', 'open-brain',
+  'open-options', 'open-brain', 'save-product',
 ].map((id) => [id, document.getElementById(id)]));
 
 let state = null;
@@ -79,6 +79,7 @@ async function getCurrentPage() {
   }
   const isWebPage = Boolean(activeTab?.id && activeTab?.url?.startsWith('http'));
   elements['save-page'].disabled = !isWebPage;
+  elements['save-product'].disabled = !isWebPage;
   if (!isWebPage) return;
   try {
     const [result] = await chrome.scripting.executeScript({
@@ -102,6 +103,108 @@ async function getCurrentPage() {
     elements['selection-preview'].hidden = false;
     elements['save-selection'].disabled = false;
   }
+}
+
+async function extractCurrentProduct() {
+  if (!activeTab?.id) throw new Error('Open a product page first');
+  const [result] = await chrome.scripting.executeScript({
+    target: { tabId: activeTab.id },
+    func: () => {
+      const clean = (value) => String(value ?? '').replace(/\s+/g, ' ').trim();
+      const meta = (...keys) => {
+        for (const key of keys) {
+          const node = document.querySelector(`meta[property="${key}"],meta[name="${key}"],meta[itemprop="${key}"]`);
+          const value = node?.getAttribute('content');
+          if (value) return value;
+        }
+        return '';
+      };
+      const scalar = (value, keys = []) => {
+        if (typeof value === 'string' || typeof value === 'number') return value;
+        if (Array.isArray(value)) {
+          for (const item of value) {
+            const found = scalar(item, keys);
+            if (found != null && clean(found)) return found;
+          }
+          return null;
+        }
+        if (!value || typeof value !== 'object') return null;
+        for (const key of [...keys, '@value', 'value', 'amount', 'url', 'src', 'content']) {
+          const found = scalar(value[key], []);
+          if (found != null && clean(found)) return found;
+        }
+        return null;
+      };
+      const products = [];
+      const visit = (value) => {
+        if (!value || typeof value !== 'object') return;
+        if (Array.isArray(value)) return value.forEach(visit);
+        const types = Array.isArray(value['@type']) ? value['@type'] : [value['@type']];
+        if (types.includes('Product')) products.push(value);
+        Object.values(value).forEach(visit);
+      };
+      document.querySelectorAll('script[type="application/ld+json"]').forEach((node) => {
+        try { visit(JSON.parse(node.textContent || '')); } catch { /* Use rendered fields below. */ }
+      });
+      const product = products[0] || {};
+      const offers = [];
+      const collectOffers = (value) => {
+        if (!value || typeof value !== 'object') return;
+        if (Array.isArray(value)) return value.forEach(collectOffers);
+        if (value.price != null || value.lowPrice != null || value.highPrice != null) offers.push(value);
+        if (value.offers) collectOffers(value.offers);
+        if (value.priceSpecification) collectOffers(value.priceSpecification);
+      };
+      collectOffers(product.offers);
+      const offer = offers[0] || {};
+      const firstNode = (...selectors) => {
+        for (const selector of selectors) {
+          const node = document.querySelector(selector);
+          if (node) return node;
+        }
+        return null;
+      };
+      const titleNode = firstNode('[itemprop="name"]', '#productTitle', '[data-testid="x-item-title"]', 'main h1', 'h1');
+      const imageNode = firstNode('[itemprop="image"]', '#landingImage', '[data-testid="ux-image-carousel-item"] img', '.product-intro__main img', 'main img');
+      const priceNode = firstNode('[itemprop="price"]', '.x-price-primary', '.priceToPay .a-offscreen', '.a-price .a-offscreen', '[class*="product"][class*="price"]', '[class*="sale-price"]');
+      const rawPrice = scalar(offer.price ?? offer.lowPrice ?? offer.highPrice, ['price', 'amount', 'value'])
+        ?? meta('product:price:amount', 'og:price:amount')
+        ?? priceNode?.getAttribute('content')
+        ?? priceNode?.textContent
+        ?? '';
+      const priceText = clean(rawPrice);
+      const numberText = priceText.replace(/[^\d.,-]/g, '').replace(/,(?=\d{3}(?:\D|$))/g, '').replace(',', '.');
+      const price = /\d/.test(numberText) && Number.isFinite(Number(numberText)) ? Number(numberText) : null;
+      const currencyText = clean(scalar(offer.priceCurrency ?? offer.priceSpecification, ['priceCurrency', 'currency'])
+        ?? meta('product:price:currency', 'og:price:currency')
+        ?? document.querySelector('[itemprop="priceCurrency"]')?.getAttribute('content')
+        ?? priceText).toUpperCase();
+      const currency = currencyText.match(/(?:^|[^A-Z])([A-Z]{3})(?=[^A-Z]|$)/)?.[1]
+        || (currencyText.includes('€') ? 'EUR' : currencyText.includes('£') ? 'GBP' : currencyText.includes('ر.س') ? 'SAR' : '');
+      const imageValue = scalar(product.image, ['url', 'contentUrl', 'src'])
+        ?? meta('og:image:secure_url', 'og:image', 'twitter:image')
+        ?? imageNode?.getAttribute('data-old-hires')
+        ?? imageNode?.getAttribute('src')
+        ?? '';
+      const metadataHtml = [...document.querySelectorAll('meta[property],meta[name],meta[itemprop]')]
+        .filter((node) => /(?:title|image|price|currency|product)/i.test(`${node.getAttribute('property')} ${node.getAttribute('name')} ${node.getAttribute('itemprop')}`))
+        .map((node) => node.outerHTML)
+        .join('\n')
+        .slice(0, 1_800);
+      const renderedSignals = [titleNode?.outerHTML, priceNode?.outerHTML, imageNode?.outerHTML].filter(Boolean).join('\n').slice(0, 1_000);
+      const visibleProductText = clean((document.querySelector('main') || document.body)?.innerText).slice(0, 2_200);
+      return {
+        title: clean(scalar(product.name, ['text', 'value']) ?? meta('og:title', 'twitter:title') ?? titleNode?.textContent ?? document.title),
+        url: location.href,
+        imageUrl: imageValue ? new URL(String(imageValue), location.href).toString() : '',
+        price,
+        currency,
+        context: `<title>${clean(document.title)}</title>\n${metadataHtml}\n${renderedSignals}\n${visibleProductText}`,
+      };
+    },
+  });
+  if (!result?.result) throw new Error('Could not read this product page');
+  return result.result;
 }
 
 async function refreshState() {
@@ -130,6 +233,19 @@ async function capture(kind, text) {
 
 elements['save-selection'].addEventListener('click', () => capture('selection', selection));
 elements['save-page'].addEventListener('click', () => capture('page', ''));
+elements['save-product'].addEventListener('click', async () => {
+  elements['save-product'].disabled = true;
+  try {
+    const product = await extractCurrentProduct();
+    const result = await send({ type: 'ADD_WISHLIST_PRODUCT', product });
+    if (!result.ok) throw new Error(result.error || 'Could not add this product');
+    showToast('Added to your Wishlist', true);
+  } catch (error) {
+    showToast(error instanceof Error ? error.message : 'Could not add this product');
+  } finally {
+    elements['save-product'].disabled = false;
+  }
+});
 elements['save-thought'].addEventListener('click', async () => {
   const text = elements['quick-thought'].value.trim();
   if (!text) return;

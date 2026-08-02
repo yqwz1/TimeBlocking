@@ -437,9 +437,9 @@ export default function TaskEditorPanel({ taskId, onClose, onOpen }: { taskId: s
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 onBlur={() => description !== task.description && patch({ description })}
-                rows={2}
+                rows={4}
                 placeholder="Description"
-                className="w-full resize-none border-none bg-transparent text-sm text-slate-500 outline-none placeholder:text-slate-400 dark:text-neutral-400 dark:placeholder:text-neutral-600"
+                className="w-full resize-y border-none bg-transparent text-sm text-slate-500 outline-none placeholder:text-slate-400 dark:text-neutral-400 dark:placeholder:text-neutral-600"
               />
             </div>
 

@@ -16,6 +16,7 @@ import { completeGraphJob, failGraphJob, recoverInterruptedGraphJobs, startGraph
 import { reembedAllNotes } from './notes/embeddings.js';
 import { aiConfigured } from './ai/client.js';
 import { DriveBackupService } from './integrations/google/driveBackups.js';
+import { WorkoutEngineService } from './workout/engine.js';
 
 async function main() {
   const db = createDb();
@@ -35,6 +36,7 @@ async function main() {
 
   const manager = new SyncManager(db);
   const driveBackups = new DriveBackupService(db);
+  const workout = new WorkoutEngineService(db);
 
   const app = Fastify({ logger: { level: env.isProd ? 'warn' : 'info' } });
   await app.register(cors, { origin: env.isProd ? (env.integrationOrigin || false) : true });
@@ -42,7 +44,7 @@ async function main() {
 
   await app.register(
     async (api) => {
-      registerApiRoutes(api, db, manager, driveBackups);
+      registerApiRoutes(api, db, manager, driveBackups, workout);
     },
     { prefix: '/api' },
   );

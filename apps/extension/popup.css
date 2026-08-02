@@ -121,6 +121,8 @@ h1 { margin: 0; font: 700 25px/1 "Bodoni 72", Didot, Georgia, serif; letter-spac
 .button:disabled { opacity: .38; cursor: not-allowed; box-shadow: none; }
 .button-primary { background: var(--green); color: #fff; }
 .button-secondary { background: var(--paper); }
+.button-product { grid-column: 1 / -1; border-color: #9dcac2; background: #e8f5f2; color: #174f47; }
+.button-product:hover:not(:disabled) { background: #d9eee9; }
 kbd { border: 1px solid currentColor; padding: 2px 4px; font: 700 8px/1 monospace; opacity: .75; }
 
 .thought-card { margin: 14px 18px; border: 1px solid var(--line); background: rgba(255,255,255,.46); box-shadow: var(--shadow); }

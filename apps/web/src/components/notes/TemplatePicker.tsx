@@ -1,6 +1,33 @@
 import { useEffect, useRef, useState } from 'react';
-import { FileText, LayoutTemplate } from 'lucide-react';
+import {
+  BookOpen,
+  CalendarDays,
+  ClipboardCheck,
+  FileText,
+  GraduationCap,
+  LayoutTemplate,
+  Lightbulb,
+  Map,
+  PenLine,
+  Rocket,
+  Scale,
+  Users,
+  type LucideIcon,
+} from 'lucide-react';
 import type { TemplateSummaryDTO } from '@timeblock/shared';
+
+const TEMPLATE_ICONS: Record<string, LucideIcon> = {
+  'book-open': BookOpen,
+  'calendar-days': CalendarDays,
+  'clipboard-check': ClipboardCheck,
+  'graduation-cap': GraduationCap,
+  lightbulb: Lightbulb,
+  map: Map,
+  'pen-line': PenLine,
+  rocket: Rocket,
+  scale: Scale,
+  users: Users,
+};
 
 export default function TemplatePicker({
   templates,
@@ -40,13 +67,7 @@ export default function TemplatePicker({
             <FileText size={14} className="shrink-0 opacity-50" /> Blank note
           </button>
           {templates.map((t) => (
-            <button
-              key={t.id}
-              onClick={() => setSelected(t.id)}
-              className={`flex w-full items-center gap-2 px-4 py-2 text-left text-sm ${selected === t.id ? 'bg-teal-50 text-teal-700 dark:bg-teal-500/15 dark:text-teal-300' : 'text-slate-700 dark:text-neutral-200'}`}
-            >
-              <LayoutTemplate size={14} className="shrink-0 opacity-50" /> {t.title}
-            </button>
+            <TemplateOption key={t.id} template={t} selected={selected === t.id} onSelect={() => setSelected(t.id)} />
           ))}
           {templates.length === 0 && (
             <p className="px-4 py-3 text-xs text-slate-400 dark:text-neutral-500">No templates yet — add .md files to your Templates folder (see Settings).</p>
@@ -71,5 +92,17 @@ export default function TemplatePicker({
         </div>
       </div>
     </div>
+  );
+}
+
+function TemplateOption({ template, selected, onSelect }: { template: TemplateSummaryDTO; selected: boolean; onSelect: () => void }) {
+  const Icon = (template.icon && TEMPLATE_ICONS[template.icon]) || LayoutTemplate;
+  return (
+    <button
+      onClick={onSelect}
+      className={`flex w-full items-center gap-2 px-4 py-2 text-left text-sm ${selected ? 'bg-teal-50 text-teal-700 dark:bg-teal-500/15 dark:text-teal-300' : 'text-slate-700 dark:text-neutral-200'}`}
+    >
+      <Icon size={14} className="shrink-0 opacity-60" /> {template.title}
+    </button>
   );
 }

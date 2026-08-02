@@ -62,6 +62,8 @@ export const AI_TASK_POLICIES: Record<string, AiTaskPolicy> = {
   vault_synthesis: { task: 'vault_synthesis', inputBudget: 5_000, outputBudget: 800, defaultTier: 'cheap-cloud', allowEscalation: true },
   draft: { task: 'draft', inputBudget: 5_000, outputBudget: 1_000, defaultTier: 'cheap-cloud', allowEscalation: true },
   complex_answer: { task: 'complex_answer', inputBudget: 10_000, outputBudget: 1_200, defaultTier: 'quality-cloud' },
+  wishlist_import: { task: 'wishlist_import', inputBudget: 900, outputBudget: 120, defaultTier: 'cheap-cloud', cacheTtlMs: 30 * 24 * 60 * 60_000 },
+  wishlist_advice: { task: 'wishlist_advice', inputBudget: 4_000, outputBudget: 500, defaultTier: 'cheap-cloud', cacheTtlMs: 7 * 24 * 60 * 60_000 },
 };
 
 function cacheKey(input: Pick<ModelGatewayRequest<unknown>, 'task' | 'promptVersion' | 'model' | 'prompt'>): string {
@@ -161,7 +163,7 @@ export class ModelGateway {
 
   async generateStructuredResult<T>(request: ModelGatewayRequest<T>): Promise<AiResult<T>> {
     return this.run(request, async (model, prompt) => {
-      const result = await generateJsonWithUsage<unknown>(model, prompt, request.schema);
+      const result = await generateJsonWithUsage<unknown>(model, prompt, request.schema, policyFor(request).outputBudget);
       return { value: request.validate(result.value), usage: result.usage, provider: result.provider, model: result.model };
     });
   }

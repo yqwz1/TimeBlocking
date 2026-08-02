@@ -1,0 +1,82 @@
+{
+  "e1rm_formula": "epley",
+  "e1rm_rep_cap": 10,
+  "goal_rep_range": [5, 8],
+  "progression_min_rir": 2.0,
+  "progression_big_jump_rir": 4.0,
+
+  "acwr_acute_days": 7,
+  "acwr_chronic_days": 28,
+  "acwr_chronic_min_days": 6,
+  "acwr_chronic_min_frac": 0.5,
+  "acwr_use_ewma": true,
+  "acwr_uncouple": true,
+  "acwr_spike_self": null,
+  "acwr_spike": 1.5,
+  "acwr_low": 0.8,
+  "monotony_flag": 2.0,
+
+  "forecast_window_weeks": 12,
+  "forecast_min_points": 5,
+  "forecast_horizon_weeks": 8,
+  "forecast_damping": 0.6,
+  "forecast_band_level": 0.8,
+  "forecast_use_ceiling": true,
+  "forecast_ceiling_max_ratio": 1.6,
+  "plateau_weeks": 4,
+  "regression_drop_pct": 5.0,
+  "min_sets_to_track": 1,
+
+  "unit_jump_ratio": 3.0,
+  "weight_outlier_k": 2.5,
+  "min_epoch_sets": 4,
+  "session_duration_clamp_hours": 4.0,
+  "implausible_reps_floor": 15,
+  "implausible_reps_factor": 1.5,
+  "recent_pr_window_days": 90,
+  "max_weekly_set_increase": 3,
+  "max_weekly_set_decrease": 4,
+  "secondary_set_credit": 0.5,
+  "volume_ewma_halflife_weeks": 2,
+  "volume_gating_basis": "ewma",
+  "dropoff_same_load_tol": 0.10,
+
+  "default_increment_kg": 2.5,
+  "increment_overrides": {
+    "dumbbell": 2.0,
+    "machine": 5.0,
+    "cable": 2.5,
+    "barbell": 2.5,
+    "band": 5.0
+  },
+
+  "hevy": {
+    "base_url": "https://api.hevyapp.com/v1",
+    "page_size": 10,
+    "timeout_seconds": 30,
+    "max_retries": 4
+  },
+
+  "powerlifting": {
+    "_comment": "The three competition lifts and scoring for the Powerlifting tab. lifts maps squat/bench/deadlift to raw Hevy names. sex+score drive the relative-strength number (dots|wilks). standards.bw_mult are 1RM-as-bodyweight-multiples bracket lower-bounds (estimates, tunable). meet_date (YYYY-MM-DD or null) enables the meet projection.",
+    "lifts": {
+      "squat": "Squat (Barbell)",
+      "bench": "Bench Press",
+      "deadlift": "Deadlift (Barbell)"
+    },
+    "bar_weight_kg": 20,
+    "plate_pairs_kg": [25, 20, 15, 10, 5, 2.5, 1.25],
+    "sex": "male",
+    "score": "dots",
+    "meet_date": null,
+    "attempt_pct": [0.91, 0.96, 1.01],
+    "standards": {
+      "labels": ["Beginner", "Novice", "Intermediate", "Advanced", "Elite"],
+      "bw_mult": {
+        "squat": [0.75, 1.25, 1.5, 2.0, 2.5],
+        "bench": [0.5, 0.75, 1.0, 1.5, 2.0],
+        "deadlift": [1.0, 1.5, 1.75, 2.25, 2.75]
+      }
+    }
+  }
+}

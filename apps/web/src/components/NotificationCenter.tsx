@@ -27,8 +27,8 @@ function timeAgo(at: number): string {
   return `${Math.round(h / 24)}d ago`;
 }
 
-/** Header bell: unread badge + dropdown inbox of reminders and gamification events. */
-export default function NotificationCenter({ gameMode }: { gameMode: boolean }) {
+/** Notification bell: unread badge + dropdown inbox of reminders and gamification events. */
+export default function NotificationCenter({ gameMode, placement = 'header' }: { gameMode: boolean; placement?: 'header' | 'sidebar' }) {
   const notifications = useSyncExternalStore(subscribeNotifications, getNotifications);
   const unread = useSyncExternalStore(subscribeNotifications, getUnreadCount);
   const [open, setOpen] = useState(false);
@@ -81,7 +81,9 @@ export default function NotificationCenter({ gameMode }: { gameMode: boolean }) 
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -6, scale: 0.98 }}
             transition={{ duration: 0.15 }}
-            className="absolute right-0 top-full z-50 mt-2 w-80 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl dark:border-neutral-800 dark:bg-neutral-900"
+            className={`absolute z-50 w-80 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl dark:border-neutral-800 dark:bg-neutral-900 ${
+              placement === 'sidebar' ? 'bottom-full left-0 mb-2' : 'right-0 top-full mt-2'
+            }`}
           >
             <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2 dark:border-neutral-800">
               <span className="text-sm font-semibold text-slate-800 dark:text-neutral-100">Notifications</span>

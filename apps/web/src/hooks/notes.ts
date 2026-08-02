@@ -51,6 +51,16 @@ export class NoteConflictError extends Error {
 
 export const useNoteTree = () => useQuery({ queryKey: ['notes', 'tree'], queryFn: () => api.get<NoteSummaryDTO[]>('/notes/tree') });
 
+export const useNoteFolders = () => useQuery({ queryKey: ['notes', 'folders'], queryFn: () => api.get<string[]>('/notes/folders') });
+
+export const useCreateNoteFolder = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { path: string }) => api.post<{ path: string }>('/notes/folders', input),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['notes'] }),
+  });
+};
+
 export const useInboxNotes = () => useQuery({ queryKey: ['notes', 'inbox'], queryFn: () => api.get<InboxNoteDTO[]>('/notes/inbox') });
 
 export const useNoteSearch = (q: string) =>
@@ -101,6 +111,14 @@ export const useClipUrlToInbox = () => {
   });
 };
 
+export const useCaptureYouTubeNote = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { url: string; title?: string; folder?: string }) => api.post<NoteDTO>('/notes/capture-youtube', input),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['notes'] }),
+  });
+};
+
 export const useSaveNote = () => {
   const qc = useQueryClient();
   return useMutation({
@@ -112,6 +130,17 @@ export const useSaveNote = () => {
     onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: ['notes', 'tree'] });
       qc.invalidateQueries({ queryKey: ['notes', 'file', vars.id] });
+    },
+  });
+};
+
+export const useUpdateNoteAppearance = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { id: string; color: string | null; icon: string | null }) => api.put<NoteDTO>('/notes/appearance', input),
+    onSuccess: (_data, input) => {
+      qc.invalidateQueries({ queryKey: ['notes', 'tree'] });
+      qc.invalidateQueries({ queryKey: ['notes', 'file', input.id] });
     },
   });
 };
@@ -251,6 +280,17 @@ export const useToggleNotePin = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => api.post<NoteDTO>('/notes/pin', { id }),
+    onSuccess: (_data, id) => {
+      qc.invalidateQueries({ queryKey: ['notes', 'tree'] });
+      qc.invalidateQueries({ queryKey: ['notes', 'file', id] });
+    },
+  });
+};
+
+export const useToggleNoteBookmark = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.post<NoteDTO>('/notes/bookmark', { id }),
     onSuccess: (_data, id) => {
       qc.invalidateQueries({ queryKey: ['notes', 'tree'] });
       qc.invalidateQueries({ queryKey: ['notes', 'file', id] });

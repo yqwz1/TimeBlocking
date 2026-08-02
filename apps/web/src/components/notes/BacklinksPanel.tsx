@@ -1,6 +1,7 @@
 import { Link2, Link2Off, Sparkles, Wand2 } from 'lucide-react';
 import type { NoteDetailDTO, NoteSuggestionsDTO, RelatedNoteDTO } from '@timeblock/shared';
 import { highlightSnippet } from '../../lib/markdown.js';
+import { tagPillStyle } from './tagAppearance.js';
 
 export default function BacklinksPanel({
   note,
@@ -152,7 +153,7 @@ export default function BacklinksPanel({
           <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-neutral-500">Tags</h3>
           <div className="flex flex-wrap gap-1.5">
             {note.tags.map((t) => (
-              <span key={t} className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600 dark:bg-white/5 dark:text-neutral-300">
+              <span key={t} style={tagPillStyle(t, note.tagColors)} className="rounded-full border border-transparent bg-slate-100 px-2 py-0.5 text-xs text-slate-600 dark:bg-white/5 dark:text-neutral-300">
                 #{t}
               </span>
             ))}

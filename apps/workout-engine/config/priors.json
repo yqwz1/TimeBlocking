@@ -1,0 +1,91 @@
+{
+  "_comment": "Population priors from the research briefs. Used as defaults during the grace period, then shrunk toward the user's personal posterior as data accumulates. Citations: Nuzzo 2024 (reps@%1RM), Zourdos 2016 (RIR), Pelland 2024 (dose-response), Grgic 2019 (deload), SBS detraining.",
+
+  "training_age": "intermediate",
+
+  "gain_rate_e1rm_per_week": {"beginner": 2.5, "intermediate": 1.0, "advanced": 0.4},
+  "gain_rate_sd_per_week": 1.5,
+
+  "grace": {"n_learn": 5, "n_confident": 12, "min_r2": 0.4},
+
+  "rpe_to_rir": {"10": 0, "9": 1, "8": 2, "7": 3, "6": 4, "5": 5},
+  "rpe_to_velocity_loss": {"6": 0.10, "7": 0.15, "8": 0.22, "9": 0.28, "10": 0.35},
+  "rir_reliable_max_reps": 12,
+  "rir_reliable_max_rir": 4,
+
+  "set_order_fatigue_default": {"1": 0.0, "2": -1.0, "3": -2.0, "4": -2.5, "5": -3.0},
+
+  "reps_at_pct1rm": {
+    "default": {"100": 1, "95": 2, "90": 4, "85": 6, "80": 8, "75": 10, "70": 12, "65": 15},
+    "lower_compound": {"100": 1, "95": 3, "90": 5, "85": 8, "80": 13, "75": 16, "70": 19, "65": 22},
+    "upper_press": {"100": 1, "95": 2, "90": 4, "85": 6, "80": 9, "75": 11, "70": 14, "65": 18}
+  },
+
+  "recovery": {
+    "weights": {"perf": 0.5, "acwr": 0.3, "dropoff": 0.2, "rpe": 0.2},
+    "cutoffs": {"well": 0.2, "under": -0.2},
+    "gate_days": 21,
+    "min_trend_lifts": 1,
+    "acwr_high": 1.3, "acwr_low": 0.8,
+    "dropoff_neutral": 0.15, "dropoff_bad": 0.40,
+    "rpe_signal": {"neutral": 8.0, "hard": 10.0, "light": 6.0, "creep_bad": 2.0, "creep_blend": 0.4, "min_sets": 2, "hard_flag": 9.3},
+    "_rpe_help": "weights.rpe is the FRACTION of the recovery blend given to the RPE fatigue read (0 = off); the other three keep their 5:3:2 ratio in the remaining 1-rpe, and renormalize to the original mix when no RPE is logged. rpe_signal: neutral/hard/light = RPE anchors for the level read, creep_bad = within-session RPE rise (at matched load) that reads as full acute fatigue, creep_blend = weight of creep vs level, min_sets = RPE working-sets needed per muscle before the signal fires, hard_flag = avg top-set RPE that surfaces a 'near failure' note.",
+    "confidence": {"min_n": 8, "corr_moderate": 0.2, "corr_high": 0.35},
+    "calibration_mode": "advisory",
+    "_calibration_help": "Set calibration_mode to 'apply' and fill a 'calibrated' object {weights:{...}, cutoffs:{well,under}} to use data-fitted values from `coach.py calibrate`. Default 'advisory' = report-only, nothing changes."
+  },
+
+  "form": {
+    "tau_fit": 42.0, "tau_fat": 7.0,
+    "z_well": 0.5, "z_under": -0.5,
+    "embargo_days": 3, "horizon_days": 21,
+    "min_points": 4, "trail_sessions": 6,
+    "min_n": 8, "success_r": 0.15,
+    "signal_scale": 2.0,
+    "_help": "Fitness-Fatigue 'Form' model (design 01-fitness-fatigue-form-model.md). tau_fit/tau_fat = CTL/ATL daily-EWMA time constants in days (slow fitness / fast fatigue), FIXED per literature - do not free-fit (the full 5-param Banister fit is ill-posed on one gappy subject). z_well/z_under = self-relative Form z-score state cutoffs. signal_scale divides the Form z into the [-1,+0.3] recovery-blend fatigue signal (z/scale, clipped) that REPLACES the old acwr+dropoff sub-read in the live recovery score (design section 5.1). The rest govern the leakage-free validator (design section 2): embargo_days<=gap<=horizon_days picks the outcome session after each point, trail_sessions sets the prior-only Theil-Sen trend window, min_points starts the per-lift walk. adopt_form_over_landmarks fires only when n>=min_n AND r>=success_r AND tercile means are monotone - a bar pre-registered BEFORE looking (design section 3), to prevent self-deception."
+  },
+
+  "rep_pooling": {
+    "enabled": true,
+    "rich_min_points": 8, "rich_min_ratio": 1.15,
+    "borrowed_conf_base": 25, "borrowed_conf_per_lift": 5, "borrowed_conf_cap": 55,
+    "min_n_starved": 12, "rich_tol": 0.02,
+    "_help": "Hierarchical partial pooling of the load->reps slope (design 02-hierarchical-pooling-rep-model.md). enabled=use the pooled/borrowed slope in live rep predictions (false = old per-exercise-only behavior). A lift is 'rich' (kept un-pooled, own slope) when its fit has >=rich_min_points fresh sets AND a max/min load ratio >=rich_min_ratio AND r2>=grace.min_r2; otherwise its slope is shrunk toward, or fully borrowed from, its exercise-TYPE level (lower_compound/upper_press/default), with a global fallback for sparse types. borrowed_conf_* set the modest confidence a borrowed-slope prediction reports (base + per backing lift, capped). min_n_starved/rich_tol are the pre-registered adoption gate in backtest.pooled_rep_prediction: adopt iff the starved bucket has >=min_n_starved windows and lower MAE while the rich bucket's MAE does not worsen by more than rich_tol."
+  },
+
+  "curvilinear_1rm": {
+    "enabled": false,
+    "prior_sd_frac": 0.15, "min_spread": 1.15, "legacy_weight": 0.25,
+    "p_floor": 0.30, "p_ceil": 1.05, "search_max_ratio": 2.5,
+    "min_heavy_targets": 5, "adopt_min_rel_improve": 0.15, "adopt_max_inband_regress": 0.02,
+    "_help": "Curvilinear, regularized 1RM (design 04-curvilinear-1rm-model.md). The reps-to-failure curve s(p), p=W/1RM, is borrowed at the exercise-TYPE level (the Nuzzo reps_at_pct1rm table above, read through a monotone PCHIP interpolator) and each lift fits ONE parameter, the anchor M=1RM. Curvature is a group parameter (never fit per lift); M is lift-local and shrunk toward a heaviest-reliable-set prior. enabled=use the spline 1RM as the top rung of the individual_1rm fallback ladder (spline->linear(1.4x clamp)->per-set Epley); false=legacy linear-only. Only lifts with real load spread (max/min>=min_spread) get a spline 1RM - fixed-load lifts are unchanged. UNIT-SAFE: only the ratio W/M touches the curve, both in one epoch's raw units. prior_sd_frac=prior SD on M as a fraction of M_prior; legacy_weight=downweight for no-RPE (one-sided) sets; p_floor/p_ceil clamp W/M; search_max_ratio bounds the golden-section M search at max_load*ratio. min_heavy_targets/adopt_min_rel_improve/adopt_max_inband_regress are the PRE-REGISTERED bar in backtest.heavy_extrapolation: adopt iff >=min_heavy_targets held-out above-max heavy targets exist AND the spline cuts heavy-set rep-MAE by >=adopt_min_rel_improve relative AND the in-band (to-failure) MAE does not worsen by more than adopt_max_inband_regress. The live in-band rep predictor (predict_reps_anchored / #2 pooling) is NOT touched by #4."
+  },
+
+  "rir_rep_model": {
+    "enabled": false,
+    "min_rir_points": 3, "rir_var": 1.0,
+    "min_recent_targets": 8, "adopt_min_rel_improve": 0.0, "adopt_max_legacy_regress": 0.02,
+    "_help": "Fold RIR into the LIVE in-band rep predictor (design 05-rir-into-rep-model.md). The linear/pooled load->reps fit is blind to effort: 8 reps @ RPE 7 and 8 reps @ RPE 10 are the same point to it, though they sit far apart on the true capacity curve. #5 fixes the prediction SEMANTICS - anchor on the last set's CAPACITY r* = reps + reliable RIR (the same r* #4 anchors its 1RM on, via failure_reps), project it along the slope (#2's pooled slope when starved), then predict the reps the user will actually PERFORM at their intended effort = capacity(W) - target_rir. target_rir = the user's median reliable top-set RIR for the lift (>= min_rir_points), else settings.progression_min_rir. enabled=use predict_reps_at_effort in autoregulation.prediction_for (false = today's raw-reps predict_reps_anchored). When the anchor set has no reliable RIR its capacity is censored and the predictor is BYTE-IDENTICAL to today, so legacy lifts are untouched and the win is concentrated in the RIR era. rir_var = Var(RIR) self-report noise added to the interval (feeds #6's conformal calibration). min_recent_targets/adopt_min_rel_improve/adopt_max_legacy_regress are the PRE-REGISTERED bar in backtest.effort_rep_prediction: adopt iff the RECENT bucket (anchor has reliable RIR) has >= min_recent_targets walk-forward targets AND the effort predictor's PERFORMED-rep MAE beats the raw-reps baseline by >= adopt_min_rel_improve relative AND the LEGACY bucket (byte-identical by construction) does not worsen by more than adopt_max_legacy_regress."
+  },
+
+  "conformal": {
+    "enabled": false,
+    "min_group_n": 20, "normalized": false,
+    "coverage_lo": 0.75, "coverage_hi": 0.85, "min_type_n": 20,
+    "forecast_width_tol": 0.10,
+    "_help": "Conformal prediction intervals (design 06-conformal-prediction-intervals.md). Split/inductive conformal gives a finite-sample, distribution-free MARGINAL coverage guarantee under only exchangeability - no Gaussian/homoscedastic assumption. enabled=swap the rep predictor's Gaussian +-1.96*se band AND the forecast band's plain-percentile half-width for calibrated conformal intervals (false = pre-#6 behavior, byte-identical). The POINT estimates are untouched; only the bands change. alpha is NOT a key here - it derives from settings.forecast_band_level (one knob, two callers): level 0.8 -> alpha 0.2 -> 80% intervals. min_group_n=Mondrian floor: a per-exercise calibration set is far too small on this user's data, so |residual| nonconformity scores are POOLED by exercise-TYPE (lower_compound/upper_press/default, the SAME grouping #2 pools the slope by); a type below min_group_n inherits the global pooled quantile, a true orphan stays point-only. normalized=use the §1b heteroscedastic width sqrt(1+1/n+(load-mean_x)^2/ssx) so the band fans out away from the trained load (false=constant width, the robust small-n default). coverage_lo/coverage_hi/min_type_n are the PRE-REGISTERED bar in backtest.conformal_rep_intervals: adopt iff walk-forward conformal coverage lands in [coverage_lo,coverage_hi] overall AND within every type with n_g>=min_type_n AND median conformal width <= median Gaussian width. forecast_width_tol is the forecast-band bar in backtest.forecast_band_audit: adopt the finite-sample-corrected band iff coverage moves toward nominal without median width inflating by more than this fraction. HONEST NULL is acceptable: conformal guarantees COVERAGE, not sharpness - a wider-but-calibrated band means the Gaussian band was over-confident."
+  },
+
+  "weightdep_1rm": {
+    "beta": 0.85, "a": -2.55, "b": 4.58,
+    "_help": "arXiv 2603.17495 weight-dependent 1RM = w*(1 + (r-1)^beta / (a + b*ln w)) (design 04 section 1b). Exposed as metrics.e1rm_weightdep for a future bake-off ONLY - NOT wired as the default e1RM: the constants were fit on near-failure sets (so feed reps-to-failure) and ln(w) is unit-sensitive (valid for real-kg barbell loads, NOT machine/stack epochs). Preprint, single dataset - keep dormant until section 3's bake-off promotes it on airtight unit handling."
+  },
+
+  "deload": {"plateau_weeks": 3, "mrv_weeks": 2, "volume_drop_pct": 50, "proactive_block_weeks": 6},
+
+  "detraining": {
+    "days_flag": 21,
+    "return_volume_pct": 55,
+    "strength_loss_pct_by_week": {"2": 0, "3": 3, "4": 5, "8": 11, "12": 14}
+  }
+}

@@ -6,6 +6,8 @@ import SharedNotePage from './pages/SharedNotePage.js';
 import TasksPage from './pages/TasksPage.js';
 import WhiteboardPage from './pages/WhiteboardPage.js';
 import SecondBrainPage from './pages/SecondBrainPage.js';
+import WishlistPage from './pages/WishlistPage.js';
+import WorkoutPage from './pages/WorkoutPage.js';
 import { decodeNoteDeepLinkId } from './lib/noteDeepLinks.js';
 import { CommandPaletteProvider } from './lib/commandPalette.js';
 
@@ -35,6 +37,8 @@ export default function App() {
             <Route path="/tasks" element={<TasksPage />} />
             <Route path="/whiteboard" element={<WhiteboardPage />} />
             <Route path="/notes" element={<SecondBrainPage />} />
+            <Route path="/wishlist" element={<WishlistPage />} />
+            <Route path="/workout" element={<WorkoutPage />} />
             <Route path="/calendar" element={<Navigate to="/tasks?view=calendar" replace />} />
             <Route path="/habits" element={<Navigate to="/tasks?view=habits" replace />} />
             <Route path="/objectives" element={<Navigate to="/tasks?view=objectives" replace />} />

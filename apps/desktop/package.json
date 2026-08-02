@@ -60,6 +60,10 @@
       {
         "from": "../web/dist",
         "to": "web"
+      },
+      {
+        "from": "../workout-engine/dist/workout-engine",
+        "to": "workout-engine"
       }
     ],
     "asarUnpack": [

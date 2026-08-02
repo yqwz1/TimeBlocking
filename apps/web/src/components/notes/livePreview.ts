@@ -1,6 +1,6 @@
 import { syntaxTree } from '@codemirror/language';
-import type { Extension, Range } from '@codemirror/state';
-import { Decoration, EditorView, ViewPlugin, WidgetType, type DecorationSet, type ViewUpdate } from '@codemirror/view';
+import { StateField, type Extension, type Range } from '@codemirror/state';
+import { Decoration, EditorView, WidgetType, type DecorationSet } from '@codemirror/view';
 import type { NoteQueryResultDTO } from '@timeblock/shared';
 
 const queryCache = new Map<string, Promise<NoteQueryResultDTO>>();
@@ -41,6 +41,16 @@ class ListMarkerWidget extends WidgetType {
   }
 }
 
+/** Renders portable Markdown horizontal rules as an actual divider in live preview. */
+class HorizontalRuleWidget extends WidgetType {
+  toDOM() {
+    const rule = document.createElement('hr');
+    rule.className = 'sb-live-horizontal-rule';
+    rule.setAttribute('aria-hidden', 'true');
+    return rule;
+  }
+}
+
 class TaskCheckboxWidget extends WidgetType {
   constructor(
     private readonly checked: boolean,
@@ -73,6 +83,77 @@ class TaskCheckboxWidget extends WidgetType {
       view.focus();
     });
     return checkbox;
+  }
+
+  ignoreEvent() {
+    return false;
+  }
+}
+
+interface MarkdownTable {
+  from: number;
+  to: number;
+  headers: string[];
+  rows: string[][];
+}
+
+function tableCells(line: string): string[] {
+  return line.trim().replace(/^\||\|$/g, '').split('|').map((cell) => cell.trim());
+}
+
+function isTableDivider(line: string): boolean {
+  const cells = tableCells(line);
+  return cells.length > 0 && cells.every((cell) => /^:?-{3,}:?$/.test(cell));
+}
+
+class MarkdownTableWidget extends WidgetType {
+  constructor(private readonly table: MarkdownTable) {
+    super();
+  }
+
+  eq(other: MarkdownTableWidget) {
+    return JSON.stringify(other.table) === JSON.stringify(this.table);
+  }
+
+  toDOM(view: EditorView) {
+    const host = document.createElement('div');
+    host.className = 'sb-live-markdown-table-wrap';
+    host.tabIndex = 0;
+    host.setAttribute('role', 'button');
+    host.setAttribute('aria-label', 'Markdown table. Click or press Enter to edit.');
+    host.title = 'Click to edit table';
+
+    const table = document.createElement('table');
+    table.className = 'sb-live-markdown-table';
+    const head = table.createTHead().insertRow();
+    for (const value of this.table.headers) {
+      const cell = document.createElement('th');
+      cell.scope = 'col';
+      cell.textContent = value;
+      head.append(cell);
+    }
+    const body = table.createTBody();
+    for (const row of this.table.rows) {
+      const tr = body.insertRow();
+      for (let index = 0; index < this.table.headers.length; index += 1) {
+        const cell = tr.insertCell();
+        cell.textContent = row[index] ?? '';
+      }
+    }
+    host.append(table);
+
+    const edit = () => {
+      view.dispatch({ selection: { anchor: this.table.from }, scrollIntoView: true });
+      view.focus();
+    };
+    host.addEventListener('click', edit);
+    host.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        edit();
+      }
+    });
+    return host;
   }
 
   ignoreEvent() {
@@ -149,8 +230,7 @@ class QueryBlockWidget extends WidgetType {
   }
 }
 
-function buildDecorations(view: EditorView): DecorationSet {
-  const { state } = view;
+function buildDecorations(state: EditorView['state']): DecorationSet {
   const decorations: Range<Decoration>[] = [];
   const activeLines = new Set(state.selection.ranges.map((range) => state.doc.lineAt(range.head).number));
   const decoratedLines = new Set<string>();
@@ -331,6 +411,64 @@ function buildDecorations(view: EditorView): DecorationSet {
     }
   }
 
+  // Keep `---` portable in the Markdown source, while making it read as a real
+  // divider until the user moves the cursor to that line to edit it.
+  let frontmatterEndLine = 0;
+  if (state.doc.line(1).text.trim() === '---') {
+    for (let lineNumber = 2; lineNumber <= state.doc.lines; lineNumber += 1) {
+      const text = state.doc.line(lineNumber).text.trim();
+      if (text === '---' || text === '...') {
+        frontmatterEndLine = lineNumber;
+        break;
+      }
+    }
+  }
+  for (let lineNumber = 1; lineNumber <= state.doc.lines; lineNumber += 1) {
+    const line = state.doc.line(lineNumber);
+    const previousLine = lineNumber > 1 ? state.doc.line(lineNumber - 1) : null;
+    const isMarkdownRule = /^\s{0,3}([-*_])(?:\s*\1){2,}\s*$/.test(line.text);
+    const isFrontmatterFence = (lineNumber === 1 && state.doc.line(1).text.trim() === '---') || lineNumber === frontmatterEndLine;
+    const isSetextUnderline = line.text.trim().startsWith('-') && Boolean(previousLine?.text.trim());
+    if (isMarkdownRule && !isFrontmatterFence && !isSetextUnderline && !codeLines.has(lineNumber) && !activeLines.has(lineNumber)) {
+      decorations.push(
+        Decoration.replace({ block: true, widget: new HorizontalRuleWidget() }).range(line.from, line.to),
+      );
+    }
+  }
+
+  // Pipe tables are portable Markdown, but the editor should still read like a table.
+  // Clicking the rendered grid moves the cursor into the source so it remains simple to edit.
+  for (let lineNumber = 1; lineNumber < state.doc.lines; lineNumber += 1) {
+    const headerLine = state.doc.line(lineNumber);
+    const dividerLine = state.doc.line(lineNumber + 1);
+    if (codeLines.has(lineNumber) || codeLines.has(lineNumber + 1) || !headerLine.text.includes('|') || !isTableDivider(dividerLine.text)) continue;
+
+    const headers = tableCells(headerLine.text);
+    if (headers.length === 0) continue;
+    const rows: string[][] = [];
+    let lastLine = dividerLine;
+    let nextLineNumber = lineNumber + 2;
+    while (nextLineNumber <= state.doc.lines) {
+      const rowLine = state.doc.line(nextLineNumber);
+      if (codeLines.has(nextLineNumber) || rowLine.text.trim() === '' || !rowLine.text.includes('|')) break;
+      rows.push(tableCells(rowLine.text));
+      lastLine = rowLine;
+      nextLineNumber += 1;
+    }
+
+    const tableEndLine = lastLine.number;
+    const tableIsActive = Array.from(activeLines).some((active) => active >= lineNumber && active <= tableEndLine);
+    if (!tableIsActive) {
+      decorations.push(
+        Decoration.replace({
+          block: true,
+          widget: new MarkdownTableWidget({ from: headerLine.from, to: lastLine.to, headers, rows }),
+        }).range(headerLine.from, lastLine.to),
+      );
+    }
+    lineNumber = tableEndLine;
+  }
+
   return Decoration.set(decorations, true);
 }
 
@@ -341,25 +479,20 @@ export function livePreviewExtension({
   onOpenWikilink: (target: string) => void;
   onOpenQueryNote: (id: string) => void;
 }): Extension {
-  const previewPlugin = ViewPlugin.fromClass(
-    class {
-      decorations: DecorationSet;
-
-      constructor(view: EditorView) {
-        this.decorations = buildDecorations(view);
-      }
-
-      update(update: ViewUpdate) {
-        if (update.docChanged || update.selectionSet || update.viewportChanged) {
-          this.decorations = buildDecorations(update.view);
-        }
-      }
+  // Block widgets (the rendered query and table views) cannot be supplied by a
+  // ViewPlugin. CodeMirror rejects them while it computes layout, which used to
+  // throw a RangeError and unmount the entire Second Brain page. A state field is
+  // the supported decoration source for widgets that can change line height.
+  const previewDecorations = StateField.define<DecorationSet>({
+    create: buildDecorations,
+    update(decorations, transaction) {
+      return transaction.docChanged || transaction.selection ? buildDecorations(transaction.state) : decorations;
     },
-    { decorations: (value) => value.decorations },
-  );
+  });
 
   return [
-    previewPlugin,
+    previewDecorations,
+    EditorView.decorations.from(previewDecorations),
     EditorView.domEventHandlers({
       click(event) {
         if (!event.ctrlKey && !event.metaKey) return false;

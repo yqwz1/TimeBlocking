@@ -145,11 +145,12 @@ export default function QuickAddTask({
               placeholder="Task name"
               className="w-full border-none bg-transparent text-base font-semibold text-slate-900 outline-none placeholder:font-semibold placeholder:text-slate-400 dark:text-neutral-100 dark:placeholder:text-neutral-500"
             />
-            <input
+            <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Description"
-              className="w-full border-none bg-transparent text-sm text-slate-500 outline-none placeholder:text-slate-400 dark:text-neutral-400 dark:placeholder:text-neutral-600"
+              rows={3}
+              className="w-full resize-y border-none bg-transparent text-sm text-slate-500 outline-none placeholder:text-slate-400 dark:text-neutral-400 dark:placeholder:text-neutral-600"
             />
           </div>
 

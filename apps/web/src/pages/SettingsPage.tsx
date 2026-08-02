@@ -553,6 +553,22 @@ export default function SettingsPage() {
             Enable Vim-style editor keys by default
           </label>
         </div>
+        <div className="mt-3 flex flex-wrap items-end gap-4 text-sm text-slate-600 dark:text-neutral-400">
+          <label className="grid gap-1">
+            <span className="text-xs font-medium">Formatting toolbar style</span>
+            <select value={form.notesToolbarStyle} onChange={(e) => set('notesToolbarStyle', e.target.value as Settings['notesToolbarStyle'])} className="rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-800">
+              <option value="standard">Standard</option>
+              <option value="tiny">Tiny (icons only)</option>
+            </select>
+          </label>
+          <label className="grid gap-1">
+            <span className="text-xs font-medium">Formatting toolbar position</span>
+            <select value={form.notesToolbarPosition} onChange={(e) => set('notesToolbarPosition', e.target.value as Settings['notesToolbarPosition'])} className="rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-800">
+              <option value="top">Top of editor</option>
+              <option value="following">Follow cursor</option>
+            </select>
+          </label>
+        </div>
       </section>
 
       <section className="rounded-xl border border-slate-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">

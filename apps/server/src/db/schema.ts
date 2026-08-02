@@ -1067,3 +1067,61 @@ export const proactiveInsights = sqliteTable(
   },
   (t) => [uniqueIndex('idx_proactive_cooldown').on(t.cooldownKey), index('idx_proactive_status').on(t.status)],
 );
+
+/** Future purchases and the latest cached AI recommendation for each item. */
+export const wishlistItems = sqliteTable(
+  'wishlist_items',
+  {
+    id: text('id').primaryKey(),
+    title: text('title').notNull(),
+    notes: text('notes').notNull().default(''),
+    productUrl: text('product_url'),
+    imageUrl: text('image_url'),
+    imageFileName: text('image_file_name'),
+    retailer: text('retailer'),
+    category: text('category').notNull().default('Other'),
+    priority: integer('priority').notNull().default(1),
+    status: text('status').notNull().default('considering'),
+    priceMinor: integer('price_minor'),
+    targetDate: text('target_date'),
+    purchasedAt: text('purchased_at'),
+    actualPriceMinor: integer('actual_price_minor'),
+    goalIds: text('goal_ids').notNull().default('[]'),
+    advice: text('advice'),
+    adviceInputHash: text('advice_input_hash'),
+    adviceAnalyzedAtUtc: text('advice_analyzed_at_utc'),
+    createdAtUtc: text('created_at_utc').notNull(),
+    updatedAtUtc: text('updated_at_utc').notNull(),
+  },
+  (t) => [
+    index('idx_wishlist_status').on(t.status),
+    index('idx_wishlist_category').on(t.category),
+    index('idx_wishlist_target_date').on(t.targetDate),
+    index('idx_wishlist_purchased_at').on(t.purchasedAt),
+  ],
+);
+
+/** One planning budget per YYYY-MM calendar month. Currency is wishlist-wide. */
+export const wishlistBudgets = sqliteTable('wishlist_budgets', {
+  month: text('month').primaryKey(),
+  amountMinor: integer('amount_minor').notNull().default(0),
+  updatedAtUtc: text('updated_at_utc').notNull(),
+});
+
+/** Serialized WorkOut engine invocations. Results remain inspectable after restart. */
+export const workoutJobs = sqliteTable(
+  'workout_jobs',
+  {
+    id: text('id').primaryKey(),
+    command: text('command').notNull(),
+    payload: text('payload').notNull().default('{}'),
+    status: text('status').notNull().default('queued'),
+    progress: real('progress').notNull().default(0),
+    result: text('result'),
+    error: text('error'),
+    createdAtUtc: text('created_at_utc').notNull(),
+    updatedAtUtc: text('updated_at_utc').notNull(),
+    completedAtUtc: text('completed_at_utc'),
+  },
+  (t) => [index('idx_workout_jobs_status').on(t.status), index('idx_workout_jobs_created').on(t.createdAtUtc)],
+);

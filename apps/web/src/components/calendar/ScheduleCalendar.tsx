@@ -205,6 +205,18 @@ export default forwardRef<FullCalendar, {
           setSelected({ item, anchor: { x: info.jsEvent.clientX, y: info.jsEvent.clientY } });
           onPopoverChange?.(true);
         }}
+        eventDidMount={(info) => {
+          // Calendar blocks should offer the same low-friction, contextual actions as
+          // task cards. FullCalendar owns this DOM node, so the event is attached here.
+          info.el.addEventListener('contextmenu', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            const item = info.event.extendedProps.item as ScheduleItemDTO | undefined;
+            if (!item) return;
+            setSelected({ item, anchor: { x: event.clientX, y: event.clientY } });
+            onPopoverChange?.(true);
+          });
+        }}
         dateClick={(info) => {
           if (info.view.type !== 'timeGridDay' && info.view.type !== 'timeGridWeek') return;
           setQuickSchedule({ date: info.date, anchor: { x: info.jsEvent.clientX, y: info.jsEvent.clientY } });
