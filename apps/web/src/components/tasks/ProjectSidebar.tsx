@@ -30,7 +30,6 @@ import {
   Plus,
   Repeat,
   Rocket,
-  Settings as SettingsIcon,
   ShoppingCart,
   Sparkles,
   Star,
@@ -86,7 +85,7 @@ function ProjectIcon({ icon, color, size = 14 }: { icon: string | null; color: s
   return <Icon size={size} className="shrink-0" style={{ color: color ?? '#64748b' }} />;
 }
 
-type SidebarIconMotion = 'analytics' | 'calendar' | 'focus' | 'goals' | 'habits' | 'inbox' | 'objectives' | 'review' | 'settings' | 'toggle';
+type SidebarIconMotion = 'analytics' | 'calendar' | 'focus' | 'goals' | 'habits' | 'inbox' | 'objectives' | 'review' | 'toggle';
 
 function SidebarNavIcon({
   icon: Icon,
@@ -175,8 +174,6 @@ export default function ProjectSidebar({
   onOpenReview,
   analyticsActive,
   onOpenAnalytics,
-  settingsActive,
-  onOpenSettings,
 }: {
   activeProject: string | null; // null = All, 'inbox' = Inbox
   onSelectProject: (id: string | null) => void;
@@ -201,8 +198,6 @@ export default function ProjectSidebar({
   onOpenReview: () => void;
   analyticsActive: boolean;
   onOpenAnalytics: () => void;
-  settingsActive: boolean;
-  onOpenSettings: () => void;
 }) {
   const { data: projects } = useProjects();
   const { data: labels } = useLabels();
@@ -264,7 +259,7 @@ export default function ProjectSidebar({
   const openPinnedTasks = (pinnedTasks ?? []).filter((t) => t.status !== 'done' && t.status !== 'cancelled');
   const { width, collapsed, dragging, toggleCollapsed, startDrag } = useResizableSidebar('tb.taskSidebar');
   const otherViewActive =
-    focusActive || todayActive || calendarActive || habitsActive || objectivesActive || goalsActive || reviewActive || analyticsActive || settingsActive;
+    focusActive || todayActive || calendarActive || habitsActive || objectivesActive || goalsActive || reviewActive || analyticsActive;
 
   if (collapsed) {
     return (
@@ -350,14 +345,6 @@ export default function ProjectSidebar({
           className={`tb-sidebar-nav-item rounded-md p-1.5 ${analyticsActive ? 'bg-teal-50 text-teal-700 dark:bg-teal-500/15 dark:text-teal-300' : 'text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5'}`}
         >
           <SidebarNavIcon icon={BarChart3} motion="analytics" size={16} />
-        </button>
-        <button
-          type="button"
-          onClick={onOpenSettings}
-          title="Settings"
-          className={`tb-sidebar-nav-item mt-auto mb-1 rounded-md p-1.5 ${settingsActive ? 'bg-teal-50 text-teal-700 dark:bg-teal-500/15 dark:text-teal-300' : 'text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5'}`}
-        >
-          <SidebarNavIcon icon={SettingsIcon} motion="settings" size={16} />
         </button>
       </div>
     );
@@ -482,15 +469,6 @@ export default function ProjectSidebar({
           </button>
         </div>
 
-        <button
-          type="button"
-          onClick={onOpenSettings}
-          className={`tb-sidebar-nav-item flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium transition-colors ${
-            settingsActive ? 'bg-teal-50 text-teal-700 dark:bg-teal-500/15 dark:text-teal-300' : 'text-slate-600 hover:bg-slate-100 dark:text-neutral-300 dark:hover:bg-white/5'
-          }`}
-        >
-          <SidebarNavIcon icon={SettingsIcon} motion="settings" size={14} /> Settings
-        </button>
       </div>
 
       <div>

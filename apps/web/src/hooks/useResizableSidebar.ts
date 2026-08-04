@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { UI_PREFERENCES_EVENT } from '../lib/uiPreferences.js';
 
 const DEFAULT_OPTIONS = {
   minWidth: 180,
@@ -27,6 +28,16 @@ export function useResizableSidebar(
   useEffect(() => {
     localStorage.setItem(`${storageKey}.collapsed`, collapsed ? '1' : '0');
   }, [storageKey, collapsed]);
+
+  useEffect(() => {
+    const syncFromPreferences = () => {
+      const storedWidth = Number(localStorage.getItem(`${storageKey}.width`));
+      if (storedWidth >= minWidth && storedWidth <= maxWidth) setWidth(storedWidth);
+      setCollapsed(localStorage.getItem(`${storageKey}.collapsed`) === '1');
+    };
+    window.addEventListener(UI_PREFERENCES_EVENT, syncFromPreferences);
+    return () => window.removeEventListener(UI_PREFERENCES_EVENT, syncFromPreferences);
+  }, [maxWidth, minWidth, storageKey]);
 
   const startDrag = useCallback(
     (e: React.MouseEvent) => {

@@ -4,6 +4,8 @@
  * missed toast can still be seen later. Persisted to localStorage, capped.
  */
 
+import { getUiPreferences } from './uiPreferences.js';
+
 export type NotificationKind = 'reminder' | 'achievement' | 'levelup';
 
 export interface AppNotification {
@@ -19,7 +21,7 @@ export interface AppNotification {
 }
 
 const STORAGE_KEY = 'tb:notifications';
-const MAX_KEPT = 50;
+const maxKept = () => getUiPreferences().notificationRetention;
 
 type Listener = () => void;
 const listeners = new Set<Listener>();
@@ -27,7 +29,7 @@ const listeners = new Set<Listener>();
 function load(): AppNotification[] {
   try {
     const raw = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]');
-    if (Array.isArray(raw)) return raw.filter((n) => n && typeof n.id === 'string');
+    if (Array.isArray(raw)) return raw.filter((n) => n && typeof n.id === 'string').slice(0, maxKept());
   } catch {
     /* corrupted — start fresh */
   }
@@ -64,7 +66,7 @@ export function getUnreadCount(): number {
 
 export function addNotification(input: Omit<AppNotification, 'at' | 'read'>) {
   // Re-fired reminders reuse their id — replace instead of duplicating.
-  items = [{ ...input, at: Date.now(), read: false }, ...items.filter((n) => n.id !== input.id)].slice(0, MAX_KEPT);
+  items = [{ ...input, at: Date.now(), read: false }, ...items.filter((n) => n.id !== input.id)].slice(0, maxKept());
   emit();
 }
 

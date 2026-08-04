@@ -51,7 +51,14 @@ const WORKOUT_ENGINE_PATH = isPackaged
 
 const REPO_DATA_DIR = path.join(REPO_ROOT, 'data');
 const REPO_ENV_PATH = path.join(REPO_ROOT, '.env');
-const APP_DATA_DIR = app.getPath('userData');
+// During development the browser client and Electron need to point at the same
+// SQLite database. The browser server defaults to <repo>/data, while Electron
+// normally uses its private userData directory. Keeping the development
+// default aligned prevents each client from silently creating its own copy.
+// Packaged builds retain an isolated per-user directory, and TB_DATA_DIR lets
+// either mode intentionally use a different shared location.
+const APP_DATA_DIR = isPackaged ? app.getPath('userData') : process.env.TB_DATA_DIR || REPO_DATA_DIR;
+const USES_REPOSITORY_DATA = path.resolve(APP_DATA_DIR) === path.resolve(REPO_DATA_DIR);
 
 let serverProcess: UtilityProcess | null = null;
 let mainWindow: BrowserWindow | null = null;
@@ -103,6 +110,9 @@ function copyRecursiveSync(src: string, dest: string) {
 }
 
 function bootstrapData() {
+  // Copying the repository data directory onto itself would recurse forever.
+  // More importantly, it is already the browser client's source of truth.
+  if (USES_REPOSITORY_DATA) return;
   fs.mkdirSync(APP_DATA_DIR, { recursive: true });
   const marker = path.join(APP_DATA_DIR, '.migrated');
   if (fs.existsSync(marker)) return;
@@ -114,6 +124,20 @@ function bootstrapData() {
     fs.copyFileSync(REPO_ENV_PATH, path.join(APP_DATA_DIR, '.env'));
   }
   fs.writeFileSync(marker, new Date().toISOString());
+}
+
+/** True when port is serving a TimeBlock API, rather than merely being occupied. */
+async function hasTimeBlockServer(port: number): Promise<boolean> {
+  try {
+    const response = await fetch(`http://127.0.0.1:${port}/api/health`, {
+      signal: AbortSignal.timeout(1_000),
+    });
+    if (!response.ok) return false;
+    const body = (await response.json()) as { ok?: unknown };
+    return body.ok === true;
+  } catch {
+    return false;
+  }
 }
 
 function startServer(port: number): Promise<number> {
@@ -362,14 +386,23 @@ app.whenReady().then(async () => {
 
   let port: number;
   try {
-    port = await findFreePort();
-    if (port !== PREFERRED_PORT) {
-      console.warn(
-        `[desktop] Port ${PREFERRED_PORT} is busy (dev server?). Using port ${port}. ` +
-          'Google OAuth needs this redirect URI registered unless the client is a "Desktop app" type.',
-      );
+    // If `npm run dev` is already running, attach Electron to that exact server
+    // instead of starting another process against a second database. This is
+    // development-only: packaged TimeBlock stays self-contained and starts its
+    // own local server.
+    if (!isPackaged && (await hasTimeBlockServer(PREFERRED_PORT))) {
+      port = PREFERRED_PORT;
+      console.log(`[desktop] Using existing TimeBlock server at http://127.0.0.1:${port}`);
+    } else {
+      port = await findFreePort();
+      if (port !== PREFERRED_PORT) {
+        console.warn(
+          `[desktop] Port ${PREFERRED_PORT} is busy. Using port ${port}. ` +
+            'Google OAuth needs this redirect URI registered unless the client is a "Desktop app" type.',
+        );
+      }
+      port = await startServer(port);
     }
-    port = await startServer(port);
   } catch (err) {
     dialog.showErrorBox('TimeBlock failed to start', err instanceof Error ? err.message : String(err));
     app.quit();

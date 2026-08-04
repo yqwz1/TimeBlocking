@@ -5,13 +5,13 @@
     "semantic_hash": "51258f8bace80e1b2961e9f41ffcebca"
   },
   "apps/desktop/package.json": {
-    "mtime": 1785613120.1312087,
-    "ast_hash": "df9324f35f8b334f7811fa8a86ef8374",
+    "mtime": 1785807210.4835114,
+    "ast_hash": "7cc72610a40934d0d6b698065366e7ef",
     "semantic_hash": ""
   },
   "apps/desktop/src/main.ts": {
-    "mtime": 1785613123.8625114,
-    "ast_hash": "ee7c80917d03545cdbcf9b858367dd61",
+    "mtime": 1785789597.9427135,
+    "ast_hash": "7f82463a0acc6fcdda4f724af53efac2",
     "semantic_hash": ""
   },
   "apps/desktop/src/pet-preload.ts": {
@@ -85,14 +85,14 @@
     "semantic_hash": ""
   },
   "apps/mcp-server/package.json": {
-    "mtime": 1783928659.224832,
-    "ast_hash": "4f338e8c4e8530b5ca364771c7940e0b",
-    "semantic_hash": "4f338e8c4e8530b5ca364771c7940e0b"
+    "mtime": 1785789050.3816514,
+    "ast_hash": "9a8355cb2fbdf4f9fd372ce8984f773a",
+    "semantic_hash": ""
   },
   "apps/mcp-server/src/index.ts": {
-    "mtime": 1784281587.2994468,
-    "ast_hash": "7ce1fc642c2bc1eba390c19c4f15b8d0",
-    "semantic_hash": "7ce1fc642c2bc1eba390c19c4f15b8d0"
+    "mtime": 1785789211.3588266,
+    "ast_hash": "f84e451d7ebe4515ac570b134f1d1772",
+    "semantic_hash": ""
   },
   "apps/mcp-server/tsconfig.json": {
     "mtime": 1783928660.4244883,
@@ -775,8 +775,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/App.tsx": {
-    "mtime": 1785613001.2391984,
-    "ast_hash": "b5e3c6c0b26dedd4a95f7f2ec594b3e3",
+    "mtime": 1785791364.871397,
+    "ast_hash": "ce0b2457996d7c95c247d44f34e44f5e",
     "semantic_hash": ""
   },
   "apps/web/src/api.ts": {
@@ -810,8 +810,8 @@
     "semantic_hash": "a8aff60537e4be2d73e589585010d885"
   },
   "apps/web/src/components/Layout.tsx": {
-    "mtime": 1785628965.494937,
-    "ast_hash": "462d40c256da8ecc655a0b86d231847d",
+    "mtime": 1785791421.260547,
+    "ast_hash": "e428c202c29b44a3f7f14f86c21baf0f",
     "semantic_hash": ""
   },
   "apps/web/src/components/NotificationCenter.tsx": {
@@ -1020,9 +1020,9 @@
     "semantic_hash": "f715421c65a8c5943f8421093c91b1f4"
   },
   "apps/web/src/components/tasks/ProjectSidebar.tsx": {
-    "mtime": 1784718814.1251457,
-    "ast_hash": "3c2b6113cb051f0101972abf62bc9d86",
-    "semantic_hash": "3c2b6113cb051f0101972abf62bc9d86"
+    "mtime": 1785791471.0109296,
+    "ast_hash": "fa8f42d1b466cc1b7762f5f8810c2406",
+    "semantic_hash": ""
   },
   "apps/web/src/components/tasks/QuickAddTask.tsx": {
     "mtime": 1785309473.666279,
@@ -1225,8 +1225,8 @@
     "semantic_hash": "3fbf7eb1bc6a90759f58e5e680f49433"
   },
   "apps/web/src/hooks/useResizableSidebar.ts": {
-    "mtime": 1785241706.9007816,
-    "ast_hash": "444dc33b0109c1193260ae31838df53f",
+    "mtime": 1785791425.1522098,
+    "ast_hash": "452f9f8ee24d0904c9267a1133bcb789",
     "semantic_hash": ""
   },
   "apps/web/src/hooks/useTheme.tsx": {
@@ -1270,9 +1270,9 @@
     "semantic_hash": "896610a5674ef126a9538f3aae79b422"
   },
   "apps/web/src/lib/notifications.ts": {
-    "mtime": 1784554070.6777089,
-    "ast_hash": "fb1bb8eae4b6c1dc356fc8c69c672a80",
-    "semantic_hash": "fb1bb8eae4b6c1dc356fc8c69c672a80"
+    "mtime": 1785791811.2137783,
+    "ast_hash": "1f77e11046755f893072d222efff5972",
+    "semantic_hash": ""
   },
   "apps/web/src/lib/queryClient.ts": {
     "mtime": 1783835313.848252,
@@ -1305,9 +1305,9 @@
     "semantic_hash": "13e782e7c4d4ae9de11ad7a4c755c67a"
   },
   "apps/web/src/main.tsx": {
-    "mtime": 1783835319.194366,
-    "ast_hash": "79cec5263a1fdfaecf0339640b185ed0",
-    "semantic_hash": "79cec5263a1fdfaecf0339640b185ed0"
+    "mtime": 1785791346.0741994,
+    "ast_hash": "33a30a518574a560c5d345c69f09c70e",
+    "semantic_hash": ""
   },
   "apps/web/src/pages/AnalyticsPage.tsx": {
     "mtime": 1784286069.6938884,
@@ -1340,8 +1340,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/pages/SettingsPage.tsx": {
-    "mtime": 1785271521.2412732,
-    "ast_hash": "5354cf8c9781b75afd55da800fac7a06",
+    "mtime": 1785791692.0014458,
+    "ast_hash": "299e030944e42ff28d83b1fb700df56a",
     "semantic_hash": ""
   },
   "apps/web/src/pages/SetupWizard.tsx": {
@@ -1350,9 +1350,9 @@
     "semantic_hash": "116384e5c065ef8862630df354649259"
   },
   "apps/web/src/pages/TasksPage.tsx": {
-    "mtime": 1784718811.4048777,
-    "ast_hash": "723ad4d88a2c572a35a2198125b5a167",
-    "semantic_hash": "723ad4d88a2c572a35a2198125b5a167"
+    "mtime": 1785791443.72094,
+    "ast_hash": "b6f0d4e39323d8645a5993fc32295ad6",
+    "semantic_hash": ""
   },
   "apps/web/src/pages/TodayPage.tsx": {
     "mtime": 1783960851.6377401,
@@ -1385,8 +1385,8 @@
     "semantic_hash": "eaab91f93a612a8ac1274450af67e164"
   },
   "package.json": {
-    "mtime": 1785613128.7813444,
-    "ast_hash": "503036f3b3683d73d0e174469b340363",
+    "mtime": 1785789054.0148642,
+    "ast_hash": "291ecb07886f4e3f8fcaaf7fe91f133c",
     "semantic_hash": ""
   },
   "packages/shared/package.json": {
@@ -2277,6 +2277,21 @@
   "apps/web/src/components/workout/workoutSchema.test.ts": {
     "mtime": 1785631093.5089645,
     "ast_hash": "2e4a7c666f5dbf21e96c6986845fdf2f",
+    "semantic_hash": ""
+  },
+  "docs/chatgpt-mcp.md": {
+    "mtime": 1785789057.3504207,
+    "ast_hash": "cce6c12432240d448cb065828c4b3b96",
+    "semantic_hash": ""
+  },
+  "apps/web/src/components/settings/DevicePreferencesPanels.tsx": {
+    "mtime": 1785791806.7102282,
+    "ast_hash": "7f9464706e172078200126ce5e9542f1",
+    "semantic_hash": ""
+  },
+  "apps/web/src/lib/uiPreferences.ts": {
+    "mtime": 1785791323.9391475,
+    "ast_hash": "f89215853ac6be11606792d77c8809aa",
     "semantic_hash": ""
   }
 }

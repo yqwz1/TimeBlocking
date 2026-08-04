@@ -1,12 +1,165 @@
-import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Cloud, Download, RefreshCw } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import {
+  Bot,
+  Brain,
+  Accessibility,
+  Bell,
+  CalendarClock,
+  CalendarRange,
+  CheckCircle2,
+  ChevronRight,
+  Cloud,
+  Database,
+  Download,
+  Gauge,
+  Focus,
+  HardDrive,
+  LayoutPanelLeft,
+  Palette,
+  MonitorCog,
+  NotebookTabs,
+  Plug,
+  RefreshCw,
+  RotateCcw,
+  Save,
+  Search,
+  Settings2,
+  SlidersHorizontal,
+  Sparkles,
+  Wrench,
+  type LucideIcon,
+} from 'lucide-react';
 import type { Settings } from '@timeblock/shared';
 import { useAiUsageDashboard, useBackupDriveNow, useDisconnectGoogle, useDriveBackupStatus, useDriveBackups, useDriveConnection, useGoogleCalendars, useLearningStats, useResetLearning, useRestoreDriveBackup, useSettings, useSetupStatus, useUpdateSettings } from '../hooks.js';
 import { useConceptStatus, useEmbeddingsStatus, useExtractConcepts, useRebuildGraph, useReindexEmbeddings } from '../hooks/notes.js';
 import WorkingHoursEditor from '../components/WorkingHoursEditor.js';
 import EnergyWindowsEditor from '../components/EnergyWindowsEditor.js';
 import DesktopUpdatePanel from '../components/DesktopUpdatePanel.js';
+import DevicePreferencesPanels, { type DeviceSettingsSectionId } from '../components/settings/DevicePreferencesPanels.js';
+
+type SettingsGroupId = 'personalize' | 'workspace' | 'general' | 'planning' | 'assistant' | 'notes' | 'connections' | 'advanced';
+type SettingsSectionId =
+  | DeviceSettingsSectionId
+  | 'updates'
+  | 'time'
+  | 'experience'
+  | 'capacity'
+  | 'scheduling'
+  | 'energy'
+  | 'learning'
+  | 'ai'
+  | 'vault'
+  | 'drive'
+  | 'calendar'
+  | 'graph';
+
+interface SettingsSectionDefinition {
+  id: SettingsSectionId;
+  label: string;
+  description: string;
+  icon: LucideIcon;
+  keywords: string[];
+}
+
+interface SettingsGroupDefinition {
+  id: SettingsGroupId;
+  label: string;
+  description: string;
+  icon: LucideIcon;
+  sections: SettingsSectionDefinition[];
+}
+
+const SETTINGS_GROUPS: SettingsGroupDefinition[] = [
+  {
+    id: 'personalize',
+    label: 'Personalize',
+    description: 'Make every workspace easier to see, read, and operate.',
+    icon: Palette,
+    sections: [
+      { id: 'appearance', label: 'Appearance', description: 'Theme, density, text size, and interface feel.', icon: Palette, keywords: ['theme', 'dark', 'light', 'density', 'spacing', 'font', 'text size', 'zoom'] },
+      { id: 'accessibility', label: 'Accessibility', description: 'Motion, contrast, transparency, links, and target sizing.', icon: Accessibility, keywords: ['accessibility', 'motion', 'contrast', 'transparent', 'underline', 'large buttons', 'readability'] },
+    ],
+  },
+  {
+    id: 'workspace',
+    label: 'Workspace',
+    description: 'Control global navigation and defaults for core workspaces.',
+    icon: LayoutPanelLeft,
+    sections: [
+      { id: 'workspace_navigation', label: 'Navigation', description: 'Workspace order, visibility, sidebar size, and footer tools.', icon: LayoutPanelLeft, keywords: ['sidebar', 'workspace', 'order', 'visibility', 'width', 'default workspace', 'quick capture', 'sync'] },
+      { id: 'task_defaults', label: 'Tasks', description: 'Default view, sorting, and project sidebar behavior.', icon: Focus, keywords: ['tasks', 'list', 'kanban', 'gantt', 'upcoming', 'dashboard', 'sort', 'project sidebar'] },
+      { id: 'calendar_defaults', label: 'Calendar', description: 'Opening range, time increments, and planning rail.', icon: CalendarRange, keywords: ['calendar', 'day', 'week', 'month', 'year', 'time slot', 'rail'] },
+      { id: 'focus_timer', label: 'Focus timer', description: 'Session rhythm, breaks, auto-start, and ambience.', icon: CalendarClock, keywords: ['focus', 'pomodoro', 'timer', 'break', 'ambience', 'volume', 'auto start'] },
+      { id: 'notifications', label: 'Notifications', description: 'Inbox visibility, browser permission, history, and shortcuts.', icon: Bell, keywords: ['notification', 'bell', 'permission', 'history', 'shortcut', 'keyboard', 'command palette'] },
+    ],
+  },
+  {
+    id: 'general',
+    label: 'General',
+    description: 'Core app behavior and everyday preferences.',
+    icon: Settings2,
+    sections: [
+      { id: 'time', label: 'Time & workweek', description: 'Timezone and the hours you normally work.', icon: CalendarClock, keywords: ['timezone', 'working hours', 'week', 'availability'] },
+      { id: 'experience', label: 'Experience', description: 'Celebrations, sounds, and completion behavior.', icon: Sparkles, keywords: ['gamification', 'xp', 'streak', 'sound', 'toast', 'completion', 'deleted'] },
+      { id: 'updates', label: 'App & updates', description: 'Desktop version and update controls.', icon: MonitorCog, keywords: ['desktop', 'version', 'update', 'install'] },
+    ],
+  },
+  {
+    id: 'planning',
+    label: 'Planning',
+    description: 'Control how TimeBlock builds and adjusts your days.',
+    icon: CalendarRange,
+    sections: [
+      { id: 'capacity', label: 'Day capacity', description: 'Choose how full the planner should make each day.', icon: Gauge, keywords: ['fullness', 'light', 'balanced', 'packed', 'capacity'] },
+      { id: 'scheduling', label: 'Scheduling', description: 'Durations, buffers, splitting, and automation.', icon: SlidersHorizontal, keywords: ['duration', 'horizon', 'buffer', 'granularity', 'split', 'auto apply', 'missed', 'due date'] },
+      { id: 'energy', label: 'Focus & energy', description: 'Match deep work to the hours when you work best.', icon: Brain, keywords: ['chronotype', 'deep work', 'shallow', 'energy', 'focus'] },
+      { id: 'learning', label: 'Adaptive learning', description: 'Learn scheduling patterns from your history.', icon: Brain, keywords: ['history', 'calibration', 'best hours', 'duration bias', 'reset'] },
+    ],
+  },
+  {
+    id: 'assistant',
+    label: 'AI & assistant',
+    description: 'Models, privacy, memory, actions, and proactive help.',
+    icon: Bot,
+    sections: [
+      { id: 'ai', label: 'AI & assistant', description: 'Manage outbound AI, models, usage, memory, and actions.', icon: Bot, keywords: ['ai', 'assistant', 'model', 'memory', 'actions', 'usage', 'tokens', 'quiet hours', 'writing'] },
+    ],
+  },
+  {
+    id: 'notes',
+    label: 'Second Brain',
+    description: 'Configure the local notes workspace and editor.',
+    icon: NotebookTabs,
+    sections: [
+      { id: 'vault', label: 'Vault & editor', description: 'Folders, retention, OCR, Vim mode, and toolbar behavior.', icon: NotebookTabs, keywords: ['vault', 'notes', 'folder', 'trash', 'snapshot', 'ocr', 'vim', 'zen', 'toolbar', 'attachments'] },
+    ],
+  },
+  {
+    id: 'connections',
+    label: 'Connections',
+    description: 'Calendar and storage services connected to the app.',
+    icon: Plug,
+    sections: [
+      { id: 'drive', label: 'Google Drive', description: 'Backups, restore points, encryption, and Drive search.', icon: Cloud, keywords: ['drive', 'backup', 'restore', 'encryption', 'snapshot', 'passphrase', 'import'] },
+      { id: 'calendar', label: 'Google Calendar', description: 'Connection status and busy-calendar setup.', icon: CalendarRange, keywords: ['google', 'calendar', 'busy', 'disconnect', 'setup'] },
+    ],
+  },
+  {
+    id: 'advanced',
+    label: 'Advanced',
+    description: 'Fine-tune indexes and graph behavior.',
+    icon: Wrench,
+    sections: [
+      { id: 'graph', label: 'Knowledge graph', description: 'Semantic edges, concepts, freshness, and detail thresholds.', icon: Database, keywords: ['graph', 'semantic', 'concept', 'edge', 'threshold', 'freshness', 'lod', 'rebuild'] },
+      { id: 'local_data', label: 'Local data & reset', description: 'Storage usage, preference export, and interface reset.', icon: HardDrive, keywords: ['local', 'storage', 'data', 'export', 'reset', 'browser', 'quota', 'preferences'] },
+    ],
+  },
+];
+
+const DEVICE_SECTION_IDS = new Set<SettingsSectionId>(['appearance', 'accessibility', 'workspace_navigation', 'task_defaults', 'calendar_defaults', 'focus_timer', 'notifications', 'local_data']);
+
+const ALL_SETTINGS_SECTIONS = SETTINGS_GROUPS.flatMap((group) => group.sections.map((section) => ({ ...section, groupId: group.id, groupLabel: group.label })));
 
 function fmtHour(h: number) {
   const period = h < 12 ? 'am' : 'pm';
@@ -66,12 +219,14 @@ function LearningPanel({ enabled, onToggle }: { enabled: boolean; onToggle: (v: 
 }
 
 export default function SettingsPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const { data: settings } = useSettings();
   const update = useUpdateSettings();
   const { data: setup } = useSetupStatus();
   const { data: calendars } = useGoogleCalendars(!!setup?.google);
   const disconnect = useDisconnectGoogle();
   const [form, setForm] = useState<Settings | null>(null);
+  const [baseline, setBaseline] = useState<Settings | null>(null);
   const [saved, setSaved] = useState(false);
   const [disconnected, setDisconnected] = useState(false);
   const { data: embeddingsStatus } = useEmbeddingsStatus();
@@ -85,22 +240,172 @@ export default function SettingsPage() {
   const backupNow = useBackupDriveNow();
   const restoreBackup = useRestoreDriveBackup();
   const aiUsage = useAiUsageDashboard();
+  const [search, setSearch] = useState('');
+
+  const requestedGroup = searchParams.get('settingsTab') as SettingsGroupId | null;
+  const activeGroup = SETTINGS_GROUPS.find((group) => group.id === requestedGroup) ?? SETTINGS_GROUPS[0];
+  const requestedSection = searchParams.get('settingsSection') as SettingsSectionId | null;
+  const activeSection = activeGroup.sections.find((section) => section.id === requestedSection) ?? activeGroup.sections[0];
+  const normalizedSearch = search.trim().toLocaleLowerCase();
+  const searchResults = useMemo(
+    () =>
+      normalizedSearch
+        ? ALL_SETTINGS_SECTIONS.filter((section) =>
+            [section.label, section.description, section.groupLabel, ...section.keywords].some((value) => value.toLocaleLowerCase().includes(normalizedSearch)),
+          )
+        : [],
+    [normalizedSearch],
+  );
+
+  const selectSettingsSection = (groupId: SettingsGroupId, sectionId: SettingsSectionId) => {
+    setSearch('');
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current);
+      next.set('settingsTab', groupId);
+      next.set('settingsSection', sectionId);
+      return next;
+    });
+  };
+
+  const sectionIsVisible = (sectionId: SettingsSectionId) =>
+    normalizedSearch ? searchResults.some((section) => section.id === sectionId) : activeSection.id === sectionId;
 
   useEffect(() => {
-    if (settings && !form) setForm(settings);
+    if (settings && !form) {
+      setForm(settings);
+      setBaseline(settings);
+    }
   }, [settings, form]);
 
   if (!form) return <div className="text-slate-400 dark:text-neutral-500">Loading…</div>;
 
   const set = <K extends keyof Settings>(key: K, value: Settings[K]) => setForm({ ...form, [key]: value });
+  const dirty = !!baseline && JSON.stringify(form) !== JSON.stringify(baseline);
+  const showServerSaveBar = normalizedSearch ? searchResults.some((section) => !DEVICE_SECTION_IDS.has(section.id)) : !DEVICE_SECTION_IDS.has(activeSection.id);
+  const save = () =>
+    update.mutate(form, {
+      onSuccess: (nextSettings) => {
+        setForm(nextSettings);
+        setBaseline(nextSettings);
+        setSaved(true);
+        setTimeout(() => setSaved(false), 3000);
+      },
+    });
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
-      <h1 className="text-lg font-semibold text-slate-900 dark:text-neutral-100">Settings</h1>
+    <div className="settings-workspace mx-auto max-w-[88rem] pb-24">
+      <header className="settings-header mb-4 flex flex-col gap-4 rounded-2xl bg-slate-950 px-5 py-5 text-white shadow-[0_18px_60px_-34px_rgba(15,23,42,0.8)] sm:flex-row sm:items-center sm:justify-between sm:px-6">
+        <div>
+          <div className="mb-2 flex items-center gap-2 text-xs font-semibold tracking-wide text-teal-300">
+            <SlidersHorizontal size={14} /> Workspace control center
+          </div>
+          <h1 className="text-2xl font-semibold tracking-[-0.035em] sm:text-3xl">Settings</h1>
+          <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-300">Customize planning, notes, AI, connections, and advanced behavior from one organized workspace.</p>
+        </div>
+        <label className="settings-search relative block w-full sm:w-[22rem]">
+          <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <span className="sr-only">Search settings</span>
+          <input
+            type="search"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search every setting..."
+            className="h-11 w-full rounded-xl border border-white/10 bg-white/10 pl-10 pr-4 text-sm text-white outline-none transition placeholder:text-slate-400 hover:bg-white/[0.14] focus:border-teal-400/70 focus:bg-white/[0.14] focus:ring-4 focus:ring-teal-400/10"
+          />
+        </label>
+      </header>
 
-      <DesktopUpdatePanel />
+      <nav className="settings-primary-tabs mb-4 flex gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-white p-1 dark:border-neutral-800 dark:bg-neutral-900" aria-label="Settings categories">
+        {SETTINGS_GROUPS.map((group) => {
+          const Icon = group.icon;
+          const selected = !normalizedSearch && activeGroup.id === group.id;
+          return (
+            <button
+              key={group.id}
+              type="button"
+              aria-current={selected ? 'page' : undefined}
+              onClick={() => selectSettingsSection(group.id, group.sections[0].id)}
+              className={`flex min-w-fit flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-xs font-semibold transition sm:text-sm ${
+                selected
+                  ? 'bg-slate-950 text-white shadow-sm dark:bg-neutral-100 dark:text-neutral-950'
+                  : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-neutral-400 dark:hover:bg-white/5 dark:hover:text-white'
+              }`}
+            >
+              <Icon size={16} strokeWidth={1.8} />
+              {group.label}
+            </button>
+          );
+        })}
+      </nav>
 
-      <section className="rounded-xl border border-slate-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
+      <div className="grid min-h-[32rem] gap-4 lg:grid-cols-[15.5rem_minmax(0,1fr)]">
+        <aside className="settings-subnav self-start rounded-xl border border-slate-200 bg-white p-3 dark:border-neutral-800 dark:bg-neutral-900 lg:sticky lg:top-3" aria-label="Settings sections">
+          {normalizedSearch ? (
+            <>
+              <div className="px-2 pb-2 pt-1">
+                <p className="text-xs font-semibold text-slate-900 dark:text-neutral-100">Search results</p>
+                <p className="mt-1 text-xs leading-5 text-slate-400">{searchResults.length} {searchResults.length === 1 ? 'section' : 'sections'} match “{search.trim()}”</p>
+              </div>
+              <div className="space-y-1">
+                {searchResults.map((section) => {
+                  const Icon = section.icon;
+                  return (
+                    <button key={section.id} type="button" onClick={() => selectSettingsSection(section.groupId, section.id)} className="group flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm text-slate-600 transition hover:bg-slate-100 dark:text-neutral-300 dark:hover:bg-white/5">
+                      <span className="grid size-7 shrink-0 place-items-center rounded-md bg-slate-100 text-slate-500 dark:bg-white/5 dark:text-neutral-400"><Icon size={14} /></span>
+                      <span className="min-w-0 flex-1"><span className="block truncate font-medium">{section.label}</span><span className="block truncate text-[10px] text-slate-400">{section.groupLabel}</span></span>
+                      <ChevronRight size={13} className="text-slate-300 transition group-hover:translate-x-0.5" />
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="px-2 pb-3 pt-1">
+                <p className="text-sm font-semibold text-slate-900 dark:text-neutral-100">{activeGroup.label}</p>
+                <p className="mt-1 text-xs leading-5 text-slate-400 dark:text-neutral-500">{activeGroup.description}</p>
+              </div>
+              <div className="space-y-1">
+                {activeGroup.sections.map((section) => {
+                  const Icon = section.icon;
+                  const selected = activeSection.id === section.id;
+                  return (
+                    <button
+                      key={section.id}
+                      type="button"
+                      aria-current={selected ? 'page' : undefined}
+                      onClick={() => selectSettingsSection(activeGroup.id, section.id)}
+                      className={`group flex w-full items-center gap-2 rounded-lg px-2 py-2.5 text-left text-sm transition ${selected ? 'bg-teal-50 text-teal-800 dark:bg-teal-500/10 dark:text-teal-300' : 'text-slate-600 hover:bg-slate-100 dark:text-neutral-300 dark:hover:bg-white/5'}`}
+                    >
+                      <span className={`grid size-8 shrink-0 place-items-center rounded-lg ${selected ? 'bg-teal-600 text-white' : 'bg-slate-100 text-slate-500 dark:bg-white/5 dark:text-neutral-400'}`}><Icon size={15} strokeWidth={1.9} /></span>
+                      <span className="min-w-0 flex-1"><span className="block font-medium">{section.label}</span><span className="mt-0.5 block text-[11px] leading-4 text-slate-400 dark:text-neutral-500">{section.description}</span></span>
+                      <ChevronRight size={13} className={selected ? 'text-teal-500' : 'text-slate-300 opacity-0 transition group-hover:opacity-100'} />
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          )}
+        </aside>
+
+        <main className="settings-content min-w-0 space-y-4">
+          {normalizedSearch && searchResults.length === 0 && (
+            <section className="grid min-h-72 place-items-center rounded-xl border border-dashed border-slate-300 bg-white px-6 text-center dark:border-neutral-700 dark:bg-neutral-900">
+              <div>
+                <Search size={24} className="mx-auto text-slate-300 dark:text-neutral-600" />
+                <h2 className="mt-3 font-semibold text-slate-800 dark:text-neutral-100">No settings found</h2>
+                <p className="mt-1 text-sm text-slate-400">Try a feature name such as “calendar”, “backup”, “sound”, or “AI”.</p>
+              </div>
+            </section>
+          )}
+
+          <DevicePreferencesPanels isVisible={(sectionId) => sectionIsVisible(sectionId)} />
+
+          <section hidden={!sectionIsVisible('updates')} className="settings-panel">
+            <DesktopUpdatePanel />
+          </section>
+
+      <section hidden={!sectionIsVisible('time')} className="rounded-xl border border-slate-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
         <h3 className="mb-3 font-semibold text-slate-900 dark:text-neutral-100">Timezone & working hours</h3>
         <label className="mb-3 block text-sm text-slate-500 dark:text-neutral-400">
           Timezone (IANA)
@@ -109,7 +414,7 @@ export default function SettingsPage() {
         <WorkingHoursEditor value={form.workingHours} onChange={(workingHours) => set('workingHours', workingHours)} />
       </section>
 
-      <section className="rounded-xl border border-slate-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
+      <section hidden={!sectionIsVisible('capacity')} className="rounded-xl border border-slate-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
         <h3 className="mb-1 font-semibold text-slate-900 dark:text-neutral-100">How full should your day be?</h3>
         <p className="mb-3 text-sm text-slate-400 dark:text-neutral-500">
           Caps how much of your working hours the planner fills with tasks. Habits and calendar events don't count against this — only task time.
@@ -139,7 +444,7 @@ export default function SettingsPage() {
         </div>
       </section>
 
-      <section className="rounded-xl border border-slate-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
+      <section hidden={!sectionIsVisible('scheduling')} className="rounded-xl border border-slate-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
         <h3 className="mb-3 font-semibold text-slate-900 dark:text-neutral-100">Scheduling</h3>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           <label className="text-sm text-slate-500 dark:text-neutral-400">
@@ -216,7 +521,7 @@ export default function SettingsPage() {
         </details>
       </section>
 
-      <section className="rounded-xl border border-slate-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
+      <section hidden={!sectionIsVisible('energy')} className="rounded-xl border border-slate-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
         <h3 className="mb-1 font-semibold text-slate-900 dark:text-neutral-100">Focus & energy</h3>
         <p className="mb-3 text-sm text-slate-400 dark:text-neutral-500">Steer deep work into your best hours and shallow work into the rest.</p>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -260,9 +565,11 @@ export default function SettingsPage() {
         )}
       </section>
 
-      <LearningPanel enabled={form.learningEnabled} onToggle={(v) => set('learningEnabled', v)} />
+      <div hidden={!sectionIsVisible('learning')}>
+        <LearningPanel enabled={form.learningEnabled} onToggle={(v) => set('learningEnabled', v)} />
+      </div>
 
-      <section className="rounded-xl border border-slate-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
+      <section hidden={!sectionIsVisible('experience')} className="rounded-xl border border-slate-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
         <h3 className="mb-1 font-semibold text-slate-900 dark:text-neutral-100">Gamification</h3>
         <p className="mb-3 text-sm text-slate-400 dark:text-neutral-500">XP, levels, and a streak with banked freezes to help you stick to your schedule.</p>
         <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-neutral-400">
@@ -286,7 +593,7 @@ export default function SettingsPage() {
         )}
       </section>
 
-      <section className="rounded-xl border border-slate-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
+      <section hidden={!sectionIsVisible('experience')} className="rounded-xl border border-slate-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
         <h3 className="mb-1 font-semibold text-slate-900 dark:text-neutral-100">Sounds</h3>
         <p className="mb-3 text-sm text-slate-400 dark:text-neutral-500">
           Short synthesized chimes — task completed, reminder fired, level-up, achievement, focus timer done.
@@ -297,7 +604,7 @@ export default function SettingsPage() {
         </label>
       </section>
 
-      <section className="rounded-xl border border-slate-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
+      <section hidden={!sectionIsVisible('experience')} className="rounded-xl border border-slate-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
         <h3 className="mb-3 font-semibold text-slate-900 dark:text-neutral-100">Completion behavior</h3>
         <div className="grid grid-cols-2 gap-3">
           <label className="text-sm text-slate-500 dark:text-neutral-400">
@@ -317,7 +624,7 @@ export default function SettingsPage() {
         </div>
       </section>
 
-      <section className="rounded-xl border border-slate-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
+      <section hidden={!sectionIsVisible('ai')} className="rounded-xl border border-slate-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
         <h3 className="mb-1 font-semibold text-slate-900 dark:text-neutral-100">AI features</h3>
         <p className="mb-3 text-sm text-slate-400 dark:text-neutral-500">
           One switch for every outbound AI call this app makes — the daily brief, Second Brain semantic search, related notes, Vault chat, link/tag
@@ -465,7 +772,7 @@ export default function SettingsPage() {
         )}
       </section>
 
-      <section className="rounded-xl border border-slate-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
+      <section hidden={!sectionIsVisible('vault')} className="rounded-xl border border-slate-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
         <h3 className="mb-1 font-semibold text-slate-900 dark:text-neutral-100">Second Brain vault</h3>
         <p className="mb-3 text-sm text-slate-400 dark:text-neutral-500">
           Where your notes live as plain markdown files on disk. Leave blank to use the default (<code>data/vault</code>).
@@ -571,7 +878,7 @@ export default function SettingsPage() {
         </div>
       </section>
 
-      <section className="rounded-xl border border-slate-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
+      <section hidden={!sectionIsVisible('drive')} className="rounded-xl border border-slate-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
         <div className="mb-1 flex items-center gap-2">
           <Cloud size={16} className="text-teal-600" />
           <h3 className="font-semibold text-slate-900 dark:text-neutral-100">Google Drive mirror</h3>
@@ -640,7 +947,7 @@ export default function SettingsPage() {
         {restoreBackup.data && <p className="mt-2 text-xs text-emerald-600 dark:text-emerald-400">Snapshot downloaded to {restoreBackup.data.inspectionPath}. Extract it there to inspect; your active vault was not changed.</p>}
       </section>
 
-      <section className="rounded-xl border border-slate-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
+      <section hidden={!sectionIsVisible('graph')} className="rounded-xl border border-slate-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
         <div className="mb-1 flex items-center justify-between">
           <h3 className="font-semibold text-slate-900 dark:text-neutral-100">Graph</h3>
           <button
@@ -774,7 +1081,7 @@ export default function SettingsPage() {
         </div>
       </section>
 
-      <section className="rounded-xl border border-slate-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
+      <section hidden={!sectionIsVisible('calendar')} className="rounded-xl border border-slate-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
         <h3 className="mb-3 font-semibold text-slate-900 dark:text-neutral-100">Connections</h3>
         <p className="mb-1 text-sm text-slate-500 dark:text-neutral-400">
           Google Calendar: {setup?.google ? <span className="font-medium text-emerald-600 dark:text-emerald-400">Connected</span> : <span className="font-medium text-slate-400 dark:text-neutral-500">Not connected</span>}
@@ -804,23 +1111,39 @@ export default function SettingsPage() {
         </div>
       </section>
 
-      <div className="flex items-center gap-3">
-        <button
-          onClick={() =>
-            update.mutate(form, {
-              onSuccess: () => {
-                setSaved(true);
-                setTimeout(() => setSaved(false), 3000);
-              },
-            })
-          }
-          disabled={update.isPending}
-          className="rounded-md bg-teal-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-        >
-          Save settings
-        </button>
-        {saved && <span className="text-sm text-emerald-600 dark:text-emerald-400">Saved.</span>}
+        </main>
       </div>
+
+      {showServerSaveBar && <div className="settings-savebar sticky bottom-3 z-20 mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200/90 bg-white/95 px-4 py-3 shadow-[0_18px_55px_-28px_rgba(15,23,42,0.55)] backdrop-blur dark:border-neutral-700 dark:bg-neutral-900/95">
+        <div className="flex items-center gap-2 text-sm">
+          {saved ? (
+            <><CheckCircle2 size={16} className="text-emerald-500" /><span className="font-medium text-emerald-700 dark:text-emerald-400">Settings saved</span></>
+          ) : dirty ? (
+            <><span className="size-2 rounded-full bg-amber-500" /><span className="font-medium text-slate-700 dark:text-neutral-200">You have unsaved changes</span></>
+          ) : (
+            <><CheckCircle2 size={16} className="text-slate-300 dark:text-neutral-600" /><span className="text-slate-400 dark:text-neutral-500">Everything is up to date</span></>
+          )}
+          {update.isError && <span className="ml-2 text-rose-600 dark:text-rose-400">Couldn’t save. Check the highlighted values and try again.</span>}
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => baseline && setForm(baseline)}
+            disabled={!dirty || update.isPending}
+            className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 disabled:pointer-events-none disabled:opacity-40 dark:text-neutral-400 dark:hover:bg-white/5 dark:hover:text-white"
+          >
+            <RotateCcw size={14} /> Revert
+          </button>
+        <button
+          type="button"
+          onClick={save}
+          disabled={update.isPending || !dirty}
+          className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-teal-700 active:translate-y-px disabled:pointer-events-none disabled:opacity-40"
+        >
+          <Save size={15} /> {update.isPending ? 'Saving…' : 'Save changes'}
+        </button>
+        </div>
+      </div>}
     </div>
   );
 }

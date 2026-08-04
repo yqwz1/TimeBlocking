@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Navigate, useSearchParams } from 'react-router-dom';
 import type { DueRange, TaskFilterState, TasksView } from '../components/tasks/types.js';
 import { EMPTY_FILTERS } from '../components/tasks/types.js';
 import { useTaskList } from '../hooks.js';
@@ -19,8 +19,8 @@ import ObjectivesPage from './ObjectivesPage.js';
 import GoalsPage from './GoalsPage.js';
 import WeeklyReviewPage from './WeeklyReviewPage.js';
 import AnalyticsPage from './AnalyticsPage.js';
-import SettingsPage from './SettingsPage.js';
 import { isOverdue } from '../components/tasks/taskDisplay.js';
+import { useUiPreferences } from '../lib/uiPreferences.js';
 
 const EMBEDDED_VIEWS = new Set<TasksView>(['focus', 'calendar', 'habits', 'today', 'objectives', 'goals', 'review', 'analytics', 'settings']);
 
@@ -46,11 +46,12 @@ function applyDueRange<T extends { dueDate: string | null; status: string }>(tas
 }
 
 export default function TasksPage() {
+  const { preferences } = useUiPreferences();
   const [params, setParams] = useSearchParams();
-  const view = (params.get('view') as TasksView) || 'list';
+  const view = (params.get('view') as TasksView) || preferences.taskDefaultView;
   const activeProject = params.get('project');
   const openTaskId = params.get('task');
-  const [filters, setFilters] = useState<TaskFilterState>(EMPTY_FILTERS);
+  const [filters, setFilters] = useState<TaskFilterState>(() => ({ ...EMPTY_FILTERS, sortBy: preferences.taskDefaultSort }));
   const [hiddenProjects, setHiddenProjects] = useState<Set<string>>(() => {
     try {
       return new Set(JSON.parse(localStorage.getItem('tb.sidebar.hiddenProjects') ?? '[]'));
@@ -139,8 +140,6 @@ export default function TasksPage() {
         onOpenReview={() => setView('review')}
         analyticsActive={view === 'analytics'}
         onOpenAnalytics={() => setView('analytics')}
-        settingsActive={view === 'settings'}
-        onOpenSettings={() => setView('settings')}
       />
       <div className="min-h-0 min-w-0 flex-1 overflow-y-auto px-4 pt-4">
         {!EMBEDDED_VIEWS.has(view) && <FilterBar view={view} onViewChange={setView} filters={filters} onFiltersChange={setFilters} />}
@@ -162,7 +161,7 @@ export default function TasksPage() {
         ) : view === 'analytics' ? (
           <AnalyticsPage />
         ) : view === 'settings' ? (
-          <SettingsPage />
+          <Navigate to="/settings" replace />
         ) : isLoading ? (
           <p className="text-sm text-slate-400 dark:text-neutral-500">Loading…</p>
         ) : view === 'list' ? (

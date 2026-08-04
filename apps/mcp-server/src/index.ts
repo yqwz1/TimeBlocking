@@ -1,6 +1,9 @@
 #!/usr/bin/env node
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
+import { randomUUID, timingSafeEqual } from 'node:crypto';
+import { createServer } from 'node:http';
 import { z } from 'zod';
 
 const BASE_URL = process.env.TIMEBLOCK_API_URL ?? 'http://127.0.0.1:4141/api';
@@ -394,5 +397,69 @@ server.registerTool(
   async ({ goalId, milestoneId }) => tool(() => api('DELETE', `/goals/${goalId}/milestones/${milestoneId}`)),
 );
 
-const transport = new StdioServerTransport();
-await server.connect(transport);
+function isAuthorized(header: string | string[] | undefined, token: string): boolean {
+  if (typeof header !== 'string') return false;
+
+  const expected = `Bearer ${token}`;
+  const actualBytes = Buffer.from(header);
+  const expectedBytes = Buffer.from(expected);
+  return actualBytes.length === expectedBytes.length && timingSafeEqual(actualBytes, expectedBytes);
+}
+
+async function startHttpServer(): Promise<void> {
+  const token = process.env.TIMEBLOCK_MCP_TOKEN;
+  if (!token) {
+    throw new Error('TIMEBLOCK_MCP_TOKEN is required when running the HTTP MCP server.');
+  }
+
+  const port = Number(process.env.TIMEBLOCK_MCP_PORT ?? 3333);
+  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+    throw new Error('TIMEBLOCK_MCP_PORT must be an integer between 1 and 65535.');
+  }
+
+  const host = process.env.TIMEBLOCK_MCP_HOST ?? '127.0.0.1';
+  const transport = new StreamableHTTPServerTransport({
+    sessionIdGenerator: randomUUID,
+    enableJsonResponse: true,
+  });
+  await server.connect(transport);
+
+  const httpServer = createServer((request, response) => {
+    if (request.url !== '/mcp') {
+      response.writeHead(404, { 'content-type': 'application/json' });
+      response.end(JSON.stringify({ error: 'Not found' }));
+      return;
+    }
+    if (!isAuthorized(request.headers.authorization, token)) {
+      response.writeHead(401, {
+        'content-type': 'application/json',
+        'www-authenticate': 'Bearer',
+      });
+      response.end(JSON.stringify({ error: 'Unauthorized' }));
+      return;
+    }
+
+    void transport.handleRequest(request, response).catch((error: unknown) => {
+      console.error('[timeblock-mcp] HTTP request failed', error);
+      if (!response.headersSent) {
+        response.writeHead(500, { 'content-type': 'application/json' });
+      }
+      response.end(JSON.stringify({ error: 'Internal server error' }));
+    });
+  });
+
+  httpServer.on('error', (error) => {
+    console.error('[timeblock-mcp] HTTP server failed', error);
+    process.exitCode = 1;
+  });
+  httpServer.listen(port, host, () => {
+    console.error(`[timeblock-mcp] Listening on http://${host}:${port}/mcp`);
+  });
+}
+
+if (process.argv.includes('--http')) {
+  await startHttpServer();
+} else {
+  const transport = new StdioServerTransport();
+  await server.connect(transport);
+}

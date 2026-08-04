@@ -8,6 +8,180 @@ body,
   height: 100%;
 }
 
+/* Device-level interface preferences. These are applied before React paints. */
+html[data-text-scale='small'] { font-size: 93.75%; }
+html[data-text-scale='default'] { font-size: 100%; }
+html[data-text-scale='large'] { font-size: 106.25%; }
+html[data-text-scale='xlarge'] { font-size: 112.5%; }
+html[data-density='compact'] { --spacing: 0.22rem; }
+html[data-density='comfortable'] { --spacing: 0.25rem; }
+html[data-density='spacious'] { --spacing: 0.285rem; }
+
+.tb-reduce-motion *,
+.tb-reduce-motion *::before,
+.tb-reduce-motion *::after {
+  scroll-behavior: auto !important;
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}
+
+.tb-reduce-transparency * {
+  backdrop-filter: none !important;
+}
+
+.tb-underline-links main a {
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+}
+
+.tb-large-targets button,
+.tb-large-targets select,
+.tb-large-targets input:not([type='checkbox']):not([type='radio']):not([type='range']) {
+  min-height: 2.5rem;
+}
+
+.tb-high-contrast body {
+  color: #020617;
+}
+
+.tb-high-contrast .text-slate-400,
+.tb-high-contrast .text-slate-500 {
+  color: #334155 !important;
+}
+
+.dark.tb-high-contrast body {
+  color: #fafafa;
+}
+
+.dark.tb-high-contrast .text-neutral-400,
+.dark.tb-high-contrast .text-neutral-500,
+.dark.tb-high-contrast .text-slate-400,
+.dark.tb-high-contrast .text-slate-500 {
+  color: #d4d4d4 !important;
+}
+
+/* ---------------- Settings: searchable, tabbed control center ---------------- */
+.settings-workspace {
+  --settings-accent: #0f766e;
+  container-type: inline-size;
+}
+
+.settings-workspace [hidden] {
+  display: none !important;
+}
+
+.settings-content > section:not([hidden]),
+.settings-content > div:not([hidden]) > section {
+  animation: settings-panel-enter 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  box-shadow: 0 18px 55px -42px rgba(15, 23, 42, 0.45);
+}
+
+.settings-content > section:not([hidden]) {
+  border-radius: 0.9rem;
+}
+
+.settings-content .settings-panel {
+  border: 0;
+  padding: 0;
+  box-shadow: none;
+}
+
+.settings-content .settings-panel > * {
+  margin: 0;
+}
+
+.settings-workspace input:not([type='checkbox']):not([type='radio']),
+.settings-workspace select,
+.settings-workspace textarea {
+  outline: none;
+  transition: border-color 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
+}
+
+.settings-workspace input:not([type='checkbox']):not([type='radio']):focus,
+.settings-workspace select:focus,
+.settings-workspace textarea:focus {
+  border-color: rgba(13, 148, 136, 0.7);
+  box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.11);
+}
+
+.settings-workspace input[type='checkbox'] {
+  appearance: none;
+  position: relative;
+  width: 2.35rem;
+  height: 1.3rem;
+  flex: 0 0 auto;
+  cursor: pointer;
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  background: #e2e8f0;
+  transition: border-color 180ms ease, background-color 180ms ease, box-shadow 180ms ease;
+}
+
+.settings-workspace input[type='checkbox']::after {
+  content: '';
+  position: absolute;
+  top: 0.14rem;
+  left: 0.15rem;
+  width: 0.9rem;
+  height: 0.9rem;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.28);
+  transition: transform 200ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.settings-workspace input[type='checkbox']:checked {
+  border-color: var(--settings-accent);
+  background: var(--settings-accent);
+}
+
+.settings-workspace input[type='checkbox']:checked::after {
+  transform: translateX(1rem);
+}
+
+.settings-workspace input[type='checkbox']:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.18);
+}
+
+.settings-workspace input[type='checkbox']:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.dark .settings-workspace input[type='checkbox'] {
+  border-color: #525252;
+  background: #404040;
+}
+
+.dark .settings-workspace input[type='checkbox']:checked {
+  border-color: #0d9488;
+  background: #0d9488;
+}
+
+@keyframes settings-panel-enter {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@container (max-width: 700px) {
+  .settings-subnav {
+    position: static;
+  }
+
+  .settings-primary-tabs {
+    justify-content: flex-start;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .settings-content > section:not([hidden]),
+  .settings-content > div:not([hidden]) > section {
+    animation: none;
+  }
+}
+
 body {
   background-color: #f8fafc;
   color: #0f172a;

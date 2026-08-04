@@ -11,6 +11,7 @@ import {
   PanelsTopLeft,
   Sun,
   ShoppingBag,
+  SlidersHorizontal,
   Dumbbell,
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
@@ -33,6 +34,7 @@ import UndoToasts from './UndoToasts.js';
 import ConfettiBurst from './ConfettiBurst.js';
 import VoiceCapture from './VoiceCapture.js';
 import QuickCaptureModal from './notes/QuickCaptureModal.js';
+import { useUiPreferences, type WorkspaceId } from '../lib/uiPreferences.js';
 
 function ThemeToggle({ gameMode }: { gameMode: boolean }) {
   const { setting, resolved, setSetting } = useTheme();
@@ -55,18 +57,19 @@ function ThemeToggle({ gameMode }: { gameMode: boolean }) {
   );
 }
 
-const tabs = [
-  { to: '/tasks', label: 'Tasks', icon: CheckSquare2 },
-  { to: '/whiteboard', label: 'Whiteboard', icon: PanelsTopLeft },
-  { to: '/notes', label: 'Second Brain', icon: BrainCircuit },
-  { to: '/wishlist', label: 'Wishlist', icon: ShoppingBag },
-  { to: '/workout', label: 'Workout', icon: Dumbbell },
+const workspaceTabs: Array<{ id: WorkspaceId; to: string; label: string; icon: typeof CheckSquare2 }> = [
+  { id: 'tasks', to: '/tasks', label: 'Tasks', icon: CheckSquare2 },
+  { id: 'whiteboard', to: '/whiteboard', label: 'Whiteboard', icon: PanelsTopLeft },
+  { id: 'notes', to: '/notes', label: 'Second Brain', icon: BrainCircuit },
+  { id: 'wishlist', to: '/wishlist', label: 'Wishlist', icon: ShoppingBag },
+  { id: 'workout', to: '/workout', label: 'Workout', icon: Dumbbell },
 ];
 
 export default function Layout() {
   useLiveSync();
   useUndoRedoShortcuts();
   const { data: settings } = useSettings();
+  const { preferences } = useUiPreferences();
   const { scopedCommands } = useCommandPaletteState();
   const navigate = useNavigate();
   const [showQuickCapture, setShowQuickCapture] = useState(false);
@@ -88,6 +91,9 @@ export default function Layout() {
   }, []);
   const sidebarCollapsed = collapsed || narrowSidebar;
   const sidebarWidth = narrowSidebar ? 48 : width;
+  const visibleWorkspaceTabs = preferences.workspaceOrder
+    .map((id) => workspaceTabs.find((tab) => tab.id === id))
+    .filter((tab): tab is (typeof workspaceTabs)[number] => !!tab && preferences.visibleWorkspaces[tab.id]);
 
   useEffect(() => {
     if (settings) setSoundEnabled(settings.soundEffects);
@@ -113,6 +119,7 @@ export default function Layout() {
   );
 
   useEffect(() => {
+    if (!preferences.globalShortcuts) return;
     const onKeyDown = (event: KeyboardEvent) => {
       const mod = event.metaKey || event.ctrlKey;
       if (mod && event.key.toLowerCase() === 'k') {
@@ -125,7 +132,7 @@ export default function Layout() {
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, []);
+  }, [preferences.globalShortcuts]);
 
   const sidebarSurface = gameMode
     ? 'border-slate-800/80 bg-[#0e1424] text-slate-100'
@@ -186,7 +193,7 @@ export default function Layout() {
         </div>
 
         <nav className="mt-3 flex flex-col gap-1" aria-label="Workspaces">
-          {tabs.map((tab) => {
+          {visibleWorkspaceTabs.map((tab) => {
             const Icon = tab.icon;
             return (
               <NavLink
@@ -227,10 +234,35 @@ export default function Layout() {
               </NavLink>
             );
           })}
+          <div className="mt-2 border-t border-slate-200/80 pt-2 dark:border-neutral-800">
+            <NavLink
+              to="/settings"
+              title="Settings"
+              className={({ isActive }) =>
+                `group relative flex h-9 items-center rounded-md outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-slate-400/60 ${
+                  sidebarCollapsed ? 'justify-center px-0' : 'gap-2.5 px-2'
+                } ${
+                  isActive
+                    ? 'text-slate-900 dark:text-neutral-100'
+                    : 'text-slate-500 hover:bg-slate-100/80 hover:text-slate-800 dark:text-neutral-400 dark:hover:bg-white/[0.045] dark:hover:text-neutral-200'
+                }`
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  {isActive && <motion.span layoutId="workspace-nav-active" transition={springs.snappy} className="absolute inset-0 rounded-md bg-slate-100 dark:bg-white/[0.06]" />}
+                  <span className="relative grid h-6 w-6 shrink-0 place-items-center transition-transform duration-150 group-hover:rotate-6">
+                    <SlidersHorizontal size={16} strokeWidth={1.8} />
+                  </span>
+                  {!sidebarCollapsed && <span className="relative truncate text-[13px] font-medium">Settings</span>}
+                </>
+              )}
+            </NavLink>
+          </div>
         </nav>
 
         <div className="mt-auto space-y-2">
-          {!sidebarCollapsed && (
+          {!sidebarCollapsed && preferences.showSyncStatus && (
             <div className="space-y-1.5 border-t border-slate-200/80 pt-3 dark:border-neutral-800">
               <div className="[&>button]:w-full [&>button]:justify-start [&>button]:rounded-md [&>button]:border-slate-200 [&>button]:bg-transparent [&>button]:px-2 [&>button]:text-slate-500 [&>button:hover]:bg-slate-50 dark:[&>button]:border-neutral-800 dark:[&>button]:text-neutral-400 dark:[&>button:hover]:bg-white/[0.04]">
                 <ScheduleStateChip />
@@ -241,7 +273,7 @@ export default function Layout() {
             </div>
           )}
 
-          <motion.button
+          {preferences.showQuickCapture && <motion.button
             type="button"
             whileTap={{ scale: 0.97 }}
             onClick={() => setShowQuickCapture(true)}
@@ -253,7 +285,7 @@ export default function Layout() {
           >
             <FilePlus2 size={15} strokeWidth={1.8} />
             {!sidebarCollapsed && <span className="truncate text-xs font-medium">Quick capture</span>}
-          </motion.button>
+          </motion.button>}
 
           <div
             className={`border-t border-slate-200/80 pt-2 dark:border-neutral-800 ${
@@ -262,8 +294,8 @@ export default function Layout() {
           >
             <VoiceCapture gameMode={gameMode} />
             {!sidebarCollapsed && width >= 172 && <UndoRedoControls gameMode={gameMode} />}
-            <NotificationCenter gameMode={gameMode} placement="sidebar" />
-            <ThemeToggle gameMode={gameMode} />
+            {preferences.showNotifications && <NotificationCenter gameMode={gameMode} placement="sidebar" />}
+            {preferences.showThemeControl && <ThemeToggle gameMode={gameMode} />}
           </div>
         </div>
       </motion.aside>

@@ -23,6 +23,7 @@
     "workout:test": "npm -w @timeblock/workout-engine test",
     "workout:build": "npm -w @timeblock/workout-engine run build:win",
     "desktop:dist": "npm run build && npm -w @timeblock/server run build && npm run workout:build && npm -w @timeblock/desktop run dist",
+    "mcp:http": "npm -w @timeblock/mcp-server run start:http",
     "native:node": "npm rebuild better-sqlite3"
   },
   "devDependencies": {
