@@ -105,7 +105,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload and verify installer
+      - name: Synchronize and verify release assets
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -117,93 +117,46 @@ jobs:
           }
           $version = (Get-Content 'apps/desktop/package.json' | ConvertFrom-Json).version
           $tag = "v$version"
-          $installerName = "TimeBlock-Setup-$version.exe"
-          $installer = Get-Item -LiteralPath (Join-Path 'apps/desktop/release' $installerName) -ErrorAction Stop
+          $assetSpecs = @(
+            @{ Name = "TimeBlock-Setup-$version.exe"; Path = "apps/desktop/release/TimeBlock-Setup-$version.exe" },
+            @{ Name = "TimeBlock-Setup-$version.exe.blockmap"; Path = "apps/desktop/release/TimeBlock-Setup-$version.exe.blockmap" },
+            @{ Name = 'latest.yml'; Path = 'apps/desktop/release/latest.yml' }
+          )
+
+          foreach ($assetSpec in $assetSpecs) {
+            Get-Item -LiteralPath $assetSpec.Path -ErrorAction Stop | Out-Null
+          }
+
           $release = Invoke-RestMethod `
             -Headers $headers `
             -Uri "https://api.github.com/repos/${{ github.repository }}/releases/tags/$tag"
-          $assets = @($release.assets.name)
 
-          if ($installerName -notin $assets) {
+          foreach ($assetSpec in $assetSpecs) {
+            $existing = $release.assets | Where-Object name -eq $assetSpec.Name
+            if ($existing) {
+              Invoke-RestMethod `
+                -Method Delete `
+                -Headers $headers `
+                -Uri "https://api.github.com/repos/${{ github.repository }}/releases/assets/$($existing.id)"
+            }
+
+            $release = Invoke-RestMethod `
+              -Headers $headers `
+              -Uri "https://api.github.com/repos/${{ github.repository }}/releases/tags/$tag"
             $uploadUrl = $release.upload_url -replace '\{\?name,label\}$', ''
-            $assetName = [uri]::EscapeDataString($installerName)
+            $assetName = [uri]::EscapeDataString($assetSpec.Name)
             Invoke-RestMethod `
               -Method Post `
               -Headers $headers `
               -ContentType 'application/octet-stream' `
-              -InFile $installer.FullName `
+              -InFile $assetSpec.Path `
               -Uri "${uploadUrl}?name=${assetName}"
           }
 
           $release = Invoke-RestMethod `
             -Headers $headers `
             -Uri "https://api.github.com/repos/${{ github.repository }}/releases/tags/$tag"
-          if ($installerName -notin @($release.assets.name)) {
-            throw "Release is missing the installer: $installerName"
-          }
-
-      - name: Upload and verify differential update assets
-        shell: pwsh
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          $headers = @{
-            Authorization = "Bearer $env:GH_TOKEN"
-            Accept = "application/vnd.github+json"
-            "X-GitHub-Api-Version" = "2022-11-28"
-          }
-          $version = (Get-Content 'apps/desktop/package.json' | ConvertFrom-Json).version
-          $tag = "v$version"
-          $release = Invoke-RestMethod `
-            -Headers $headers `
-            -Uri "https://api.github.com/repos/${{ github.repository }}/releases/tags/$tag"
-          $assets = @($release.assets.name)
-
-          $updateManifest = Get-Item -LiteralPath 'apps/desktop/release/latest.yml' -ErrorAction Stop
-          $manifestPathMatch = Select-String -LiteralPath $updateManifest.FullName -Pattern '^path:\s*(.+?)\s*$' | Select-Object -First 1
-          if ($null -eq $manifestPathMatch) {
-            throw 'Updater manifest latest.yml does not contain an installer path.'
-          }
-          $installerAssetName = $manifestPathMatch.Matches[0].Groups[1].Value.Trim('"', "'")
-          $blockMapAssetName = "$installerAssetName.blockmap"
-          $blockMap = Get-Item -LiteralPath (Join-Path 'apps/desktop/release' $blockMapAssetName) -ErrorAction Stop
-
-          # electron-builder creates the blockmap after publishing the main
-          # installer in this workflow, so attach the exact filename referenced
-          # by latest.yml. A differently named blockmap cannot be used by clients.
-          if ($blockMapAssetName -notin $assets) {
-            $uploadUrl = $release.upload_url -replace '\{\?name,label\}$', ''
-            $assetName = [uri]::EscapeDataString($blockMapAssetName)
-            Invoke-RestMethod `
-              -Method Post `
-              -Headers $headers `
-              -ContentType 'application/octet-stream' `
-              -InFile $blockMap.FullName `
-              -Uri "${uploadUrl}?name=${assetName}"
-            $assets += $blockMap.Name
-          }
-
-          # Upload the updater manifest when electron-builder did not attach it.
-          # Without this file, installed clients cannot discover the new release.
-          if ('latest.yml' -notin $assets) {
-            $uploadUrl = $release.upload_url -replace '\{\?name,label\}$', ''
-            $assetName = [uri]::EscapeDataString($updateManifest.Name)
-            Invoke-RestMethod `
-              -Method Post `
-              -Headers $headers `
-              -ContentType 'application/octet-stream' `
-              -InFile $updateManifest.FullName `
-              -Uri "${uploadUrl}?name=${assetName}"
-            $assets += $updateManifest.Name
-          }
-
-          $release = Invoke-RestMethod `
-            -Headers $headers `
-            -Uri "https://api.github.com/repos/${{ github.repository }}/releases/tags/$tag"
-          $assets = @($release.assets.name)
-          if ($blockMapAssetName -notin $assets) {
-            throw "Release is missing the expected differential blockmap: $blockMapAssetName"
-          }
-          if ('latest.yml' -notin $assets) {
-            throw 'Release is missing latest.yml.'
+          $missingAssets = $assetSpecs.Name | Where-Object { $_ -notin @($release.assets.name) }
+          if ($missingAssets) {
+            throw "Release is missing assets: $($missingAssets -join ', ')"
           }
