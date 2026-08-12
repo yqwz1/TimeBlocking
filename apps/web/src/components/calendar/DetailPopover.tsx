@@ -1,8 +1,8 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import type { ScheduleItemDTO } from '@timeblock/shared';
 import { Check, ExternalLink, Lock, MapPin, Pencil, Trash2, Unlock, Video, X } from 'lucide-react';
-import { useCompleteTask, useDeleteEvent, useDeleteTask, useLockBlock, useUnlockBlock, useUnscheduleTask } from '../../hooks.js';
+import { useBlockActivity, useCompleteTask, useCorrectBlockActivity, useDeleteEvent, useDeleteTask, useLockBlock, useUnlockBlock, useUnscheduleTask } from '../../hooks.js';
 import { popoverVariants } from '../../lib/motion.js';
 import { STYLES, priorityColor, styleKey } from './EventCard.js';
 
@@ -25,6 +25,14 @@ export default function DetailPopover({
   const unlock = useUnlockBlock();
   const deleteTask = useDeleteTask();
   const deleteEvent = useDeleteEvent();
+  const evidence = useBlockActivity(item.kind === 'external' ? undefined : item.id);
+  const correctEvidence = useCorrectBlockActivity();
+  const [showCorrection, setShowCorrection] = useState(false);
+  const [actualStart, setActualStart] = useState('');
+  const [actualEnd, setActualEnd] = useState('');
+  const [projectId, setProjectId] = useState('');
+  const [category, setCategory] = useState('');
+  const [note, setNote] = useState('');
   const isEvent = item.kind === 'event';
 
   useEffect(() => {
@@ -120,6 +128,39 @@ export default function DetailPopover({
               </a>
             )}
             {item.description && <p className="whitespace-pre-wrap text-slate-500 dark:text-neutral-400">{item.description}</p>}
+          </div>
+        )}
+        {evidence.data && (
+          <div className="mt-2.5 px-4">
+            <div className="rounded-lg bg-slate-50 p-2.5 text-xs dark:bg-neutral-800">
+              <div className="flex items-center justify-between gap-2"><span className="font-semibold text-slate-700 dark:text-neutral-200">Activity evidence</span><span className={evidence.data.verificationState === 'verified' ? 'font-medium text-emerald-600 dark:text-emerald-400' : 'font-medium text-slate-500 dark:text-neutral-400'}>{evidence.data.verificationState.replace('_', ' ')}</span></div>
+              <p className="mt-1 text-slate-500 dark:text-neutral-400">{Math.round(evidence.data.relevantMin + evidence.data.supportingMin)}m relevant · {Math.round(evidence.data.distractionMin)}m distraction · {Math.round(evidence.data.idleMin)}m idle</p>
+              <p className="mt-0.5 text-slate-500 dark:text-neutral-400">Coverage {Math.round(evidence.data.coverage)}% · confidence {evidence.data.confidence === null ? '—' : `${Math.round(evidence.data.confidence)}%`} · focus {evidence.data.focusQuality === null ? '—' : `${Math.round(evidence.data.focusQuality)}%`}</p>
+              <button type="button" onClick={() => setShowCorrection((open) => !open)} className="mt-2 text-xs font-medium text-teal-700 hover:underline dark:text-teal-300">{showCorrection ? 'Cancel correction' : 'Correct evidence'}</button>
+              {showCorrection && (
+                <form
+                  className="mt-2 space-y-2 border-t border-slate-200 pt-2 dark:border-neutral-700"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    const correction = {
+                      ...(actualStart ? { actualStartUtc: new Date(actualStart).toISOString() } : {}),
+                      ...(actualEnd ? { actualEndUtc: new Date(actualEnd).toISOString() } : {}),
+                      ...(projectId.trim() ? { projectId: projectId.trim() } : {}),
+                      ...(category.trim() ? { primaryCategory: category.trim() } : {}),
+                      ...(note.trim() ? { note: note.trim() } : {}),
+                    };
+                    if (!Object.keys(correction).length) return;
+                    correctEvidence.mutate({ blockId: item.id, correction }, { onSuccess: () => setShowCorrection(false) });
+                  }}
+                >
+                  <div className="grid grid-cols-2 gap-1.5"><input type="datetime-local" value={actualStart} onChange={(event) => setActualStart(event.target.value)} aria-label="Actual start" className="min-w-0 rounded border border-slate-300 bg-white px-1.5 py-1 text-[11px] dark:border-neutral-700 dark:bg-neutral-900" /><input type="datetime-local" value={actualEnd} onChange={(event) => setActualEnd(event.target.value)} aria-label="Actual end" className="min-w-0 rounded border border-slate-300 bg-white px-1.5 py-1 text-[11px] dark:border-neutral-700 dark:bg-neutral-900" /></div>
+                  <input value={projectId} onChange={(event) => setProjectId(event.target.value)} placeholder="Correct project id or alias" className="w-full rounded border border-slate-300 bg-white px-1.5 py-1 text-[11px] dark:border-neutral-700 dark:bg-neutral-900" />
+                  <input value={category} onChange={(event) => setCategory(event.target.value)} placeholder="Correct classification" className="w-full rounded border border-slate-300 bg-white px-1.5 py-1 text-[11px] dark:border-neutral-700 dark:bg-neutral-900" />
+                  <input value={note} onChange={(event) => setNote(event.target.value)} placeholder="What was wrong?" className="w-full rounded border border-slate-300 bg-white px-1.5 py-1 text-[11px] dark:border-neutral-700 dark:bg-neutral-900" />
+                  <button type="submit" disabled={correctEvidence.isPending} className="rounded bg-teal-600 px-2 py-1 text-[11px] font-medium text-white disabled:opacity-50">{correctEvidence.isPending ? 'Saving…' : 'Save correction'}</button>
+                </form>
+              )}
+            </div>
           </div>
         )}
         {item.reasons && item.reasons.length > 0 && (

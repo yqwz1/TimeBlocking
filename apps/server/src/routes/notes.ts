@@ -111,7 +111,9 @@ import { exportNotes } from '../notes/export.js';
 import {
   createNoteFile,
   createVaultFolder,
+  deleteVaultFolder,
   getVaultRoot,
+  listMarkdownFiles,
   listVaultFolders,
   listNoteSnapshots,
   listTrash,
@@ -125,6 +127,7 @@ import {
   restoreNoteSnapshot,
   safeResolve,
   trashNoteFile,
+  trashVaultFolder,
   VaultConflictError,
   VaultPathError,
   writeNoteFile,
@@ -375,6 +378,31 @@ export function registerNoteRoutes(app: FastifyInstance, db: DB, manager: SyncMa
     try {
       await createVaultFolder(getVaultRoot(db), folder);
       return reply.code(201).send({ path: folder });
+    } catch (err) {
+      if (err instanceof VaultConflictError || err instanceof VaultPathError) return reply.code(409).send({ error: err.message });
+      throw err;
+    }
+  });
+
+  app.delete<{ Params: { '*': string } }>('/notes/folders/*', async (req, reply): Promise<{ ok: true; trashId: string | null } | { error: string }> => {
+    const root = getVaultRoot(db);
+    const folder = normalizeVaultFolder(req.params['*'], '');
+    if (!folder) return reply.code(400).send({ error: 'folder path is required' });
+    const folderRoot = safeResolve(root, folder);
+    let noteIds: string[] = [];
+    try {
+      noteIds = (await listMarkdownFiles(folderRoot)).map((id) => `${folder}/${id}`);
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code === 'ENOENT') return reply.code(404).send({ error: `folder not found: ${folder}` });
+      throw err;
+    }
+    try {
+      const trashId = noteIds.length > 0 ? await trashVaultFolder(root, folder) : null;
+      if (trashId) for (const id of noteIds) removeNoteFromIndex(db, id);
+      if (!trashId) await deleteVaultFolder(root, folder);
+      triggerGraphRecompute(db);
+      triggerConceptExtraction(db, root);
+      return { ok: true, trashId };
     } catch (err) {
       if (err instanceof VaultConflictError || err instanceof VaultPathError) return reply.code(409).send({ error: err.message });
       throw err;
@@ -1559,11 +1587,13 @@ export function registerNoteRoutes(app: FastifyInstance, db: DB, manager: SyncMa
   app.post<{ Params: { trashId: string } }>('/notes/trash/:trashId/restore', async (req, reply) => {
     const root = getVaultRoot(db);
     try {
-      const relPath = await restoreFromTrash(root, req.params.trashId);
-      await indexNote(db, root, relPath);
+      const relPaths = await restoreFromTrash(root, req.params.trashId);
+      for (const relPath of relPaths) {
+        if (relPath.toLowerCase().endsWith('.md')) await indexNote(db, root, relPath);
+      }
       triggerGraphRecompute(db);
       triggerConceptExtraction(db, root);
-      return { ok: true, path: relPath };
+      return { ok: true, path: relPaths[0] ?? '' };
     } catch (err) {
       return reply.code(404).send({ error: (err as Error).message });
     }

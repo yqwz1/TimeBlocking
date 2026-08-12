@@ -8,14 +8,19 @@ export function setSoundEnabled(enabled: boolean) {
   soundEnabled = enabled;
 }
 
-function getCtx(): AudioContext | null {
-  if (!soundEnabled) return null;
+function getCtx(ignoreSoundSetting = false): AudioContext | null {
+  if (!ignoreSoundSetting && !soundEnabled) return null;
   if (typeof window === 'undefined') return null;
   const Ctor = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
   if (!Ctor) return null;
   if (!ctx) ctx = new Ctor();
   if (ctx.state === 'suspended') void ctx.resume();
   return ctx;
+}
+
+/** Unlock audio from a user gesture so later alarms are not muted by autoplay policy. */
+export function primeAlarmAudio() {
+  return getCtx(true)?.resume().catch(() => undefined);
 }
 
 interface Tone {
@@ -62,6 +67,34 @@ export function playNotificationPing() {
     { freq: 987.8, at: 0, dur: 0.28, gain: 0.14 },
     { freq: 1479.98, at: 0.06, dur: 0.34, gain: 0.1 },
   ]);
+}
+
+/** A four-second, high-attention reminder alarm. Unlike UI sounds it has its own preference. */
+export function playReminderAlarm(volume = 1): () => void {
+  const audioCtx = getCtx(true);
+  if (!audioCtx || volume <= 0) return () => {};
+  const now = audioCtx.currentTime;
+  const oscillators: OscillatorNode[] = [];
+  for (const at of [0, 0.48, 0.96, 1.7, 2.18, 2.66, 3.38]) {
+    for (const freq of [740, 988]) {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      const start = now + at;
+      const duration = 0.3;
+      osc.type = 'square';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.linearRampToValueAtTime(0.17 * volume, start + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+      osc.connect(gain).connect(audioCtx.destination);
+      osc.start(start);
+      osc.stop(start + duration + 0.03);
+      oscillators.push(osc);
+    }
+  }
+  return () => oscillators.forEach((osc) => {
+    try { osc.stop(); } catch { /* already stopped */ }
+  });
 }
 
 /** Rising three-note arpeggio (C5 -> E5 -> G5 -> C6) — level up. */

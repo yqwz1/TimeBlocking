@@ -13,6 +13,7 @@ import { plan } from '../scheduler/engine.js';
 import { expandChronotype } from '../scheduler/energy.js';
 import { loadLearned, recordBlockMissed, recordTaskDone } from '../learning/stats.js';
 import { awardBlockDone } from '../gamification/engine.js';
+import { recordProgressionFact } from '../gamification/progression.js';
 import type { DesiredBlock, PlanHabitInput, PlanInput, PlanResult, PlanTaskInput } from '../scheduler/types.js';
 import { blockHash } from './hash.js';
 import { APP_TAG, eventIdForBlock, type Gcal, type GEvent } from '../integrations/google/client.js';
@@ -500,6 +501,7 @@ export async function applyCompletionToCalendar(db: DB, gcal: Gcal | null, setti
         }
         db.update(blocks).set({ status: 'done', updatedAtUtc: nowUtcIso() }).where(eq(blocks.id, row.id)).run();
         awardBlockDone(db, settings, row, 'block_done', row.id, t?.content ?? 'Task', nowUtcIso());
+        recordProgressionFact(db, settings, { kind: 'block_completed', sourceId: row.id, plannedMinutes: Math.max(0, Math.round((Date.parse(row.endUtc) - Date.parse(row.startUtc)) / 60_000)), title: t?.content ?? 'Task', atUtc: nowUtcIso() }, nowUtcIso());
       }
     }
     recordTaskDone(db, settings, taskId, nowUtcIso());

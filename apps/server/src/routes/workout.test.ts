@@ -42,6 +42,18 @@ describe('workout routes', () => {
             }],
           };
         }
+        if (command === 'volume-analytics') {
+          return {
+            schema_version: 1, range: payload.range ?? '12w',
+            selected: { from: '2026-06-01', to: '2026-08-23', weeks: 12 },
+            previous: payload.compare ? { from: '2026-03-09', to: '2026-05-31', weeks: 12 } : null,
+            comparison_available: true, comparison_reason: null,
+            overview: { credited_sets: 88, target_gap: 3, muscles_requiring_action: 2, recovery_confidence: 'moderate', recovery_confidence_basis: 'history', push_pull: 1, push_pull_target: 1, upper_lower: 1.2, upper_lower_target: 1 },
+            comparison_overview: payload.compare ? { credited_sets: 72, load_index: 540 } : null,
+            weekly: [{ week: '2026-08-17', credited_sets: 9, load_index: 80, sessions: 3, recovery_score: 0.2, recovery_state: 'borderline' }],
+            previous_weekly: [], muscles: [],
+          };
+        }
         return { sets: 12, sessions: 3, latestSession: '2026-07-21', adherencePct: 41, adherence: {}, hevyConnected: true, summaryAvailable: true };
       },
       saveCredential: async (value: string) => { savedCredential = value; },
@@ -66,6 +78,19 @@ describe('workout routes', () => {
     expect(response.statusCode).toBe(200);
     expect(savedCredential).toBe('private-hevy-key');
     expect(response.body).not.toContain('private-hevy-key');
+  });
+
+  it('validates and queues a persisted powerlifting profile rebuild', async () => {
+    const profile = {
+      lifts: { squat: 'Squat (Barbell)', bench: 'Bench Press', deadlift: 'Deadlift (Barbell)' },
+      sex: 'male', score: 'dots', bar_weight_kg: 20, plate_pairs_kg: [25, 20, 2.5, 1.25], meet_date: '2026-11-14', attempt_pct: [0.91, 0.96, 1.01],
+    };
+    const valid = await app.inject({ method: 'PUT', url: '/workout/settings/powerlifting', payload: profile });
+    expect(valid.statusCode).toBe(202);
+    expect(enqueued.at(-1)).toMatchObject({ command: 'update-powerlifting-profile', payload: profile });
+
+    const invalid = await app.inject({ method: 'PUT', url: '/workout/settings/powerlifting', payload: { ...profile, attempt_pct: [0.96, 0.91, 1.01] } });
+    expect(invalid.statusCode).toBe(400);
   });
 
   it('validates coaching mutations and routine confirmation', async () => {
@@ -99,5 +124,15 @@ describe('workout routes', () => {
 
     const missing = await app.inject({ method: 'GET', url: '/workout/exercises/Missing%20lift/history' });
     expect(missing.statusCode).toBe(404);
+  });
+
+  it('validates and returns read-only volume analytics with parsed comparison state', async () => {
+    const valid = await app.inject({ method: 'GET', url: '/workout/volume-analytics?range=12w&compare=1' });
+    expect(valid.statusCode).toBe(200);
+    expect(valid.json()).toMatchObject({ schema_version: 1, range: '12w', comparison_available: true, weekly: [{ credited_sets: 9 }] });
+    expect(executed.at(-1)).toEqual({ command: 'volume-analytics', payload: { range: '12w', compare: true } });
+
+    const invalid = await app.inject({ method: 'GET', url: '/workout/volume-analytics?range=13w' });
+    expect(invalid.statusCode).toBe(400);
   });
 });

@@ -10,7 +10,7 @@ import {
   useUpdateWishlistItem,
   useUploadWishlistImage,
 } from '../../hooks/wishlist.js';
-import { majorToMinor, minorToMajor, WISHLIST_CATEGORIES } from '../../lib/wishlist.js';
+import { formatMoney, majorToMinor, minorToMajor, WISHLIST_CATEGORIES } from '../../lib/wishlist.js';
 
 const FIELD = 'w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-teal-400 focus:ring-2 focus:ring-teal-100 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100 dark:focus:border-teal-500/50 dark:focus:ring-teal-500/10';
 const LABEL = 'mb-1 block text-[11px] font-semibold uppercase tracking-[0.09em] text-slate-400 dark:text-neutral-500';
@@ -19,8 +19,8 @@ function initialForm(item: WishlistItemDTO | null): WishlistItemInput {
   return item ? {
     title: item.title, notes: item.notes, productUrl: item.productUrl, imageUrl: item.uploadedImage ? null : item.imageUrl,
     retailer: item.retailer, category: item.category, priority: item.priority, status: item.status,
-    priceMinor: item.priceMinor, targetDate: item.targetDate, goalIds: item.goalIds,
-  } : { title: '', notes: '', productUrl: null, imageUrl: null, retailer: null, category: 'Other', priority: 1, status: 'considering', priceMinor: null, targetDate: null, goalIds: [] };
+    priceMinor: item.priceMinor, listedPriceMinor: item.listedPriceMinor, listedCurrency: item.listedCurrency, targetDate: item.targetDate, goalIds: item.goalIds,
+  } : { title: '', notes: '', productUrl: null, imageUrl: null, retailer: null, category: 'Other', priority: 1, status: 'considering', priceMinor: null, listedPriceMinor: null, listedCurrency: null, targetDate: null, goalIds: [] };
 }
 
 export default function WishlistEditorPanel({ item, currency, goals, onClose }: { item: WishlistItemDTO | null; currency: string; goals: GoalDTO[]; onClose: () => void }) {
@@ -50,6 +50,8 @@ export default function WishlistEditorPanel({ item, currency, goals, onClose }: 
         retailer: current.retailer || value.retailer,
         imageUrl: current.imageUrl || value.imageUrl,
         priceMinor: current.priceMinor ?? value.priceMinor,
+        listedPriceMinor: current.listedPriceMinor ?? value.listedPriceMinor,
+        listedCurrency: current.listedCurrency ?? value.detectedCurrency,
       }));
       if (!price && value.priceMinor != null) setPrice(minorToMajor(value.priceMinor, currency));
       if (value.warnings.length) setError(value.warnings.join(' '));
@@ -94,7 +96,7 @@ export default function WishlistEditorPanel({ item, currency, goals, onClose }: 
           <div className="space-y-4">
             <div><label className={LABEL}>Product link</label><div className="flex gap-2"><div className="relative flex-1"><Link2 size={14} className="absolute left-3 top-3 text-slate-400" /><input className={`${FIELD} pl-9`} value={form.productUrl ?? ''} onChange={(e) => set('productUrl', e.target.value || null)} placeholder="https://store.example/product" /></div><button type="button" disabled={!form.productUrl || preview.isPending} onClick={importLink} className="rounded-lg border border-teal-200 bg-teal-50 px-3 text-xs font-semibold text-teal-700 hover:bg-teal-100 disabled:opacity-40 dark:border-teal-500/30 dark:bg-teal-500/10 dark:text-teal-300">{preview.isPending ? <Loader2 size={14} className="animate-spin" /> : 'Import'}</button></div></div>
             <div><label className={LABEL}>Title</label><input required className={FIELD} value={form.title} onChange={(e) => set('title', e.target.value)} placeholder="What do you want to buy?" /></div>
-            <div className="grid grid-cols-2 gap-3"><div><label className={LABEL}>Price · {currency}</label><input inputMode="decimal" className={FIELD} value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0.00" /></div><div><label className={LABEL}>Retailer</label><input className={FIELD} value={form.retailer ?? ''} onChange={(e) => set('retailer', e.target.value || null)} placeholder="Store" /></div></div>
+            <div className="grid grid-cols-2 gap-3"><div><label className={LABEL}>Price · {currency}</label><input inputMode="decimal" className={FIELD} value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0.00" />{form.listedPriceMinor != null && form.listedCurrency && form.listedCurrency !== currency && <p className="mt-1 text-[10px] text-amber-600 dark:text-amber-300">Listed {formatMoney(form.listedPriceMinor, form.listedCurrency)} · enter the converted {currency} price for budgets.</p>}</div><div><label className={LABEL}>Retailer</label><input className={FIELD} value={form.retailer ?? ''} onChange={(e) => set('retailer', e.target.value || null)} placeholder="Store" /></div></div>
             <div className="grid grid-cols-2 gap-3"><div><label className={LABEL}>Category</label><input list="wishlist-categories" className={FIELD} value={form.category} onChange={(e) => set('category', e.target.value)} /><datalist id="wishlist-categories">{WISHLIST_CATEGORIES.map((value) => <option value={value} key={value} />)}</datalist></div><div><label className={LABEL}>Priority</label><select className={FIELD} value={form.priority} onChange={(e) => set('priority', Number(e.target.value))}><option value={4}>P1 · Essential</option><option value={3}>P2 · High</option><option value={2}>P3 · Medium</option><option value={1}>P4 · Low</option></select></div></div>
             <div className="grid grid-cols-2 gap-3"><div><label className={LABEL}>Stage</label><select className={FIELD} value={form.status} onChange={(e) => set('status', e.target.value as WishlistItemInput['status'])}><option value="considering">Considering</option><option value="planned">Planned</option>{item?.status === 'purchased' && <option value="purchased">Purchased</option>}<option value="skipped">Skipped</option></select></div><div><label className={LABEL}>Target date</label><input type="date" className={FIELD} value={form.targetDate ?? ''} onChange={(e) => set('targetDate', e.target.value || null)} /></div></div>
             <div><label className={LABEL}>Remote image URL</label><input className={FIELD} value={form.imageUrl ?? ''} onChange={(e) => set('imageUrl', e.target.value || null)} placeholder="Filled by import, or paste an image URL" /></div>

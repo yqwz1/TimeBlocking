@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import contextlib
+from datetime import date
 import hashlib
 import io
 import json
+import math
 import os
 import sys
 from pathlib import Path
@@ -26,6 +28,7 @@ from workout import (
     summary,
     sync,
     volume,
+    volume_analytics,
 )
 from workout import config as workout_config
 
@@ -184,6 +187,61 @@ def _exercise_history(conn, payload: dict) -> dict:
     }
 
 
+def _powerlifting_profile(payload: dict) -> dict:
+    """Validate and normalize the small user-owned competition profile."""
+    lifts = payload.get("lifts")
+    if not isinstance(lifts, dict) or any(not isinstance(lifts.get(slot), str) or not lifts[slot].strip()
+                                      for slot in ("squat", "bench", "deadlift")):
+        raise ValueError("Each competition lift must be mapped to an exercise")
+    sex = payload.get("sex")
+    score = payload.get("score")
+    if sex not in ("male", "female"):
+        raise ValueError("Scoring division must be male or female")
+    if score not in ("dots", "wilks"):
+        raise ValueError("Score must be DOTS or Wilks")
+    try:
+        bar_weight = float(payload.get("bar_weight_kg"))
+    except (TypeError, ValueError):
+        raise ValueError("Bar weight must be a number")
+    if not math.isfinite(bar_weight) or not 0 < bar_weight <= 100:
+        raise ValueError("Bar weight must be between 0 and 100 kg")
+    raw_plates = payload.get("plate_pairs_kg")
+    if not isinstance(raw_plates, list) or not raw_plates or len(raw_plates) > 24:
+        raise ValueError("Provide between one and 24 plate pairs")
+    try:
+        plates = [float(item) for item in raw_plates]
+    except (TypeError, ValueError):
+        raise ValueError("Plate pairs must be numbers")
+    if any(not math.isfinite(item) or item <= 0 or item > 100 for item in plates) or len(set(plates)) != len(plates):
+        raise ValueError("Plate pairs must be positive, unique values")
+    raw_attempts = payload.get("attempt_pct")
+    if not isinstance(raw_attempts, list) or len(raw_attempts) != 3:
+        raise ValueError("Attempt strategy must include opener, second, and third")
+    try:
+        attempts = [float(item) for item in raw_attempts]
+    except (TypeError, ValueError):
+        raise ValueError("Attempt percentages must be numbers")
+    if not all(math.isfinite(item) for item in attempts) or not (0 < attempts[0] < attempts[1] < attempts[2] <= 1.15):
+        raise ValueError("Attempts must increase from opener to third and remain realistic")
+    meet_date = payload.get("meet_date")
+    if meet_date is not None:
+        if not isinstance(meet_date, str):
+            raise ValueError("Meet date must be an ISO date")
+        try:
+            date.fromisoformat(meet_date)
+        except ValueError:
+            raise ValueError("Meet date must be an ISO date")
+    return {
+        "lifts": {slot: lifts[slot].strip() for slot in ("squat", "bench", "deadlift")},
+        "bar_weight_kg": bar_weight,
+        "plate_pairs_kg": sorted(plates, reverse=True),
+        "sex": sex,
+        "score": score,
+        "meet_date": meet_date,
+        "attempt_pct": attempts,
+    }
+
+
 def execute(command: str, payload: dict):
     conn = _open()
     try:
@@ -202,6 +260,8 @@ def execute(command: str, payload: dict):
             return _rebuild(conn, payload.get("date"))
         if command == "exercise-history":
             return _exercise_history(conn, payload)
+        if command == "volume-analytics":
+            return volume_analytics.build(conn, str(payload.get("range", "12w")), bool(payload.get("compare", False)))
         if command == "report":
             obj = _rebuild(conn, payload.get("date"))
             return {"summary": obj, "status": _status(conn)}
@@ -221,6 +281,10 @@ def execute(command: str, payload: dict):
         if command == "log-bodyweight":
             date = memory.log_bodyweight(conn, float(payload["weight"]), payload.get("date"), note=payload.get("note"))
             return {"date": date, "weight": float(payload["weight"]), "summary": _rebuild(conn)}
+        if command == "update-powerlifting-profile":
+            profile = _powerlifting_profile(payload)
+            workout_config.save_powerlifting_profile(profile)
+            return {"powerlifting": workout_config.powerlifting(), "summary": _rebuild(conn)}
         if command == "set-goal":
             memory.add_goal(
                 conn,

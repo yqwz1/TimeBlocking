@@ -6,7 +6,7 @@
 
 import { getUiPreferences } from './uiPreferences.js';
 
-export type NotificationKind = 'reminder' | 'achievement' | 'levelup';
+export type NotificationKind = 'reminder' | 'achievement' | 'levelup' | 'activity';
 
 export interface AppNotification {
   id: string;

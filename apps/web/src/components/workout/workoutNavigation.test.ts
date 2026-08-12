@@ -15,4 +15,15 @@ describe('workout URL state', () => {
     expect(selected.get('exercise')).toBe('Bench Press');
     expect(setWorkoutParameter(selected, 'muscle', 'all').has('muscle')).toBe(false);
   });
+
+  it('restores the powerlifting panel and selected competition lift from URL state', () => {
+    const state = resolveWorkoutRoute(new URLSearchParams('section=powerlifting&panel=lift&lift=deadlift&range=8w'));
+    expect(state).toMatchObject({ section: 'powerlifting', powerliftingPanel: 'lift', powerliftingLift: 'deadlift', range: '8w' });
+    expect(resolveWorkoutRoute(new URLSearchParams('section=powerlifting&panel=nope&lift=row')).powerliftingPanel).toBe('overview');
+  });
+
+  it('keeps the Volume & recovery controls in shareable URL state', () => {
+    const state = resolveWorkoutRoute(new URLSearchParams('section=volume&range=8w&compare=1&metric=recovery&region=lower&sort=load'));
+    expect(state).toMatchObject({ section: 'volume', range: '8w', compare: true, volumeMetric: 'recovery', volumeRegion: 'lower', volumeSort: 'load' });
+  });
 });

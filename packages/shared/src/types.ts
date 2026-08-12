@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { ActivityVerificationBadge } from './activity.js';
 
 // ---------- Settings ----------
 
@@ -90,6 +91,12 @@ export const SettingsSchema = z.object({
   celebrationToasts: z.boolean(),
   /** UI sound effects: completion chime, reminder ping, level-up fanfare, focus-timer done. */
   soundEffects: z.boolean(),
+  /** Season 1 progression preferences. These never alter legacy XP. */
+  progressionActiveWeekdays: z.array(z.enum(['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'])).min(3).max(7),
+  progressionContractLockTime: z.string().regex(HHMM),
+  activityWatchBonusConsent: z.boolean(),
+  activitySanitizedRetentionDays: z.number().int().min(1).max(365),
+  celebrationIntensity: z.enum(['minimal', 'standard', 'full']),
   /** Second Brain vault folder, absolute path. null = default `data/vault`. */
   notesVaultPath: z.string().nullable(),
   /** Days a deleted note sits in `.trash` before it's eligible for auto-purge. */
@@ -216,6 +223,11 @@ export const DEFAULT_SETTINGS: Settings = {
   streakRule: 'one_block',
   celebrationToasts: true,
   soundEffects: true,
+  progressionActiveWeekdays: ['mon', 'tue', 'wed', 'thu', 'fri'],
+  progressionContractLockTime: '10:00',
+  activityWatchBonusConsent: false,
+  activitySanitizedRetentionDays: 30,
+  celebrationIntensity: 'standard',
   notesVaultPath: null,
   notesTrashRetentionDays: 30,
   notesSnapshotRetention: 20,
@@ -591,6 +603,9 @@ export interface ReminderDTO {
 
 export interface ReminderFiredEventDTO {
   reminderId: string;
+  /** The domain object the reminder belongs to. */
+  sourceType: 'task' | 'event';
+  sourceId: string;
   taskId: string;
   taskContent: string;
   message: string;
@@ -703,6 +718,8 @@ export interface ScheduleItemDTO {
   chunk?: { index: number; count: number };
   /** True when the latest plan flagged this block's task as at-risk (Phase 2+). */
   atRisk?: boolean;
+  /** Observational ActivityWatch evidence. This never changes the block status. */
+  activityVerification?: ActivityVerificationBadge;
 }
 
 export interface TaskViewDTO {
@@ -1044,6 +1061,107 @@ export interface GamificationSummaryDTO {
   };
   latestSeq: number;
   recentAchievements: AchievementDTO[];
+}
+
+// ---------- Progression V2 ----------
+
+export type ProgressionResource = 'xp' | 'credits' | 'rank_points';
+export type RankTier = 'Bronze' | 'Silver' | 'Gold' | 'Platinum' | 'Diamond' | 'Apex';
+
+export interface SeasonProgress {
+  id: string | null;
+  startLocal: string;
+  endLocal: string;
+  rankPoints: number;
+  tier: RankTier;
+  nextTier: { name: RankTier; at: number } | null;
+}
+
+export interface ProgressionEvent {
+  seq: number;
+  resource: ProgressionResource;
+  kind: string;
+  amount: number;
+  createdAt: string;
+  metadata: Record<string, unknown>;
+}
+
+export interface Mission {
+  id: string;
+  type: 'core' | 'optional' | 'weekly';
+  title: string;
+  detail: string;
+  metric: string;
+  target: number;
+  progress: number;
+  selected: boolean;
+  completedAt: string | null;
+  rewards: { xp: number; credits: number; rankPoints: number };
+}
+
+export interface DailyContract {
+  dateLocal: string;
+  state: 'open' | 'locked' | 'complete' | 'failed' | 'rest';
+  lockAt: string;
+  lockedAt: string | null;
+  optionalMissionId: string | null;
+  coreComplete: boolean;
+  optionalComplete: boolean;
+  missions: Mission[];
+}
+
+export interface AchievementProgress {
+  id: string;
+  category: string;
+  tier: string;
+  name: string;
+  requirement: string;
+  progress: number;
+  target: number;
+  xp: number;
+  credits: number;
+  unlockedAt: string | null;
+}
+
+export interface RewardItem {
+  id: string;
+  title: string;
+  description: string;
+  icon: string | null;
+  creditCost: number;
+  template: 'small' | 'medium' | 'major' | 'custom';
+  repeatable: boolean;
+  cooldownDays: number;
+  active: boolean;
+  realWorldPrice: string | null;
+  available: boolean;
+  unavailableReason: string | null;
+}
+
+export interface RewardRedemption {
+  id: string;
+  rewardId: string;
+  creditCost: number;
+  status: 'claimed' | 'used' | 'refunded';
+  claimedAt: string;
+  usedAt: string | null;
+  refundedAt: string | null;
+}
+
+export interface ProgressionDashboard {
+  started: boolean;
+  lifetimeXp: number;
+  level: number;
+  xpIntoLevel: number;
+  xpForNextLevel: number;
+  credits: number;
+  activeStreak: number;
+  longestStreak: number;
+  pendingWeeklyCredits: number;
+  season: SeasonProgress;
+  contract: DailyContract | null;
+  weeklyMissions: Mission[];
+  recentEvents: ProgressionEvent[];
 }
 
 // ---------- Whiteboards ----------
@@ -2133,6 +2251,8 @@ export const WishlistItemInputSchema = z
     priority: z.number().int().min(1).max(4).default(1),
     status: WishlistStatusSchema.default('considering'),
     priceMinor: z.number().int().nonnegative().nullable().default(null),
+    listedPriceMinor: z.number().int().nonnegative().nullable().default(null),
+    listedCurrency: z.string().regex(/^[A-Z]{3}$/).nullable().default(null),
     targetDate: z.string().date().nullable().default(null),
     goalIds: z.array(z.string().min(1)).max(20).default([]),
   })
@@ -2202,6 +2322,7 @@ export interface WishlistLinkPreviewDTO {
   retailer: string | null;
   imageUrl: string | null;
   priceMinor: number | null;
+  listedPriceMinor: number | null;
   detectedCurrency: string | null;
   warnings: string[];
 }

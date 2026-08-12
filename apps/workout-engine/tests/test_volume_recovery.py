@@ -6,6 +6,7 @@ import os
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from workout import config  # noqa: E402
@@ -231,6 +232,20 @@ class RpeByMuscleTest(unittest.TestCase):
         self.conn.commit()
         info = volume._rpe_by_muscle(self.conn, "2025-02-02")[self.muscle]
         self.assertAlmostEqual(info["creep"], 2.0)     # still 10 - 8, back-off ignored
+
+
+class HistoricalRecoveryBoundaryTest(unittest.TestCase):
+    def test_form_trace_excludes_sets_after_the_requested_week_end(self):
+        fcfg = {"tau_fit": 42, "tau_fat": 7, "z_well": 0.5, "z_under": -0.5}
+        with patch.object(volume.form, "daily_muscle_load", return_value=[
+            ("2026-01-01", 10.0), ("2026-01-02", 12.0), ("2026-01-03", 9.0),
+            ("2026-02-01", 9_999.0),
+        ]), patch.object(volume.form, "form_series", return_value=[
+            ("2026-01-01", 0, 0, 0), ("2026-01-02", 0, 0, 1),
+            ("2026-01-03", 0, 0, 2),
+        ]) as series:
+            volume._muscle_form_z(None, "chest", "2026-01-03", fcfg)
+        self.assertNotIn(("2026-02-01", 9_999.0), series.call_args.args[0])
 
 
 if __name__ == "__main__":

@@ -2,7 +2,7 @@ import type { CSSProperties } from 'react';
 import { DateTime } from 'luxon';
 import type { EventContentArg } from '@fullcalendar/core';
 import type { ScheduleItemDTO } from '@timeblock/shared';
-import { Lock, X } from 'lucide-react';
+import { CircleAlert, CircleCheck, Eye, Lock, X } from 'lucide-react';
 import { DifficultyBadge, PriorityBadge } from '../tasks/taskDisplay.js';
 
 export type Style = { accent: string; bg: string; text: string };
@@ -79,6 +79,9 @@ export default function EventCard({ arg, atRiskTaskIds }: { arg: EventContentArg
       <X size={9} className="shrink-0" /> Missed
     </span>
   ) : null;
+  const verification = item.activityVerification;
+  const verificationLabel = verification?.state === 'verified' ? 'Verified evidence' : verification?.state === 'needs_review' || verification?.state === 'corrected' ? 'Evidence needs review' : 'Observed activity';
+  const VerificationIcon = verification?.state === 'verified' ? CircleCheck : verification?.state === 'needs_review' || verification?.state === 'corrected' ? CircleAlert : Eye;
 
   if (compact) {
     return (
@@ -86,6 +89,7 @@ export default function EventCard({ arg, atRiskTaskIds }: { arg: EventContentArg
         <div className="tb-ev-title">
           {dotColor && <span className="tb-priority-dot" style={{ '--dot': dotColor } as CSSProperties} />}
           {item.locked && <Lock size={9} className="shrink-0" />}
+          {verification && <VerificationIcon size={10} className={verification.state === 'verified' ? 'shrink-0 text-emerald-600 dark:text-emerald-400' : 'shrink-0 text-slate-500 dark:text-neutral-400'} aria-label={verificationLabel} />}
           {missedTag}
           <span className="tb-ev-title-text">{item.title}</span>
         </div>
@@ -98,6 +102,7 @@ export default function EventCard({ arg, atRiskTaskIds }: { arg: EventContentArg
       <div className={`tb-ev-title${short ? '' : ' tb-ev-title-wrap'}`}>
         {dotColor && <span className="tb-priority-dot" style={{ '--dot': dotColor } as CSSProperties} />}
         {item.locked && <Lock size={10} className="shrink-0" />}
+        {verification && <VerificationIcon size={11} className={verification.state === 'verified' ? 'shrink-0 text-emerald-600 dark:text-emerald-400' : 'shrink-0 text-slate-500 dark:text-neutral-400'} aria-label={verificationLabel} />}
         {missedTag}
         <span className="tb-ev-title-text">{item.title}</span>
         {item.chunk && (

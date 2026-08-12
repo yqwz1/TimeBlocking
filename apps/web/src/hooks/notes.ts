@@ -61,6 +61,14 @@ export const useCreateNoteFolder = () => {
   });
 };
 
+export const useDeleteNoteFolder = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (path: string) => api.delete<{ ok: true; trashId: string | null }>(`/notes/folders/${encodeNotePath(path)}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['notes'] }),
+  });
+};
+
 export const useInboxNotes = () => useQuery({ queryKey: ['notes', 'inbox'], queryFn: () => api.get<InboxNoteDTO[]>('/notes/inbox') });
 
 export const useNoteSearch = (q: string) =>

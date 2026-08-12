@@ -13,10 +13,12 @@ import {
   ShoppingBag,
   SlidersHorizontal,
   Dumbbell,
+  Trophy,
+  CookingPot,
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { NavLink, useLocation, useNavigate, useOutlet } from 'react-router-dom';
-import { useLiveSync, useSettings, useSetupStatus } from '../hooks.js';
+import { useActivityNudges, useLiveSync, useSettings, useSetupStatus } from '../hooks.js';
 import { useResizableSidebar } from '../hooks/useResizableSidebar.js';
 import { useTheme } from '../hooks/useTheme.js';
 import CommandPalette from './CommandPalette.js';
@@ -29,12 +31,14 @@ import ScheduleStateChip from './ScheduleStateChip.js';
 import UndoRedoControls from './UndoRedoControls.js';
 import CelebrationToasts from './CelebrationToasts.js';
 import NotificationCenter from './NotificationCenter.js';
-import ReminderToasts from './ReminderToasts.js';
+import AttentionAlerts from './AttentionAlerts.js';
+import FocusTimerMonitor from './FocusTimerMonitor.js';
 import UndoToasts from './UndoToasts.js';
 import ConfettiBurst from './ConfettiBurst.js';
 import VoiceCapture from './VoiceCapture.js';
 import QuickCaptureModal from './notes/QuickCaptureModal.js';
 import { useUiPreferences, type WorkspaceId } from '../lib/uiPreferences.js';
+import { useKitchenStatus } from '../hooks/kitchen.js';
 
 function ThemeToggle({ gameMode }: { gameMode: boolean }) {
   const { setting, resolved, setSetting } = useTheme();
@@ -62,14 +66,18 @@ const workspaceTabs: Array<{ id: WorkspaceId; to: string; label: string; icon: t
   { id: 'whiteboard', to: '/whiteboard', label: 'Whiteboard', icon: PanelsTopLeft },
   { id: 'notes', to: '/notes', label: 'Second Brain', icon: BrainCircuit },
   { id: 'wishlist', to: '/wishlist', label: 'Wishlist', icon: ShoppingBag },
+  { id: 'kitchen', to: '/kitchen', label: 'Kitchen', icon: CookingPot },
   { id: 'workout', to: '/workout', label: 'Workout', icon: Dumbbell },
+  { id: 'progress', to: '/progress', label: 'Progress', icon: Trophy },
 ];
 
 export default function Layout() {
   useLiveSync();
+  useActivityNudges();
   useUndoRedoShortcuts();
   const { data: settings } = useSettings();
   const { preferences } = useUiPreferences();
+  const kitchenStatus = useKitchenStatus();
   const { scopedCommands } = useCommandPaletteState();
   const navigate = useNavigate();
   const [showQuickCapture, setShowQuickCapture] = useState(false);
@@ -139,7 +147,7 @@ export default function Layout() {
     : 'border-slate-200 bg-white text-slate-900 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-100';
 
   return (
-    <div className={`flex h-dvh min-h-0 overflow-hidden transition-colors duration-300 ${gameMode ? 'bg-[#0b0f1a]' : 'bg-slate-50 dark:bg-neutral-950'}`}>
+    <div className={`flex h-dvh min-h-0 overflow-hidden transition-colors duration-300 ${gameMode ? 'bg-[#0b0f1a]' : 'bg-[var(--tb-app-canvas)]'}`}>
       <motion.aside
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -227,8 +235,10 @@ export default function Layout() {
                     )}
                     <span className="relative grid h-6 w-6 shrink-0 place-items-center transition-transform duration-150 group-hover:translate-x-px">
                       <Icon size={16} strokeWidth={1.8} />
+                      {tab.id === 'kitchen' && (kitchenStatus.data?.alertCount ?? 0) > 0 && sidebarCollapsed && <span className="absolute right-0 top-0 h-2 w-2 rounded-full bg-rose-500 ring-2 ring-white dark:ring-neutral-900" />}
                     </span>
                     {!sidebarCollapsed && <span className="relative truncate text-[13px] font-medium">{tab.label}</span>}
+                    {!sidebarCollapsed && tab.id === 'kitchen' && (kitchenStatus.data?.alertCount ?? 0) > 0 && <span className="relative ml-auto rounded-full bg-rose-100 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-rose-700 dark:bg-rose-500/15 dark:text-rose-300">{kitchenStatus.data?.alertCount}</span>}
                   </>
                 )}
               </NavLink>
@@ -300,7 +310,8 @@ export default function Layout() {
         </div>
       </motion.aside>
 
-      <div className="flex min-w-0 flex-1 flex-col pt-[env(titlebar-area-height,0px)]">
+      <div className="relative flex min-w-0 flex-1 flex-col pt-[env(titlebar-area-height,0px)]">
+        <div className="tb-window-drag-region" aria-hidden="true" />
         {setupIncomplete && (
           <div className="shrink-0 border-b border-amber-200/70 bg-amber-50 px-4 py-2 text-center text-sm text-amber-800 dark:border-amber-500/15 dark:bg-amber-500/10 dark:text-amber-300">
             Setup isn't finished yet.{' '}
@@ -330,7 +341,8 @@ export default function Layout() {
         </main>
       </div>
       <CelebrationToasts />
-      <ReminderToasts />
+      <FocusTimerMonitor />
+      <AttentionAlerts />
       <UndoToasts />
       <ConfettiBurst />
       {showQuickCapture && (

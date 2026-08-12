@@ -13,6 +13,7 @@ import { Gcal } from '../integrations/google/client.js';
 import { nowUtcIso } from '../config.js';
 import { recordHabitDone } from '../learning/stats.js';
 import { awardBlockDone } from '../gamification/engine.js';
+import { recordProgressionFact } from '../gamification/progression.js';
 
 type HabitRow = typeof habits.$inferSelect;
 type InstanceRow = typeof habitInstances.$inferSelect;
@@ -223,10 +224,12 @@ export function registerHabitRoutes(app: FastifyInstance, db: DB, manager: SyncM
       db.update(blocks).set({ status: 'done', updatedAtUtc: now }).where(eq(blocks.id, b.id)).run();
       recordHabitDone(db, settings, { startUtc: b.startUtc, endUtc: b.endUtc }, now);
       awardBlockDone(db, settings, { startUtc: b.startUtc, endUtc: b.endUtc }, 'habit_done', b.id, habit.name, now);
+      recordProgressionFact(db, settings, { kind: 'habit_completed', sourceId: b.id, title: habit.name, atUtc: now }, now);
     }
     if (!affected.length) {
       // No calendar block today (e.g. habit not yet scheduled) — still credit the completion.
       awardBlockDone(db, settings, { startUtc: now, endUtc: now }, 'habit_done', instanceId, habit.name, now);
+      recordProgressionFact(db, settings, { kind: 'habit_completed', sourceId: instanceId, title: habit.name, atUtc: now }, now);
     }
 
     await manager.forcePlan('habit-complete-today');

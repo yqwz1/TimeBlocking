@@ -86,6 +86,22 @@ export async function createVaultFolder(root: string, relPath: string): Promise<
   await fsp.mkdir(abs, { recursive: true });
 }
 
+/** Deletes an empty visible vault folder. Notes should be moved to trash first by the folder route. */
+export async function deleteVaultFolder(root: string, relPath: string): Promise<void> {
+  if (!relPath.trim()) throw new VaultPathError('cannot delete the vault root');
+  const abs = safeResolve(root, relPath);
+  let stat: fs.Stats;
+  try {
+    stat = await fsp.stat(abs);
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === 'ENOENT') throw new VaultPathError(`folder not found: ${relPath}`);
+    throw err;
+  }
+  if (!stat.isDirectory()) throw new VaultPathError(`not a folder: ${relPath}`);
+  if ((await fsp.readdir(abs)).length > 0) throw new VaultConflictError(`folder is not empty: ${relPath}`);
+  await fsp.rmdir(abs);
+}
+
 export interface NoteFileStat {
   content: string;
   createdAtUtc: string;
@@ -146,6 +162,25 @@ export async function moveNoteFile(root: string, fromRel: string, toRel: string)
 /** Soft-deletes a note into `.trash/<timestamp>/<relPath>`, preserving its folder structure for restore. Returns the trash folder id. */
 export async function trashNoteFile(root: string, relPath: string): Promise<string> {
   const fromAbs = safeResolve(root, relPath);
+  const ts = `${new Date().toISOString().replace(/[:.]/g, '-')}-${Math.random().toString(36).slice(2, 6)}`;
+  const destAbs = path.join(root, TRASH_DIRNAME, ts, relPath);
+  await fsp.mkdir(path.dirname(destAbs), { recursive: true });
+  await fsp.rename(fromAbs, destAbs);
+  return ts;
+}
+
+/** Moves a folder into one trash entry so its notes can be restored together. */
+export async function trashVaultFolder(root: string, relPath: string): Promise<string> {
+  if (!relPath.trim()) throw new VaultPathError('cannot delete the vault root');
+  const fromAbs = safeResolve(root, relPath);
+  let stat: fs.Stats;
+  try {
+    stat = await fsp.stat(fromAbs);
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === 'ENOENT') throw new VaultPathError(`folder not found: ${relPath}`);
+    throw err;
+  }
+  if (!stat.isDirectory()) throw new VaultPathError(`not a folder: ${relPath}`);
   const ts = `${new Date().toISOString().replace(/[:.]/g, '-')}-${Math.random().toString(36).slice(2, 6)}`;
   const destAbs = path.join(root, TRASH_DIRNAME, ts, relPath);
   await fsp.mkdir(path.dirname(destAbs), { recursive: true });
@@ -231,36 +266,39 @@ export async function listTrash(root: string): Promise<TrashEntry[]> {
   const trashDir = path.join(root, TRASH_DIRNAME);
   if (!fs.existsSync(trashDir)) return [];
   const folders = await fsp.readdir(trashDir, { withFileTypes: true });
-  const out: TrashEntry[] = [];
+  const out = new Map<string, TrashEntry>();
   for (const folder of folders) {
     if (!folder.isDirectory()) continue;
     const folderAbs = path.join(trashDir, folder.name);
     const [files, stat] = await Promise.all([findFilesRecursive(folderAbs), fsp.stat(folderAbs)]);
-    for (const f of files) out.push({ trashId: folder.name, originalPath: f, deletedAt: stat.mtime.toISOString() });
+    if (files.length > 0) out.set(folder.name, { trashId: folder.name, originalPath: files[0], deletedAt: stat.mtime.toISOString() });
   }
-  return out;
+  return [...out.values()];
 }
 
 /** Restores a trashed note back to its original path, appending " (restored)" if something now occupies that path. */
-export async function restoreFromTrash(root: string, trashId: string): Promise<string> {
+export async function restoreFromTrash(root: string, trashId: string): Promise<string[]> {
   const trashDir = path.join(root, TRASH_DIRNAME, trashId);
   if (!fs.existsSync(trashDir)) throw new VaultPathError('trash entry not found');
   const files = await findFilesRecursive(trashDir);
   if (files.length === 0) throw new VaultPathError('trash entry is empty');
-  const relPath = files[0];
-  const fromAbs = path.join(trashDir, relPath);
-  let toRel = relPath;
-  let toAbs = safeResolve(root, toRel);
-  if (fs.existsSync(toAbs)) {
-    const ext = path.extname(relPath);
-    const base = relPath.slice(0, -ext.length);
-    toRel = `${base} (restored)${ext}`;
-    toAbs = safeResolve(root, toRel);
+  const restored: string[] = [];
+  for (const relPath of files) {
+    const fromAbs = path.join(trashDir, relPath);
+    let toRel = relPath;
+    let toAbs = safeResolve(root, toRel);
+    if (fs.existsSync(toAbs)) {
+      const ext = path.extname(relPath);
+      const base = relPath.slice(0, -ext.length);
+      toRel = `${base} (restored)${ext}`;
+      toAbs = safeResolve(root, toRel);
+    }
+    await fsp.mkdir(path.dirname(toAbs), { recursive: true });
+    await fsp.rename(fromAbs, toAbs);
+    restored.push(toRel);
   }
-  await fsp.mkdir(path.dirname(toAbs), { recursive: true });
-  await fsp.rename(fromAbs, toAbs);
   await fsp.rm(trashDir, { recursive: true, force: true });
-  return toRel;
+  return restored;
 }
 
 export async function purgeTrashEntry(root: string, trashId: string): Promise<void> {

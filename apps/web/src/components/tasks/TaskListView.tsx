@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { AnimatePresence, animate, motion, useDragControls, useMotionValue, useTransform } from 'motion/react';
 import { CheckSquare, ChevronRight, Clock, GripVertical, MoreHorizontal, Pin, Trash2 } from 'lucide-react';
 import type { TaskDTO } from '@timeblock/shared';
@@ -10,6 +10,7 @@ import { useTaskHoverPreview } from './TaskHoverPreview.js';
 import { useTaskContextMenu } from './TaskContextMenu.js';
 import QuickAddTask from './QuickAddTask.js';
 import TaskCheckbox from './TaskCheckbox.js';
+import { usePersistentStringSet } from '../../hooks/usePersistentUiState.js';
 
 const SWIPE_DELETE_THRESHOLD = -96;
 
@@ -37,6 +38,10 @@ function TaskRow({
   onOpen,
   onReorder,
   reorderable,
+  expanded,
+  onToggleExpanded,
+  onExpand,
+  isExpanded,
 }: {
   task: TaskDTO;
   depth: number;
@@ -45,13 +50,16 @@ function TaskRow({
   onOpen: (id: string) => void;
   onReorder: (ids: string[]) => void;
   reorderable: boolean;
+  expanded: boolean;
+  onToggleExpanded: (id: string) => void;
+  onExpand: (id: string) => void;
+  isExpanded: (id: string) => boolean;
 }) {
   const update = useUpdateTask();
   const del = useDeleteTask();
   const labelColors = useLabelColorMap();
   const hover = useTaskHoverPreview<HTMLSpanElement>(task);
   const openTaskMenu = useTaskContextMenu();
-  const [expanded, setExpanded] = useState(depth === 0);
   const [addingSub, setAddingSub] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [dragging, setDragging] = useState(false);
@@ -186,7 +194,7 @@ function TaskRow({
           {kids.length > 0 ? (
             <button
               type="button"
-              onClick={() => setExpanded((v) => !v)}
+              onClick={() => onToggleExpanded(task.id)}
               className="-mx-1 shrink-0 rounded p-1 text-slate-400 hover:bg-slate-200/60 hover:text-slate-600 dark:hover:bg-neutral-700/60 dark:hover:text-neutral-300"
               aria-label={expanded ? 'Collapse subtasks' : 'Expand subtasks'}
             >
@@ -291,7 +299,7 @@ function TaskRow({
               defaults={{ parentId: task.id, projectId: task.projectId ?? undefined }}
               onCreated={() => {
                 setAddingSub(false);
-                setExpanded(true);
+                onExpand(task.id);
               }}
             />
           </div>
@@ -303,7 +311,7 @@ function TaskRow({
         <AnimatePresence initial={false}>
           {expanded &&
             kids.map((k) => (
-              <TaskRow key={k.id} task={k} depth={depth + 1} siblings={kids} childrenOf={childrenOf} onOpen={onOpen} onReorder={onReorder} reorderable={reorderable} />
+              <TaskRow key={k.id} task={k} depth={depth + 1} siblings={kids} childrenOf={childrenOf} onOpen={onOpen} onReorder={onReorder} reorderable={reorderable} expanded={isExpanded(k.id)} onToggleExpanded={onToggleExpanded} onExpand={onExpand} isExpanded={isExpanded} />
             ))}
         </AnimatePresence>
       )}
@@ -326,6 +334,23 @@ export default function TaskListView({
 }) {
   const reorder = useReorderTasks();
   const reorderable = sortBy === 'manual';
+  const [collapsedTaskIds, setCollapsedTaskIds] = usePersistentStringSet('tb.tasks.collapsed-subtask-ids');
+  const toggleExpanded = useCallback((id: string) => {
+    setCollapsedTaskIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }, [setCollapsedTaskIds]);
+  const expand = useCallback((id: string) => {
+    setCollapsedTaskIds((current) => {
+      if (!current.has(id)) return current;
+      const next = new Set(current);
+      next.delete(id);
+      return next;
+    });
+  }, [setCollapsedTaskIds]);
+  const isExpanded = useCallback((id: string) => !collapsedTaskIds.has(id), [collapsedTaskIds]);
   const { roots, childrenOf } = useMemo(() => {
     // Completed tasks drop out of the working list (they linger with strikethrough otherwise).
     // Select the "Done" status filter to review them.
@@ -358,7 +383,7 @@ export default function TaskListView({
         <ul className="space-y-2">
           <AnimatePresence initial={false}>
             {roots.map((t) => (
-              <TaskRow key={t.id} task={t} depth={0} siblings={roots} childrenOf={childrenOf} onOpen={onOpenTask} onReorder={handleReorder} reorderable={reorderable} />
+              <TaskRow key={t.id} task={t} depth={0} siblings={roots} childrenOf={childrenOf} onOpen={onOpenTask} onReorder={handleReorder} reorderable={reorderable} expanded={isExpanded(t.id)} onToggleExpanded={toggleExpanded} onExpand={expand} isExpanded={isExpanded} />
             ))}
           </AnimatePresence>
         </ul>

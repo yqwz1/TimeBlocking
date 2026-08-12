@@ -8,6 +8,7 @@ import { getSettings } from '../settings.js';
 import { nowUtcIso } from '../config.js';
 import { buildDailySummary } from '../plan/daily.js';
 import { awardXp } from '../gamification/engine.js';
+import { recordProgressionFact } from '../gamification/progression.js';
 
 type Row = typeof dailyPlans.$inferSelect;
 
@@ -89,6 +90,7 @@ export function registerDailyRoutes(app: FastifyInstance, db: DB) {
       .run();
     // Reward the ritual once per day (idempotent on kind+sourceId).
     awardXp(db, settings, { kind: 'shutdown', sourceId: date, amount: SHUTDOWN_XP, dateLocal: date, meta: { title: 'Daily shutdown' } }, now);
+    recordProgressionFact(db, settings, { kind: 'shutdown_completed', sourceId: date, atUtc: now }, now);
     return toDTO(db, getRow(db, date), date, tz);
   });
 

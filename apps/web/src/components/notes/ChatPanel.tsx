@@ -39,6 +39,7 @@ import {
   useWeeklyBriefing,
 } from '../../hooks/assistant.js';
 import { api } from '../../api.js';
+import { usePersistentBoolean } from '../../hooks/usePersistentUiState.js';
 
 type PanelTab = 'brief' | 'chat' | 'memory';
 
@@ -96,6 +97,7 @@ function BriefView({ onNavigate }: { onNavigate: (id: string) => void }) {
   const { data: proposals = [] } = useActionProposals();
   const approve = useApproveActionProposal();
   const reject = useRejectActionProposal();
+  const [weeklyOpen, setWeeklyOpen] = usePersistentBoolean('second-brain.ask.weekly-brief-open', false);
 
   if (isLoading || !daily) {
     return <div className="grid h-full place-items-center text-sm text-stone-400">Preparing today’s command brief…</div>;
@@ -206,7 +208,7 @@ function BriefView({ onNavigate }: { onNavigate: (id: string) => void }) {
       )}
 
       {weekly && (
-        <details className="group rounded-2xl border border-stone-200/80 bg-white/60 p-4 dark:border-neutral-800 dark:bg-neutral-900/60">
+        <details open={weeklyOpen} onToggle={(event) => setWeeklyOpen(event.currentTarget.open)} className="group rounded-2xl border border-stone-200/80 bg-white/60 p-4 dark:border-neutral-800 dark:bg-neutral-900/60">
           <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-semibold text-stone-700 dark:text-neutral-200">
             <span className="flex items-center gap-2"><History size={14} /> This week at a glance</span>
             <ChevronDown size={14} className="transition group-open:rotate-180" />
@@ -287,6 +289,7 @@ function MemoryView({ onNavigate }: { onNavigate: (id: string) => void }) {
   const { data: onboarding } = useAssistantOnboarding();
   const submitOnboarding = useSubmitAssistantOnboarding();
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [onboardingOpen, setOnboardingOpen] = usePersistentBoolean('second-brain.ask.onboarding-open', false);
   const candidates = memories.filter((memory) => memory.status === 'candidate');
   const confirmed = memories.filter((memory) => memory.status === 'confirmed');
   return (
@@ -299,7 +302,7 @@ function MemoryView({ onNavigate }: { onNavigate: (id: string) => void }) {
           Confirmed facts may shape important advice. Candidates stay labelled until you approve them. Every claim keeps its source.
         </p>
       </section>
-      <details className="group rounded-2xl border border-stone-200/80 bg-white/70 p-4 dark:border-neutral-800 dark:bg-neutral-900/60">
+      <details open={onboardingOpen} onToggle={(event) => setOnboardingOpen(event.currentTarget.open)} className="group rounded-2xl border border-stone-200/80 bg-white/70 p-4 dark:border-neutral-800 dark:bg-neutral-900/60">
         <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-semibold text-stone-700 dark:text-neutral-200">
           <span className="flex items-center gap-2"><Sparkles size={14} className="text-amber-500" /> Guided onboarding interview</span>
           <ChevronDown size={14} className="transition group-open:rotate-180" />

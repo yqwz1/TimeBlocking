@@ -150,14 +150,19 @@ export function buildWishlistItem(product, wishlistCurrency = 'SAR') {
   } catch { /* An image is optional. */ }
   const detectedCurrency = String(product?.currency || '').toUpperCase();
   const currency = String(wishlistCurrency || 'SAR').toUpperCase();
-  const amount = Number(product?.price);
+  const hasAmount = product?.price != null && String(product.price).trim() !== '' && Number.isFinite(Number(product.price));
+  const amount = hasAmount ? Number(product.price) : null;
   let priceMinor = null;
-  if (detectedCurrency === currency && Number.isFinite(amount) && amount >= 0) {
+  let listedPriceMinor = null;
+  if (detectedCurrency && amount != null && amount >= 0) {
     let digits = 2;
-    try { digits = new Intl.NumberFormat('en', { style: 'currency', currency }).resolvedOptions().maximumFractionDigits ?? 2; } catch { /* Keep two decimals. */ }
-    priceMinor = Math.round(amount * 10 ** digits);
+    try { digits = new Intl.NumberFormat('en', { style: 'currency', currency: detectedCurrency }).resolvedOptions().maximumFractionDigits ?? 2; } catch { /* Keep two decimals. */ }
+    listedPriceMinor = Math.round(amount * 10 ** digits);
   }
-  const notes = detectedCurrency && detectedCurrency !== currency && Number.isFinite(amount)
+  if (detectedCurrency === currency && amount != null && amount >= 0) {
+    priceMinor = listedPriceMinor;
+  }
+  const notes = detectedCurrency && detectedCurrency !== currency && amount != null
     ? `Listed price: ${detectedCurrency} ${amount}. Convert to ${currency} before planning this purchase.`
     : '';
   return {
@@ -170,6 +175,8 @@ export function buildWishlistItem(product, wishlistCurrency = 'SAR') {
     priority: 1,
     status: 'considering',
     priceMinor,
+    listedPriceMinor,
+    listedCurrency: detectedCurrency || null,
     targetDate: null,
     goalIds: [],
   };

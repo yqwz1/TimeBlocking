@@ -3,6 +3,17 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { celebrateTaskComplete } from './lib/celebrate.js';
 import type {
   AchievementDTO,
+  ActivityAnalytics,
+  ActivityAiAnalysis,
+  ActivityAiAnalyzeInput,
+  ActivityAiPreview,
+  ActivityAiPreviewInput,
+  ActivityConnectInput,
+  ActivityCorrectionInput,
+  ActivityPersonalAnalytics,
+  ActivityRecommendation,
+  BlockActivitySummary,
+  ActivityStatus,
   AnalyticsDailyDTO,
   AttachmentDTO,
   BriefDTO,
@@ -18,6 +29,10 @@ import type {
   EventInput,
   EventPatch,
   GamificationSummaryDTO,
+  ProgressionDashboard,
+  AchievementProgress,
+  RewardItem,
+  RewardRedemption,
   GoalDTO,
   GoalInput,
   GoalMilestoneInput,
@@ -54,6 +69,7 @@ import type {
 import { api } from './api';
 import { undoStack } from './lib/undoStack.js';
 import { showUndoToast } from './lib/actionToast.js';
+import { addNotification } from './lib/notifications.js';
 
 // ---------- live sync (SSE) ----------
 
@@ -144,6 +160,91 @@ export const useBackupDriveNow = () => {
 
 export const useRestoreDriveBackup = () =>
   useMutation({ mutationFn: (id: string) => api.post<{ ok: true; inspectionPath: string }>(`/drive/backups/${encodeURIComponent(id)}/restore`) });
+
+// ---------- ActivityWatch (local activity intelligence) ----------
+
+export const useActivityStatus = () =>
+  useQuery({ queryKey: ['activity', 'status'], queryFn: () => api.get<ActivityStatus>('/activity/status'), refetchInterval: 30_000 });
+
+export const useConnectActivityWatch = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: ActivityConnectInput) => api.post<ActivityStatus>('/activity/connect', input),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ['activity', 'status'] }),
+  });
+};
+
+export const useBlockActivity = (blockId?: string) =>
+  useQuery({
+    queryKey: ['activity', 'block', blockId],
+    queryFn: () => api.get<BlockActivitySummary>(`/blocks/${encodeURIComponent(blockId!)}/activity`),
+    enabled: !!blockId,
+    retry: false,
+  });
+
+export const useCorrectBlockActivity = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ blockId, correction }: { blockId: string; correction: ActivityCorrectionInput }) =>
+      api.post<BlockActivitySummary>(`/blocks/${encodeURIComponent(blockId)}/activity/correction`, correction),
+    onSuccess: (summary) => {
+      qc.setQueryData(['activity', 'block', summary.blockId], summary);
+      void qc.invalidateQueries({ queryKey: ['schedule'] });
+      void qc.invalidateQueries({ queryKey: ['activity', 'analytics'] });
+    },
+  });
+};
+
+export const useActivityAnalytics = (fromUtc: string, toUtc: string) =>
+  useQuery({
+    queryKey: ['activity', 'analytics', fromUtc, toUtc],
+    queryFn: () => api.get<ActivityAnalytics>(`/activity/analytics?from=${encodeURIComponent(fromUtc)}&to=${encodeURIComponent(toUtc)}`),
+  });
+
+export const useActivityPersonalAnalytics = (fromUtc: string, toUtc: string) =>
+  useQuery({
+    queryKey: ['activity', 'personal-analytics', fromUtc, toUtc],
+    queryFn: () => api.get<ActivityPersonalAnalytics>(`/activity/personal-analytics?from=${encodeURIComponent(fromUtc)}&to=${encodeURIComponent(toUtc)}`),
+  });
+
+/** Prepares an exact aggregate payload locally for the user's review; it does not contact an AI provider. */
+export const useCreateActivityAiPreview = () =>
+  useMutation({
+    mutationFn: (input: ActivityAiPreviewInput) => api.post<ActivityAiPreview>('/activity/ai/preview', input),
+  });
+
+/** Consumes a reviewed activity preview exactly once. The payload itself is never posted back from the browser. */
+export const useAnalyzeActivityAiPreview = () =>
+  useMutation({
+    mutationFn: (input: ActivityAiAnalyzeInput) => api.post<ActivityAiAnalysis>('/activity/ai/analyze', input),
+  });
+
+export const useActivityRecommendations = () =>
+  useQuery({ queryKey: ['activity', 'recommendations'], queryFn: () => api.get<ActivityRecommendation[]>('/activity/recommendations'), refetchInterval: 60_000 });
+
+export const useUpdateActivityRecommendation = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, action }: { id: string; action: 'accept' | 'dismiss' }) => api.post<ActivityRecommendation>(`/activity/recommendations/${encodeURIComponent(id)}/${action}`),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ['activity', 'recommendations'] }),
+  });
+};
+
+/** Turn server-side suggestions into inbox entries. This only surfaces evidence; it takes no action on a block. */
+export function useActivityNudges() {
+  const recommendations = useActivityRecommendations();
+  useEffect(() => {
+    for (const recommendation of recommendations.data?.filter((item) => item.status === 'active') ?? []) {
+      addNotification({
+        id: `activity:${recommendation.id}`,
+        kind: 'activity',
+        title: recommendation.title,
+        body: recommendation.detail ?? undefined,
+        link: '/tasks?view=analytics',
+      });
+    }
+  }, [recommendations.data]);
+}
 
 // ---------- sync ----------
 
@@ -1023,6 +1124,38 @@ export const useBuyFreeze = () => {
   return useMutation({
     mutationFn: () => api.post<{ ok: true; freezes: number }>('/gamification/freeze/buy'),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['gamification'] }),
+  });
+};
+
+// ---------- Progression V2 ----------
+
+export const useProgressionDashboard = () =>
+  useQuery({ queryKey: ['progression', 'dashboard'], queryFn: () => api.get<ProgressionDashboard>('/progression/dashboard'), refetchInterval: 60_000 });
+
+export const useProgressionAchievements = () =>
+  useQuery({ queryKey: ['progression', 'achievements'], queryFn: () => api.get<AchievementProgress[]>('/progression/achievements') });
+
+export const useProgressionRewards = () =>
+  useQuery({ queryKey: ['progression', 'rewards'], queryFn: () => api.get<RewardItem[]>('/progression/rewards') });
+
+export const useProgressionRedemptions = () =>
+  useQuery({ queryKey: ['progression', 'redemptions'], queryFn: () => api.get<RewardRedemption[]>('/progression/redemptions') });
+
+export const useSelectProgressionMission = () => {
+  const qc = useQueryClient();
+  return useMutation({ mutationFn: (id: string) => api.post<ProgressionDashboard>(`/progression/missions/${id}/select`), onSuccess: () => qc.invalidateQueries({ queryKey: ['progression'] }) });
+};
+
+export const useClaimProgressionReward = () => {
+  const qc = useQueryClient();
+  return useMutation({ mutationFn: (id: string) => api.post<RewardRedemption>(`/progression/rewards/${id}/claim`), onSuccess: () => qc.invalidateQueries({ queryKey: ['progression'] }) });
+};
+
+export const useCreateProgressionReward = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: Pick<RewardItem, 'title' | 'description' | 'icon' | 'creditCost' | 'template' | 'repeatable' | 'cooldownDays' | 'active' | 'realWorldPrice'>) => api.post<RewardItem>('/progression/rewards', input),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['progression'] }),
   });
 };
 

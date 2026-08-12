@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { CSSProperties, PointerEvent as ReactPointerEvent } from 'react';
+import type { CSSProperties, PointerEvent as ReactPointerEvent, ReactNode } from 'react';
 import {
   BookOpenText,
   Bookmark,
@@ -43,6 +43,7 @@ import {
   useCreateNoteFolder,
   useCreateNoteFromTemplate,
   useDeleteNote,
+  useDeleteNoteFolder,
   useDraftLinkedInPost,
   useGenerateDigest,
   useInboxNotes,
@@ -70,6 +71,8 @@ import {
 import { actionToasts, showUndoToast } from '../lib/actionToast.js';
 import { useCommandPaletteScope } from '../lib/commandPalette.js';
 import { getRecentNoteIds, recordNoteOpened } from '../lib/recentNotes.js';
+import { noteFileNameForRename, notePathInFolder } from '../lib/notePaths.js';
+import { usePersistentBoolean } from '../hooks/usePersistentUiState.js';
 import NoteTree from '../components/notes/NoteTree.js';
 import { NoteAppearancePicker } from '../components/notes/noteAppearance.js';
 import NoteEditor, { type NoteEditorHandle } from '../components/notes/NoteEditor.js';
@@ -109,6 +112,15 @@ function readPanelWidth(key: string, fallback: number): number {
 function readPanelVisibility(key: string, fallback: boolean): boolean {
   const value = window.localStorage.getItem(key);
   return value === null ? fallback : value === 'true';
+}
+
+function PersistedDisclosure({ storageKey, children }: { storageKey: string; children: ReactNode }) {
+  const [open, setOpen] = usePersistentBoolean(storageKey, false);
+  return (
+    <details className="sb-disclosure" open={open} onToggle={(event) => setOpen(event.currentTarget.open)}>
+      {children}
+    </details>
+  );
 }
 
 const NOTE_TABS_STORAGE_KEY = 'second-brain.note-tabs';
@@ -195,6 +207,8 @@ export default function SecondBrainPage() {
   const createFromTemplate = useCreateNoteFromTemplate();
   const saveNote = useSaveNote();
   const deleteNote = useDeleteNote();
+  const deleteFolder = useDeleteNoteFolder();
+  const restoreNote = useRestoreNote();
   const moveNote = useMoveNote();
   const reindex = useReindexNotes();
   const togglePin = useToggleNotePin();
@@ -541,8 +555,9 @@ export default function SecondBrainPage() {
   function handleNewFolder(parentFolder: string) {
     const name = window.prompt('Folder name');
     if (!name?.trim()) return;
-    const path = parentFolder ? `${parentFolder}/${name}` : name;
-    createFolder.mutate({ path });
+    const safeName = name.trim().replace(/[\\/]/g, '-');
+    const path = notePathInFolder(parentFolder, safeName);
+    createFolder.mutate({ path }, { onError: (error) => showLibraryError(error) });
   }
 
   function handleNewProject(parentFolder: string) {
@@ -560,11 +575,17 @@ export default function SecondBrainPage() {
               path,
               content: `---\ntype: project\nstatus: active\n---\n\n# ${safeName}\n\n## Outcome\n\nDescribe the result this project should create.\n\n## Next actions\n\n- [ ] Define the next concrete step\n\n## Notes\n\n`,
             },
-            { onSuccess: (project) => setSelectedId(project.id) },
+            { onSuccess: (project) => setSelectedId(project.id), onError: (error) => showLibraryError(error) },
           );
         },
+        onError: (error) => showLibraryError(error),
       },
     );
+  }
+
+  function showLibraryError(error: unknown) {
+    const message = error instanceof Error ? error.message : 'The vault operation failed.';
+    actionToasts.show(message, () => {}, 'OK');
   }
 
   function handleCreateAndOpen(title: string) {
@@ -626,26 +647,49 @@ export default function SecondBrainPage() {
           });
         });
       },
+      onError: (error) => showLibraryError(error),
     });
   }
 
-  function handleMove(fromId: string, toFolder: string) {
-    const fileName = fromId.split('/').pop()!;
-    const toPath = toFolder ? `${toFolder}/${fileName}` : fileName;
+  function handleDeleteFolder(folderPath: string) {
+    const label = folderPath.split('/').pop() || folderPath;
+    if (!window.confirm(`Delete the folder "${label}"? Notes inside it will move to trash.`)) return;
+    const affectedIds = (notes ?? []).filter((item) => item.id.startsWith(`${folderPath}/`)).map((item) => item.id);
+    deleteFolder.mutate(folderPath, {
+      onSuccess: (result) => {
+        for (const id of affectedIds) closeNoteTab(id);
+        if (result.trashId) {
+          showUndoToast(`"${label}" moved to trash.`, () => {
+            restoreNote.mutate(result.trashId!);
+          });
+        } else {
+          actionToasts.show(`Deleted "${label}".`, () => {}, 'OK');
+        }
+      },
+      onError: (error) => showLibraryError(error),
+    });
+  }
+
+  function moveNoteToPath(fromId: string, toPath: string) {
     if (toPath === fromId) return;
     moveNote.mutate(
       { from: fromId, path: toPath },
       {
-        onSuccess: (updated) => {
-          replaceNoteId(fromId, updated.id);
-        },
+        onSuccess: (updated) => replaceNoteId(fromId, updated.id),
+        onError: (error) => showLibraryError(error),
       },
     );
   }
 
+  function handleMove(fromId: string, toFolder: string) {
+    const fileName = fromId.split('/').pop()!;
+    moveNoteToPath(fromId, notePathInFolder(toFolder, fileName));
+  }
+
   function handleRename(id: string, newFileName: string) {
     const folder = id.includes('/') ? id.slice(0, id.lastIndexOf('/')) : '';
-    handleMove(id, folder ? `${folder}/${newFileName}` : newFileName);
+    const fileName = noteFileNameForRename(newFileName);
+    if (fileName) moveNoteToPath(id, notePathInFolder(folder, fileName));
   }
 
   function handleRenameOpenNote() {
@@ -861,7 +905,7 @@ export default function SecondBrainPage() {
           </button>
         </div>
         <div className="sb-library-disclosures">
-          <details className="sb-disclosure">
+          <PersistedDisclosure storageKey="second-brain.disclosure.inbox-open">
             <summary>
               <span><Inbox size={13} /> Inbox</span>
               <span className={pendingInboxCount > 0 ? 'sb-status-count is-warm' : 'sb-status-count'}>{pendingInboxCount}</span>
@@ -878,9 +922,9 @@ export default function SecondBrainPage() {
                 </button>
               ))}
             </div>
-          </details>
+          </PersistedDisclosure>
 
-          <details className="sb-disclosure">
+          <PersistedDisclosure storageKey="second-brain.disclosure.on-this-day-open">
             <summary>
               <span><History size={13} /> On this day</span>
               <span className="sb-disclosure-hint">Review</span>
@@ -888,9 +932,9 @@ export default function SecondBrainPage() {
             <div className="sb-disclosure-body">
               <OnThisDayCard data={onThisDay} onOpenNote={setSelectedId} embedded />
             </div>
-          </details>
+          </PersistedDisclosure>
 
-          <details className="sb-disclosure">
+          <PersistedDisclosure storageKey="second-brain.disclosure.tools-open">
             <summary>
               <span><SlidersHorizontal size={13} /> Tools</span>
               <span className="sb-disclosure-hint">8</span>
@@ -922,7 +966,7 @@ export default function SecondBrainPage() {
                 <Trash2 size={13} /><span>Trash</span>
               </button>
             </div>
-          </details>
+          </PersistedDisclosure>
         </div>
         <NoteTree
           notes={notes ?? []}
@@ -931,6 +975,7 @@ export default function SecondBrainPage() {
           recentIds={recentIds}
           onSelect={setSelectedId}
           onDelete={handleDelete}
+          onDeleteFolder={handleDeleteFolder}
           onRename={handleRename}
           onMove={handleMove}
           onNewNote={handleNewNote}

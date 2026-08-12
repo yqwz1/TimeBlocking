@@ -363,6 +363,105 @@ export const gamificationState = sqliteTable('gamification_state', {
   value: text('value').notNull(),
 });
 
+/** Season 1+ progression is deliberately isolated from the immutable V1 archive above. */
+export const progressionProfiles = sqliteTable('progression_profiles', {
+  id: text('id').primaryKey(), // always "default" for the local-first profile
+  seasonStartLocal: text('season_start_local').notNull(),
+  activeStreak: integer('active_streak').notNull().default(0),
+  longestStreak: integer('longest_streak').notNull().default(0),
+  pendingWeeklyCredits: integer('pending_weekly_credits').notNull().default(0),
+  createdAtUtc: text('created_at_utc').notNull(),
+  updatedAtUtc: text('updated_at_utc').notNull(),
+});
+
+export const progressionSeasons = sqliteTable('progression_seasons', {
+  id: text('id').primaryKey(),
+  startLocal: text('start_local').notNull(),
+  endLocal: text('end_local').notNull(),
+  archivedRankPoints: integer('archived_rank_points'),
+  archivedAtUtc: text('archived_at_utc'),
+  createdAtUtc: text('created_at_utc').notNull(),
+}, (t) => [uniqueIndex('idx_progression_season_start').on(t.startLocal)]);
+
+/** Immutable V2 balance source. XP is never negative; Credits may be spent only by a reward claim. */
+export const progressionLedger = sqliteTable('progression_ledger', {
+  seq: integer('seq').primaryKey({ autoIncrement: true }),
+  seasonId: text('season_id'),
+  resource: text('resource').notNull(), // xp|credits|rank_points
+  kind: text('kind').notNull(),
+  sourceId: text('source_id').notNull(),
+  amount: integer('amount').notNull(),
+  formulaVersion: text('formula_version').notNull(),
+  metadata: text('metadata').notNull().default('{}'),
+  createdAtUtc: text('created_at_utc').notNull(),
+}, (t) => [
+  uniqueIndex('idx_progression_ledger_idempotency').on(t.resource, t.kind, t.sourceId, t.seasonId),
+  index('idx_progression_ledger_season').on(t.seasonId, t.seq),
+]);
+
+export const dailyContracts = sqliteTable('daily_contracts', {
+  dateLocal: text('date_local').primaryKey(),
+  seasonId: text('season_id'),
+  state: text('state').notNull().default('open'), // open|locked|complete|failed|rest
+  optionalMissionId: text('optional_mission_id'),
+  lockAtUtc: text('lock_at_utc').notNull(),
+  lockedAtUtc: text('locked_at_utc'),
+  evaluatedAtUtc: text('evaluated_at_utc'),
+  createdAtUtc: text('created_at_utc').notNull(),
+  updatedAtUtc: text('updated_at_utc').notNull(),
+});
+
+export const progressionMissions = sqliteTable('progression_missions', {
+  id: text('id').primaryKey(),
+  contractDateLocal: text('contract_date_local'),
+  weekStartLocal: text('week_start_local'),
+  seasonId: text('season_id'),
+  type: text('type').notNull(), // core|optional|weekly
+  title: text('title').notNull(),
+  detail: text('detail').notNull().default(''),
+  metric: text('metric').notNull(), // block_count|focus_minutes|habit_count|shutdown|weekly_review
+  target: integer('target').notNull(),
+  progress: integer('progress').notNull().default(0),
+  selected: integer('selected').notNull().default(0),
+  completedAtUtc: text('completed_at_utc'),
+  rewardXp: integer('reward_xp').notNull().default(0),
+  rewardCredits: integer('reward_credits').notNull().default(0),
+  rewardRank: integer('reward_rank').notNull().default(0),
+  createdAtUtc: text('created_at_utc').notNull(),
+}, (t) => [index('idx_progression_missions_contract').on(t.contractDateLocal), index('idx_progression_missions_week').on(t.weekStartLocal)]);
+
+export const progressionRewards = sqliteTable('progression_rewards', {
+  id: text('id').primaryKey(),
+  title: text('title').notNull(),
+  description: text('description').notNull().default(''),
+  icon: text('icon'),
+  creditCost: integer('credit_cost').notNull(),
+  template: text('template').notNull().default('custom'), // small|medium|major|custom
+  repeatable: integer('repeatable').notNull().default(1),
+  cooldownDays: integer('cooldown_days').notNull().default(0),
+  active: integer('active').notNull().default(1),
+  realWorldPrice: text('real_world_price'),
+  createdAtUtc: text('created_at_utc').notNull(),
+  updatedAtUtc: text('updated_at_utc').notNull(),
+});
+
+export const progressionRedemptions = sqliteTable('progression_redemptions', {
+  id: text('id').primaryKey(),
+  rewardId: text('reward_id').notNull(),
+  creditCost: integer('credit_cost').notNull(),
+  status: text('status').notNull().default('claimed'), // claimed|used|refunded
+  claimedAtUtc: text('claimed_at_utc').notNull(),
+  usedAtUtc: text('used_at_utc'),
+  refundedAtUtc: text('refunded_at_utc'),
+}, (t) => [index('idx_progression_redemptions_reward').on(t.rewardId, t.claimedAtUtc)]);
+
+export const progressionAchievements = sqliteTable('progression_achievements', {
+  id: text('id').primaryKey(),
+  progress: integer('progress').notNull().default(0),
+  unlockedAtUtc: text('unlocked_at_utc'),
+  updatedAtUtc: text('updated_at_utc').notNull(),
+});
+
 /** One row per local day holding the daily highlight + end-of-day shutdown ritual. */
 export const dailyPlans = sqliteTable('daily_plans', {
   date: text('date').primaryKey(), // local YYYY-MM-DD
@@ -1083,6 +1182,8 @@ export const wishlistItems = sqliteTable(
     priority: integer('priority').notNull().default(1),
     status: text('status').notNull().default('considering'),
     priceMinor: integer('price_minor'),
+    listedPriceMinor: integer('listed_price_minor'),
+    listedCurrency: text('listed_currency'),
     targetDate: text('target_date'),
     purchasedAt: text('purchased_at'),
     actualPriceMinor: integer('actual_price_minor'),
@@ -1125,3 +1226,286 @@ export const workoutJobs = sqliteTable(
   },
   (t) => [index('idx_workout_jobs_status').on(t.status), index('idx_workout_jobs_created').on(t.createdAtUtc)],
 );
+
+/** Local ActivityWatch connection metadata. No credentials or remote endpoints are stored. */
+export const activitySources = sqliteTable(
+  'activity_sources',
+  {
+    id: text('id').primaryKey(),
+    sourceKey: text('source_key').notNull(),
+    port: integer('port').notNull(),
+    version: text('version'),
+    capabilities: text('capabilities').notNull().default('{}'),
+    mode: text('mode').notNull().default('off'),
+    health: text('health').notNull().default('disconnected'),
+    lastSuccessfulSyncAtUtc: text('last_successful_sync_at_utc'),
+    lastAttemptAtUtc: text('last_attempt_at_utc'),
+    cursor: text('cursor'),
+    backfillStatus: text('backfill_status').notNull().default('not_started'),
+    lastErrorCode: text('last_error_code'),
+    createdAtUtc: text('created_at_utc').notNull(),
+    updatedAtUtc: text('updated_at_utc').notNull(),
+  },
+  (t) => [uniqueIndex('idx_activity_sources_key').on(t.sourceKey), index('idx_activity_sources_updated').on(t.updatedAtUtc)],
+);
+
+/** Sanitized local mirror; ingestion and retention are introduced in the next activity slice. */
+export const computerActivityEvents = sqliteTable(
+  'computer_activity_events',
+  {
+    id: text('id').primaryKey(),
+    sourceId: text('source_id').notNull(),
+    bucketId: text('bucket_id').notNull(),
+    sourceEventId: text('source_event_id').notNull(),
+    startUtc: text('start_utc').notNull(),
+    durationSec: real('duration_sec').notNull(),
+    application: text('application'),
+    registrableDomain: text('registrable_domain'),
+    editorProjectKey: text('editor_project_key'),
+    language: text('language'),
+    category: text('category').notNull().default('unknown'),
+    isAfk: integer('is_afk').notNull().default(0),
+    isIncognito: integer('is_incognito').notNull().default(0),
+    keyboardCount: integer('keyboard_count'),
+    mouseCount: integer('mouse_count'),
+    matchedRuleId: text('matched_rule_id'),
+    ingestedAtUtc: text('ingested_at_utc').notNull(),
+    updatedAtUtc: text('updated_at_utc').notNull(),
+  },
+  (t) => [
+    uniqueIndex('idx_activity_event_source').on(t.sourceId, t.bucketId, t.sourceEventId),
+    index('idx_activity_events_start').on(t.startUtc),
+    index('idx_activity_events_source_start').on(t.sourceId, t.startUtc),
+  ],
+);
+
+/** Per-scope opt-in controls. A missing profile remains manual and can never auto-verify. */
+export const activityProfiles = sqliteTable(
+  'activity_profiles',
+  {
+    id: text('id').primaryKey(),
+    scope: text('scope').notNull(),
+    scopeId: text('scope_id').notNull(),
+    verificationMode: text('verification_mode').notNull().default('manual'),
+    permittedToolGroups: text('permitted_tool_groups').notNull().default('[]'),
+    notificationPreferences: text('notification_preferences').notNull().default('{}'),
+    createdAtUtc: text('created_at_utc').notNull(),
+    updatedAtUtc: text('updated_at_utc').notNull(),
+  },
+  (t) => [uniqueIndex('idx_activity_profiles_scope').on(t.scope, t.scopeId)],
+);
+
+/** Derived, explainable block evidence. No raw ActivityWatch payload belongs here. */
+export const blockActivitySummaries = sqliteTable(
+  'block_activity_summaries',
+  {
+    id: text('id').primaryKey(),
+    blockId: text('block_id').notNull(),
+    formulaVersion: text('formula_version').notNull(),
+    actualStartUtc: text('actual_start_utc'),
+    actualEndUtc: text('actual_end_utc'),
+    startLatencyMin: real('start_latency_min'),
+    coverage: real('coverage').notNull().default(0),
+    relevantMin: real('relevant_min').notNull().default(0),
+    supportingMin: real('supporting_min').notNull().default(0),
+    distractionMin: real('distraction_min').notNull().default(0),
+    idleMin: real('idle_min').notNull().default(0),
+    unknownMin: real('unknown_min').notNull().default(0),
+    contextSwitches: integer('context_switches').notNull().default(0),
+    returnLatencyMin: real('return_latency_min'),
+    longestFocusSessionMin: real('longest_focus_session_min').notNull().default(0),
+    continuity: real('continuity').notNull().default(0),
+    focusRatio: real('focus_ratio'),
+    focusQuality: real('focus_quality'),
+    primaryCategory: text('primary_category'),
+    overrunMin: real('overrun_min').notNull().default(0),
+    confidence: real('confidence'),
+    verificationState: text('verification_state').notNull().default('unobserved'),
+    correctionJson: text('correction_json'),
+    correctedAtUtc: text('corrected_at_utc'),
+    updatedAtUtc: text('updated_at_utc').notNull(),
+  },
+  (t) => [uniqueIndex('idx_activity_summary_block').on(t.blockId), index('idx_activity_summary_state').on(t.verificationState)],
+);
+
+/** Nudge records are suggestions only. Accepting one never moves a block or completes a task. */
+export const activityRecommendations = sqliteTable(
+  'activity_recommendations',
+  {
+    id: text('id').primaryKey(),
+    blockId: text('block_id'),
+    kind: text('kind').notNull(),
+    title: text('title').notNull(),
+    detail: text('detail'),
+    evidenceJson: text('evidence_json').notNull().default('{}'),
+    status: text('status').notNull().default('active'),
+    cooldownKey: text('cooldown_key'),
+    expiresAtUtc: text('expires_at_utc'),
+    createdAtUtc: text('created_at_utc').notNull(),
+    updatedAtUtc: text('updated_at_utc').notNull(),
+  },
+  (t) => [index('idx_activity_recommendations_status').on(t.status), index('idx_activity_recommendations_block').on(t.blockId)],
+);
+
+/**
+ * Exact, reviewed aggregate AI payloads. These are short-lived and can be
+ * consumed once; detailed activity is never copied into this boundary.
+ */
+export const activityAiPreviews = sqliteTable(
+  'activity_ai_previews',
+  {
+    id: text('id').primaryKey(),
+    payloadJson: text('payload_json').notNull(),
+    payloadHash: text('payload_hash').notNull(),
+    status: text('status').notNull().default('active'),
+    expiresAtUtc: text('expires_at_utc').notNull(),
+    usedAtUtc: text('used_at_utc'),
+    createdAtUtc: text('created_at_utc').notNull(),
+  },
+  (t) => [index('idx_activity_ai_previews_hash').on(t.payloadHash), index('idx_activity_ai_previews_expiry').on(t.expiresAtUtc)],
+);
+
+/** User-level defaults for the local protein inventory and forecast. */
+export const kitchenSettings = sqliteTable('kitchen_settings', {
+  id: text('id').primaryKey(),
+  dailyProteinTarget: real('daily_protein_target').notNull().default(120),
+  dailyCaloriesTarget: real('daily_calories_target').notNull().default(2500),
+  dailyCarbsTarget: real('daily_carbs_target').notNull().default(325),
+  warningCoverageDays: integer('warning_coverage_days').notNull().default(7),
+  forecastDays: integer('forecast_days').notNull().default(30),
+  updatedAtUtc: text('updated_at_utc').notNull(),
+});
+
+/** Reusable nutrition definition; exact bags and bottles live in kitchen_stock_portions. */
+export const kitchenFoods = sqliteTable(
+  'kitchen_foods',
+  {
+    id: text('id').primaryKey(),
+    name: text('name').notNull(),
+    category: text('category').notNull().default('Protein'),
+    unit: text('unit').notNull(),
+    preparationState: text('preparation_state').notNull().default('as_packaged'),
+    nutritionBasisAmount: real('nutrition_basis_amount').notNull(),
+    proteinPerBasis: real('protein_per_basis').notNull(),
+    caloriesPerBasis: real('calories_per_basis'),
+    carbsPerBasis: real('carbs_per_basis'),
+    fatPerBasis: real('fat_per_basis'),
+    portionMode: text('portion_mode').notNull().default('whole'),
+    planningIncrement: real('planning_increment'),
+    dailyMaxQuantity: real('daily_max_quantity'),
+    dailyMaxPortions: integer('daily_max_portions'),
+    lowStockThreshold: real('low_stock_threshold'),
+    plannerEligible: integer('planner_eligible').notNull().default(1),
+    archived: integer('archived').notNull().default(0),
+    createdAtUtc: text('created_at_utc').notNull(),
+    updatedAtUtc: text('updated_at_utc').notNull(),
+  },
+  (t) => [index('idx_kitchen_foods_archived').on(t.archived), index('idx_kitchen_foods_name').on(t.name)],
+);
+
+/** A physical bag, bottle, tub, or other independently tracked portion. */
+export const kitchenStockPortions = sqliteTable(
+  'kitchen_stock_portions',
+  {
+    id: text('id').primaryKey(),
+    foodId: text('food_id').notNull(),
+    label: text('label'),
+    originalQuantity: real('original_quantity').notNull(),
+    remainingQuantity: real('remaining_quantity').notNull(),
+    expiresOn: text('expires_on'),
+    status: text('status').notNull().default('available'),
+    createdAtUtc: text('created_at_utc').notNull(),
+    updatedAtUtc: text('updated_at_utc').notNull(),
+  },
+  (t) => [index('idx_kitchen_stock_food').on(t.foodId), index('idx_kitchen_stock_expiry').on(t.expiresOn), index('idx_kitchen_stock_status').on(t.status)],
+);
+
+/** One durable plan per local day; regeneration replaces only its unconsumed lines. */
+export const kitchenPlans = sqliteTable(
+  'kitchen_plans',
+  {
+    id: text('id').primaryKey(),
+    dateLocal: text('date_local').notNull(),
+    targetProteinG: real('target_protein_g').notNull(),
+    status: text('status').notNull().default('draft'),
+    createdAtUtc: text('created_at_utc').notNull(),
+    updatedAtUtc: text('updated_at_utc').notNull(),
+  },
+  (t) => [uniqueIndex('idx_kitchen_plans_date').on(t.dateLocal), index('idx_kitchen_plans_status').on(t.status)],
+);
+
+export const kitchenPlanLines = sqliteTable(
+  'kitchen_plan_lines',
+  {
+    id: text('id').primaryKey(),
+    planId: text('plan_id').notNull(),
+    foodId: text('food_id').notNull(),
+    stockPortionId: text('stock_portion_id').notNull(),
+    plannedQuantity: real('planned_quantity').notNull(),
+    actualQuantity: real('actual_quantity'),
+    status: text('status').notNull().default('planned'),
+    proteinG: real('protein_g').notNull(),
+    caloriesKcal: real('calories_kcal'),
+    carbsG: real('carbs_g'),
+    fatG: real('fat_g'),
+    createdAtUtc: text('created_at_utc').notNull(),
+    consumedAtUtc: text('consumed_at_utc'),
+  },
+  (t) => [index('idx_kitchen_plan_lines_plan').on(t.planId), index('idx_kitchen_plan_lines_stock').on(t.stockPortionId), index('idx_kitchen_plan_lines_status').on(t.status)],
+);
+
+/** Append-only audit trail for stock additions, consumption, corrections, disposal, and undo. */
+export const kitchenStockMovements = sqliteTable(
+  'kitchen_stock_movements',
+  {
+    id: text('id').primaryKey(),
+    foodId: text('food_id').notNull(),
+    stockPortionId: text('stock_portion_id').notNull(),
+    planLineId: text('plan_line_id'),
+    deltaQuantity: real('delta_quantity').notNull(),
+    reason: text('reason').notNull(),
+    dateLocal: text('date_local').notNull(),
+    note: text('note').notNull().default(''),
+    proteinG: real('protein_g').notNull().default(0),
+    caloriesKcal: real('calories_kcal'),
+    carbsG: real('carbs_g'),
+    fatG: real('fat_g'),
+    reversalOfId: text('reversal_of_id'),
+    reversedAtUtc: text('reversed_at_utc'),
+    createdAtUtc: text('created_at_utc').notNull(),
+  },
+  (t) => [index('idx_kitchen_movements_date').on(t.dateLocal), index('idx_kitchen_movements_stock').on(t.stockPortionId), index('idx_kitchen_movements_plan_line').on(t.planLineId)],
+);
+
+/** Last successful D4D deal snapshot. Replaced atomically after each refresh. */
+export const kitchenDeals = sqliteTable(
+  'kitchen_deals',
+  {
+    id: text('id').primaryKey(),
+    sourceOfferId: text('source_offer_id').notNull(),
+    category: text('category').notNull(),
+    description: text('description').notNull().default(''),
+    store: text('store').notNull(),
+    location: text('location').notNull(),
+    priceSar: real('price_sar').notNull(),
+    previousPriceSar: real('previous_price_sar').notNull(),
+    discountPct: integer('discount_pct').notNull(),
+    quality: text('quality').notNull(),
+    validFrom: text('valid_from'),
+    validTo: text('valid_to'),
+    imageUrl: text('image_url'),
+    sourceUrl: text('source_url').notNull(),
+    fetchedAtUtc: text('fetched_at_utc').notNull(),
+  },
+  (t) => [index('idx_kitchen_deals_quality').on(t.quality), index('idx_kitchen_deals_category').on(t.category), index('idx_kitchen_deals_valid_to').on(t.validTo)],
+);
+
+export const kitchenDealSync = sqliteTable('kitchen_deal_sync', {
+  id: text('id').primaryKey(),
+  location: text('location').notNull(),
+  regionCode: text('region_code').notNull(),
+  refreshedDateLocal: text('refreshed_date_local'),
+  refreshedAtUtc: text('refreshed_at_utc'),
+  lastAttemptAtUtc: text('last_attempt_at_utc'),
+  lastError: text('last_error'),
+});

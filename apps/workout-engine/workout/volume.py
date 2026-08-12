@@ -225,7 +225,12 @@ def _muscle_form_z(conn, muscle, as_of, fcfg):
     days since the last session decay the traces toward 'fresh' - the readiness
     you'd actually act on this morning. Returns (z, state), or (None, None) when
     there isn't enough Form history."""
-    loads = form.daily_muscle_load(conn, muscle) + [(as_of, 0.0)]
+    # `daily_muscle_load` is also used for today's recovery, where the complete
+    # history is correct. Historical dashboard points must stop at their own
+    # week end, otherwise later sessions distort both the Form trace and its
+    # self-relative z-score.
+    loads = [(day, load) for day, load in form.daily_muscle_load(conn, muscle)
+             if day <= as_of] + [(as_of, 0.0)]
     series = form.form_series(loads, fcfg["tau_fit"], fcfg["tau_fat"])
     hist = [f for d, _c, _a, f in series if d <= as_of]
     if len(hist) < 3:
@@ -265,7 +270,7 @@ def recovery_by_muscle(conn, as_of, prog_map, acwr_by_muscle):
     rpe_map = _rpe_by_muscle(conn, as_of)
     last = {r["primary_muscle"]: r["d"] for r in conn.execute(
         """SELECT primary_muscle, MAX(date) d FROM sets WHERE is_working=1
-           GROUP BY primary_muscle""")}
+             AND date<=? GROUP BY primary_muscle""", (as_of,))}
     as_of_dt = dates.from_iso(as_of + "T00:00:00")
 
     out = {}

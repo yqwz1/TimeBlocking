@@ -112,7 +112,29 @@ def powerlifting():
     }
     user = settings().get("powerlifting", {})
     base.update({k: v for k, v in user.items() if not k.startswith("_")})
+    try:
+        with open(powerlifting_profile_path(), encoding="utf-8") as f:
+            profile = json.load(f)
+        if isinstance(profile, dict):
+            base.update(profile)
+    except (FileNotFoundError, ValueError):
+        pass
     return base
+
+
+def save_powerlifting_profile(profile):
+    """Persist user-owned competition settings without modifying bundled config."""
+    ensure_dirs()
+    destination = powerlifting_profile_path()
+    temporary = f"{destination}.{os.getpid()}.tmp"
+    with open(temporary, "w", encoding="utf-8") as f:
+        json.dump(profile, f, indent=2, ensure_ascii=False)
+        f.write("\n")
+    os.replace(temporary, destination)
+
+
+def powerlifting_profile_path():
+    return os.path.join(DATA_DIR, "powerlifting-profile.json")
 
 
 def ensure_dirs():

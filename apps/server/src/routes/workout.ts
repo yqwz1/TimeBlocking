@@ -8,10 +8,14 @@ import {
   WorkoutExerciseHistorySchema,
   WorkoutGoalInputSchema,
   WorkoutNoteInputSchema,
+  WorkoutPowerliftingProfileInputSchema,
   WorkoutPredictInputSchema,
   WorkoutRoutinePushInputSchema,
+  WorkoutSettingsSchema,
   WorkoutSummarySchema,
   WorkoutSyncInputSchema,
+  WorkoutVolumeAnalyticsQuerySchema,
+  WorkoutVolumeAnalyticsSchema,
 } from '@timeblock/shared';
 import { WORKOUT_DATA_DIR } from '../config.js';
 import { WorkoutEngineService } from '../workout/engine.js';
@@ -37,7 +41,7 @@ export function registerWorkoutRoutes(app: FastifyInstance, engine: WorkoutEngin
 
   app.get('/workout/settings', async (_req, reply) => {
     try {
-      return await engine.execute<Record<string, unknown>>('settings');
+      return WorkoutSettingsSchema.parse(await engine.execute<Record<string, unknown>>('settings'));
     } catch (error) {
       return reply.code(503).send({ error: error instanceof Error ? error.message : 'Workout settings are unavailable.' });
     }
@@ -69,6 +73,18 @@ export function registerWorkoutRoutes(app: FastifyInstance, engine: WorkoutEngin
     },
   );
 
+  app.get<{ Querystring: { range?: string; compare?: string } }>('/workout/volume-analytics', async (req, reply) => {
+    try {
+      const query = WorkoutVolumeAnalyticsQuerySchema.parse(req.query ?? {});
+      return WorkoutVolumeAnalyticsSchema.parse(await engine.execute('volume-analytics', query));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Volume analytics could not be read.';
+      if (message.includes('No workout history exists')) return reply.code(404).send({ error: message });
+      if (message.includes('range') || message.includes('Expected') || message.includes('Invalid')) return validationError(reply, error);
+      return reply.code(503).send({ error: message });
+    }
+  });
+
   app.get<{ Params: { id: string } }>('/workout/jobs/:id', async (req, reply) => {
     const job = engine.getJob(req.params.id);
     return job ?? reply.code(404).send({ error: 'Workout job not found.' });
@@ -80,6 +96,12 @@ export function registerWorkoutRoutes(app: FastifyInstance, engine: WorkoutEngin
       const { apiKey } = WorkoutCredentialInputSchema.parse(req.body);
       await engine.saveCredential(apiKey);
       return { saved: true, hevyConnected: true };
+    } catch (error) { return validationError(reply, error); }
+  });
+  app.put<{ Body: unknown }>('/workout/settings/powerlifting', async (req, reply) => {
+    try {
+      const profile = WorkoutPowerliftingProfileInputSchema.parse(req.body);
+      return reply.code(202).send(engine.enqueue('update-powerlifting-profile', profile));
     } catch (error) { return validationError(reply, error); }
   });
 

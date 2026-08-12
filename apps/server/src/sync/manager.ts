@@ -203,6 +203,9 @@ export class SyncManager extends EventEmitter {
 
   /** Fires any due, unfired reminders for open tasks and emits one 'reminder' event per hit. */
   private fireReminders(nowIso: string): void {
+    // A reminder is only consumed after there is a connected client that can
+    // receive it. This prevents the startup/sleep race from silently losing it.
+    if (this.listenerCount('reminder') === 0) return;
     const due = this.db
       .select()
       .from(reminders)
@@ -215,6 +218,8 @@ export class SyncManager extends EventEmitter {
       if (!t || t.isDeleted || t.status === 'done' || t.status === 'cancelled') continue;
       const dto: ReminderFiredEventDTO = {
         reminderId: r.id,
+        sourceType: 'task',
+        sourceId: r.taskId,
         taskId: r.taskId,
         taskContent: t.content,
         message: r.message,
@@ -226,6 +231,7 @@ export class SyncManager extends EventEmitter {
 
   /** Fires "N minutes before" reminders for upcoming events; one-shot per event. */
   private fireEventReminders(nowIso: string): void {
+    if (this.listenerCount('reminder') === 0) return;
     const now = Date.parse(nowIso);
     const pending = this.db
       .select()
@@ -244,6 +250,8 @@ export class SyncManager extends EventEmitter {
       this.db.update(events).set({ reminderFiredAtUtc: nowIso }).where(eq(events.id, e.id)).run();
       const dto: ReminderFiredEventDTO = {
         reminderId: `event:${e.id}`,
+        sourceType: 'event',
+        sourceId: e.id,
         taskId: e.id,
         taskContent: e.title,
         message: e.reminderMinutesBefore ? `Starts in ${e.reminderMinutesBefore} min` : 'Starting now',

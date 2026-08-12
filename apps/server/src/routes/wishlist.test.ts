@@ -106,7 +106,7 @@ describe('wishlist routes', () => {
           <span class="a-price priceToPay"><span class="a-offscreen">SAR 69.00</span></span>
         </div>
         <img src="https://images-na.ssl-images-amazon.com/fallback.jpg"
-             data-old-hires="https://m.media-amazon.com/images/I/book.jpg"
+             data-a-dynamic-image="{&quot;https://m.media-amazon.com/images/I/book-small.jpg&quot;:[500,500],&quot;https://m.media-amazon.com/images/I/book.jpg&quot;:[1200,1200]}"
              id="landingImage" />
       </body></html>`;
     expect(parseWishlistProductHtml(html, 'https://www.amazon.sa/-/en/gp/product/0140449264', 'SAR')).toMatchObject({
@@ -139,6 +139,23 @@ describe('wishlist routes', () => {
       detectedCurrency: 'USD',
       retailer: 'ebay.com',
       warnings: [],
+    });
+  });
+
+  it('preserves a Unity Asset Store listed price when wishlist currency differs', () => {
+    const html = `<script type="application/ld+json">${JSON.stringify({
+      '@type': 'Product',
+      name: 'Text Animator for Unity',
+      image: ['//assetstorev1-prd-cdn.unity3d.com/key-image/example.jpg'],
+      offers: { '@type': 'Offer', price: '65.00', priceCurrency: 'USD' },
+    })}</script>`;
+
+    expect(parseWishlistProductHtml(html, 'https://assetstore.unity.com/packages/tools/gui/text-animator-341308', 'SAR')).toMatchObject({
+      title: 'Text Animator for Unity',
+      priceMinor: null,
+      listedPriceMinor: 6_500,
+      detectedCurrency: 'USD',
+      retailer: 'assetstore.unity.com',
     });
   });
 

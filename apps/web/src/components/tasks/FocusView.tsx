@@ -29,7 +29,7 @@ import type { TaskDTO } from '@timeblock/shared';
 import { useTaskList, useUpdateTask } from '../../hooks.js';
 import { PriorityBadge, formatDuration } from './taskDisplay.js';
 import { popoverVariants, springs } from '../../lib/motion.js';
-import { playTimerDone } from '../../lib/sound.js';
+import { FOCUS_TIMER_STATE_EVENT } from '../../lib/focusTimer.js';
 import {
   AMBIENCE_META,
   getAmbienceVolume,
@@ -163,6 +163,12 @@ export default function FocusView({ onOpenTask }: { onOpenTask: (id: string) => 
   useEffect(() => localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)), [settings]);
   useEffect(() => localStorage.setItem(AMBIENCE_KEY, JSON.stringify({ volume: ambVolume })), [ambVolume]);
 
+  useEffect(() => {
+    const onState = (event: Event) => setState((event as CustomEvent<PersistedState>).detail);
+    window.addEventListener(FOCUS_TIMER_STATE_EVENT, onState);
+    return () => window.removeEventListener(FOCUS_TIMER_STATE_EVENT, onState);
+  }, []);
+
   // Apply volume and silence the soundscape when leaving the Focus tab.
   useEffect(() => setAmbienceVolume(ambVolume), [ambVolume]);
   useEffect(() => () => stopAmbience(), []);
@@ -225,21 +231,7 @@ export default function FocusView({ onOpenTask }: { onOpenTask: (id: string) => 
     });
   }, [settings]);
 
-  // Detect phase completion. `tick` drives the check while running.
-  useEffect(() => {
-    if (state.running && state.endsAt != null && Date.now() >= state.endsAt) {
-      playTimerDone();
-      if ('Notification' in window && Notification.permission === 'granted') {
-        const done = state.phase === 'work' ? 'Focus session done — time for a break.' : 'Break over — back to it.';
-        new Notification('TimeBlock Focus', { body: done });
-      }
-      advance();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tick, state.running, state.endsAt]);
-
   const start = () => {
-    if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission();
     setState((p) => ({ ...p, running: true, endsAt: Date.now() + p.remainingMs }));
   };
   const pause = () =>

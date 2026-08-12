@@ -48,6 +48,8 @@ import {
 } from '../hooks.js';
 import { api } from './../api';
 import { useTheme } from '../hooks/useTheme.js';
+import ActivityAnalyticsPanel from '../components/activity/ActivityAnalyticsPanel.js';
+import PersonalActivityAnalyticsPanel from '../components/activity/PersonalActivityAnalyticsPanel.js';
 
 // ---------------- formatting helpers ----------------
 
@@ -1006,6 +1008,9 @@ export default function AnalyticsPage() {
           )}
         </div>
       </div>
+
+      <ActivityAnalyticsPanel weekStart={weekStart} />
+      <PersonalActivityAnalyticsPanel weekStart={weekStart} />
 
       {isLoading ? (
         <Skeleton />

@@ -4,6 +4,7 @@ import { AlertTriangle, ArrowRight, ChevronDown, Flame, RotateCcw } from 'lucide
 import type { DailyPlanDTO, ObjectiveDTO, PlanWarningDTO, ScheduleItemDTO, TaskViewDTO, TodayPlanDTO } from '@timeblock/shared';
 import { useCompleteTask, useDailyPlan, useGamificationSummary, useRescheduleTask, useTodayPlan } from '../../hooks.js';
 import { fmtDur, greeting } from './format.js';
+import ProgressionCommandCenter from './ProgressionCommandCenter.js';
 import TaskCheckbox from '../tasks/TaskCheckbox.js';
 import { DueChip, PriorityBadge } from '../tasks/taskDisplay.js';
 import ScheduleCalendar from '../calendar/ScheduleCalendar.js';
@@ -466,6 +467,10 @@ export default function TodayView({
       {/* Now / up next */}
       <div className="mt-5">
         <NowCard blocks={blocks} />
+      </div>
+
+      <div className="mt-4">
+        <ProgressionCommandCenter />
       </div>
 
       {/* Warnings */}

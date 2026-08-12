@@ -788,6 +788,8 @@ const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(function NoteEd
       </div>
       {mode !== 'reading' && (
         <NoteProperties
+          key={note.id}
+          noteId={note.id}
           content={content}
           onAdd={(key, value) => updateProperty(key, value)}
           onUpdate={(key, value) => updateProperty(key, value)}

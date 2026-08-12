@@ -225,6 +225,69 @@
       "when": 1785571200000,
       "tag": "0031_add_workout_jobs",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "6",
+      "when": 1786176000000,
+      "tag": "0032_add_activity_foundation",
+      "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "6",
+      "when": 1786262400000,
+      "tag": "0033_add_activity_phase2",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "6",
+      "when": 1786348800000,
+      "tag": "0034_add_activity_ai_previews",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "6",
+      "when": 1786352400000,
+      "tag": "0035_add_wishlist_listed_price",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "6",
+      "when": 1786438800000,
+      "tag": "0036_add_progression_v2",
+      "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "6",
+      "when": 1786442400000,
+      "tag": "0037_add_kitchen",
+      "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "6",
+      "when": 1786528800000,
+      "tag": "0038_add_kitchen_daily_portion_limits",
+      "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "6",
+      "when": 1786615200000,
+      "tag": "0039_add_kitchen_deals",
+      "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "6",
+      "when": 1786701600000,
+      "tag": "0040_add_kitchen_macro_targets",
+      "breakpoints": true
     }
   ]
 }

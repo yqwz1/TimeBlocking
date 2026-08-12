@@ -5,6 +5,7 @@ import { Bookmark, BriefcaseBusiness, ChevronDown, ChevronRight, Clock, External
 import type { NoteSummaryDTO } from '@timeblock/shared';
 import { NOTE_COLORS, NoteIcon } from './noteAppearance.js';
 import { tagPillStyle } from './tagAppearance.js';
+import { usePersistentBoolean, usePersistentStringSet } from '../../hooks/usePersistentUiState.js';
 
 interface TreeFolder { kind: 'folder'; name: string; path: string; children: TreeNode[]; }
 interface TreeFile { kind: 'file'; name: string; note: NoteSummaryDTO; }
@@ -65,6 +66,7 @@ function buildTree(notesList: NoteSummaryDTO[], folders: string[], sortOrder: No
 interface TreeActions {
   onSelect: (id: string) => void;
   onDelete: (id: string) => void;
+  onDeleteFolder: (path: string) => void;
   onRename: (id: string, newFileName: string) => void;
   onMove: (fromId: string, folderPath: string) => void;
   onNewNote: (folderPath: string) => void;
@@ -133,8 +135,8 @@ function useNoteInfoHover() {
   };
 }
 
-function FolderRow({ folder, depth, selectedId, actions, onOpenMenu }: { folder: TreeFolder; depth: number; selectedId: string | null; actions: TreeActions; onOpenMenu: (event: ReactMouseEvent, target: MenuTarget) => void }) {
-  const [open, setOpen] = useState(true);
+function FolderRow({ folder, depth, selectedId, actions, onOpenMenu, collapsedFolders, onToggleFolder }: { folder: TreeFolder; depth: number; selectedId: string | null; actions: TreeActions; onOpenMenu: (event: ReactMouseEvent, target: MenuTarget) => void; collapsedFolders: Set<string>; onToggleFolder: (path: string) => void }) {
+  const open = !collapsedFolders.has(folder.path);
   const [dragOver, setDragOver] = useState(false);
   return <div>
     <div
@@ -145,7 +147,7 @@ function FolderRow({ folder, depth, selectedId, actions, onOpenMenu }: { folder:
       onDragLeave={() => setDragOver(false)}
       onDrop={(event) => { event.preventDefault(); setDragOver(false); const fromId = event.dataTransfer.getData('text/note-id'); if (fromId) actions.onMove(fromId, folder.path); }}
     >
-      <button onClick={() => setOpen((value) => !value)} className="flex flex-1 items-center gap-1 text-left">
+      <button onClick={() => onToggleFolder(folder.path)} className="flex flex-1 items-center gap-1 text-left">
         {open ? <ChevronDown size={13} className="shrink-0 opacity-50" /> : <ChevronRight size={13} className="shrink-0 opacity-50" />}
         {open ? <FolderOpen size={14} className="shrink-0 text-teal-600 dark:text-teal-400" /> : <Folder size={14} className="shrink-0 text-teal-600 dark:text-teal-400" />}
         <span className="truncate">{folder.name}</span>
@@ -153,7 +155,7 @@ function FolderRow({ folder, depth, selectedId, actions, onOpenMenu }: { folder:
       <button onClick={() => actions.onNewNote(folder.path)} title="New note in this folder" className="opacity-0 group-hover:opacity-100"><Plus size={13} /></button>
     </div>
     {open && folder.children.map((child) => child.kind === 'folder'
-      ? <FolderRow key={child.path} folder={child} depth={depth + 1} selectedId={selectedId} actions={actions} onOpenMenu={onOpenMenu} />
+      ? <FolderRow key={child.path} folder={child} depth={depth + 1} selectedId={selectedId} actions={actions} onOpenMenu={onOpenMenu} collapsedFolders={collapsedFolders} onToggleFolder={onToggleFolder} />
       : <FileRow key={child.note.id} file={child} depth={depth + 1} selectedId={selectedId} actions={actions} onOpenMenu={onOpenMenu} />)}
   </div>;
 }
@@ -192,7 +194,7 @@ function LibraryContextMenu({ state, actions, onClose }: { state: { x: number; y
   const action = (run: () => void) => { run(); onClose(); };
   return <motion.div ref={ref} initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.96 }} transition={{ duration: 0.12, ease: 'easeOut' }} style={{ left: pos.x, top: pos.y }} className="fixed z-[1100] w-56 origin-top-left overflow-hidden rounded-xl border border-slate-200 bg-white py-1.5 text-sm text-slate-700 shadow-xl dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-200" role="menu" onContextMenu={(event) => event.preventDefault()}>
     <p className="truncate px-3 pb-1 pt-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400 dark:text-neutral-500">{targetName}</p>
-    {folder !== null && <><MenuItem icon={FilePlus2} label="New note" onClick={() => action(() => actions.onNewNote(folder))} /><MenuItem icon={FolderPlus} label="New folder" onClick={() => action(() => actions.onNewFolder(folder))} /><MenuItem icon={BriefcaseBusiness} label="New project" onClick={() => action(() => actions.onNewProject(folder))} /></>}
+    {folder !== null && <><MenuItem icon={FilePlus2} label="New note" onClick={() => action(() => actions.onNewNote(folder))} /><MenuItem icon={FolderPlus} label="New folder" onClick={() => action(() => actions.onNewFolder(folder))} /><MenuItem icon={BriefcaseBusiness} label="New project" onClick={() => action(() => actions.onNewProject(folder))} />{state.target.kind === 'folder' && <MenuItem icon={Trash2} label="Delete folder" danger onClick={() => action(() => actions.onDeleteFolder(folder))} />}</>}
     {file && <><MenuItem icon={FileText} label="Open note" onClick={() => action(() => actions.onSelect(file.note.id))} /><MenuItem icon={Star} label={file.note.pinned ? 'Unpin note' : 'Pin note'} onClick={() => action(() => actions.onTogglePin(file.note.id))} /><div className="my-1 h-px bg-slate-100 dark:bg-neutral-800" /><MenuItem icon={Trash2} label="Delete note" danger onClick={() => action(() => actions.onDelete(file.note.id))} /></>}
   </motion.div>;
 }
@@ -201,10 +203,11 @@ function MenuItem({ icon: Icon, label, onClick, danger = false }: { icon: typeof
   return <button type="button" role="menuitem" onClick={onClick} className={`flex w-full items-center gap-2.5 px-3 py-1.5 text-left transition-colors ${danger ? 'text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-500/10' : 'hover:bg-slate-100 dark:hover:bg-neutral-800'}`}><Icon size={15} className={danger ? '' : 'text-slate-400 dark:text-neutral-500'} /><span>{label}</span></button>;
 }
 
-export default function NoteTree({ notes, folders, selectedId, recentIds, onSelect, onDelete, onRename, onMove, onNewNote, onNewFolder, onNewProject, onTogglePin }: { notes: NoteSummaryDTO[]; folders: string[]; selectedId: string | null; recentIds: string[]; onSelect: (id: string) => void; onDelete: (id: string) => void; onRename: (id: string, newFileName: string) => void; onMove: (fromId: string, toFolder: string) => void; onNewNote: (folder: string) => void; onNewFolder: (parentFolder: string) => void; onNewProject: (parentFolder: string) => void; onTogglePin: (id: string) => void; }) {
+export default function NoteTree({ notes, folders, selectedId, recentIds, onSelect, onDelete, onDeleteFolder, onRename, onMove, onNewNote, onNewFolder, onNewProject, onTogglePin }: { notes: NoteSummaryDTO[]; folders: string[]; selectedId: string | null; recentIds: string[]; onSelect: (id: string) => void; onDelete: (id: string) => void; onDeleteFolder: (path: string) => void; onRename: (id: string, newFileName: string) => void; onMove: (fromId: string, toFolder: string) => void; onNewNote: (folder: string) => void; onNewFolder: (parentFolder: string) => void; onNewProject: (parentFolder: string) => void; onTogglePin: (id: string) => void; }) {
   const [visibleColors, setVisibleColors] = useState<string[] | null>(null);
-  const [recentOpen, setRecentOpen] = useState(true);
-  const [vaultOpen, setVaultOpen] = useState(true);
+  const [recentOpen, setRecentOpen] = usePersistentBoolean('second-brain.note-tree.recent-open', true);
+  const [vaultOpen, setVaultOpen] = usePersistentBoolean('second-brain.note-tree.vault-open', true);
+  const [collapsedFolders, setCollapsedFolders] = usePersistentStringSet('second-brain.note-tree.collapsed-folders');
   const [sortOrder, setSortOrder] = useState<NoteSortOrder>(() => {
     const saved = window.localStorage.getItem('second-brain.vault-sort-order');
     return saved === 'updated' || saved === 'created' ? saved : 'title';
@@ -215,7 +218,7 @@ export default function NoteTree({ notes, folders, selectedId, recentIds, onSele
   const tree = useMemo(() => buildTree(visibleNotes, folders, sortOrder), [visibleNotes, folders, sortOrder]);
   const [rootDragOver, setRootDragOver] = useState(false);
   const [menu, setMenu] = useState<{ x: number; y: number; target: MenuTarget } | null>(null);
-  const actions: TreeActions = { onSelect, onDelete, onRename, onMove, onNewNote, onNewFolder, onNewProject, onTogglePin };
+  const actions: TreeActions = { onSelect, onDelete, onDeleteFolder, onRename, onMove, onNewNote, onNewFolder, onNewProject, onTogglePin };
   const openMenu = (event: ReactMouseEvent, target: MenuTarget) => { event.preventDefault(); event.stopPropagation(); setMenu({ x: event.clientX, y: event.clientY, target }); };
   const byId = useMemo(() => new Map(visibleNotes.map((note) => [note.id, note])), [visibleNotes]);
   const pinned = useMemo(() => visibleNotes.filter((note) => note.pinned).sort((a, b) => compareNotes(a, b, sortOrder)), [visibleNotes, sortOrder]);
@@ -225,6 +228,11 @@ export default function NoteTree({ notes, folders, selectedId, recentIds, onSele
     const next = new Set(current ?? availableColors);
     if (next.has(color)) next.delete(color); else next.add(color);
     return availableColors.filter((item) => next.has(item));
+  });
+  const toggleFolder = (path: string) => setCollapsedFolders((current) => {
+    const next = new Set(current);
+    if (next.has(path)) next.delete(path); else next.add(path);
+    return next;
   });
   useEffect(() => {
     window.localStorage.setItem('second-brain.vault-sort-order', sortOrder);
@@ -280,7 +288,7 @@ export default function NoteTree({ notes, folders, selectedId, recentIds, onSele
       <AnimatePresence initial={false}>
         {vaultOpen && <motion.div id="vault-contents" initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.16, ease: 'easeOut' }} className="overflow-hidden">
           {tree.length === 0 && <p className="px-2 py-4 text-sm text-slate-400 dark:text-neutral-500">No notes or folders yet — right-click to get started.</p>}
-          {tree.map((node) => node.kind === 'folder' ? <FolderRow key={node.path} folder={node} depth={0} selectedId={selectedId} actions={actions} onOpenMenu={openMenu} /> : <FileRow key={node.note.id} file={node} depth={0} selectedId={selectedId} actions={actions} onOpenMenu={openMenu} />)}
+          {tree.map((node) => node.kind === 'folder' ? <FolderRow key={node.path} folder={node} depth={0} selectedId={selectedId} actions={actions} onOpenMenu={openMenu} collapsedFolders={collapsedFolders} onToggleFolder={toggleFolder} /> : <FileRow key={node.note.id} file={node} depth={0} selectedId={selectedId} actions={actions} onOpenMenu={openMenu} />)}
         </motion.div>}
       </AnimatePresence>
     </section>

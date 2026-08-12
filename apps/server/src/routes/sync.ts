@@ -29,6 +29,8 @@ export function registerSyncRoutes(app: FastifyInstance, _db: DB, manager: SyncM
     manager.on('update', onUpdate);
     const onReminder = (dto: ReminderFiredEventDTO) => reply.raw.write(`event: reminder\ndata: ${JSON.stringify(dto)}\n\n`);
     manager.on('reminder', onReminder);
+    // Deliver any reminder that became due while the renderer was reconnecting.
+    void manager.runCycle('sse-connected');
     const heartbeat = setInterval(() => reply.raw.write(': ping\n\n'), 25_000);
     req.raw.on('close', () => {
       clearInterval(heartbeat);

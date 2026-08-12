@@ -30,8 +30,8 @@ import {
   Wrench,
   type LucideIcon,
 } from 'lucide-react';
-import type { Settings } from '@timeblock/shared';
-import { useAiUsageDashboard, useBackupDriveNow, useDisconnectGoogle, useDriveBackupStatus, useDriveBackups, useDriveConnection, useGoogleCalendars, useLearningStats, useResetLearning, useRestoreDriveBackup, useSettings, useSetupStatus, useUpdateSettings } from '../hooks.js';
+import type { ActivityMode, Settings } from '@timeblock/shared';
+import { useActivityStatus, useAiUsageDashboard, useBackupDriveNow, useConnectActivityWatch, useDisconnectGoogle, useDriveBackupStatus, useDriveBackups, useDriveConnection, useGoogleCalendars, useLearningStats, useResetLearning, useRestoreDriveBackup, useSettings, useSetupStatus, useUpdateSettings } from '../hooks.js';
 import { useConceptStatus, useEmbeddingsStatus, useExtractConcepts, useRebuildGraph, useReindexEmbeddings } from '../hooks/notes.js';
 import WorkingHoursEditor from '../components/WorkingHoursEditor.js';
 import EnergyWindowsEditor from '../components/EnergyWindowsEditor.js';
@@ -51,6 +51,7 @@ type SettingsSectionId =
   | 'ai'
   | 'vault'
   | 'drive'
+  | 'activity'
   | 'calendar'
   | 'graph';
 
@@ -143,6 +144,7 @@ const SETTINGS_GROUPS: SettingsGroupDefinition[] = [
     sections: [
       { id: 'drive', label: 'Google Drive', description: 'Backups, restore points, encryption, and Drive search.', icon: Cloud, keywords: ['drive', 'backup', 'restore', 'encryption', 'snapshot', 'passphrase', 'import'] },
       { id: 'calendar', label: 'Google Calendar', description: 'Connection status and busy-calendar setup.', icon: CalendarRange, keywords: ['google', 'calendar', 'busy', 'disconnect', 'setup'] },
+      { id: 'activity', label: 'ActivityWatch', description: 'Local computer-activity connection and privacy controls.', icon: MonitorCog, keywords: ['activitywatch', 'activity', 'focus', 'privacy', 'computer', 'window', 'afk'] },
     ],
   },
   {
@@ -214,6 +216,63 @@ function LearningPanel({ enabled, onToggle }: { enabled: boolean; onToggle: (v: 
           {reset.isPending ? 'Resetting…' : 'Reset learned stats'}
         </button>
       )}
+    </section>
+  );
+}
+
+function ActivityWatchPanel() {
+  const activity = useActivityStatus();
+  const connect = useConnectActivityWatch();
+  const [port, setPort] = useState(5600);
+  const [mode, setMode] = useState<ActivityMode>('off');
+
+  useEffect(() => {
+    if (!activity.data) return;
+    setPort(activity.data.port ?? 5600);
+    setMode(activity.data.mode);
+  }, [activity.data?.port, activity.data?.mode]);
+
+  const status = activity.data;
+  const capabilityNames = status
+    ? Object.entries(status.capabilities).filter(([, available]) => available).map(([name]) => name === 'afk' ? 'AFK' : name[0]!.toUpperCase() + name.slice(1))
+    : [];
+
+  return (
+    <section className="rounded-xl border border-slate-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
+      <div className="mb-1 flex items-center gap-2">
+        <MonitorCog size={16} className="text-teal-600" />
+        <h3 className="font-semibold text-slate-900 dark:text-neutral-100">ActivityWatch</h3>
+      </div>
+      <p className="mb-3 text-sm text-slate-400 dark:text-neutral-500">
+        TimeBlocking only connects to ActivityWatch on this computer. Window titles, full URLs, file paths, keystrokes, screenshots, clipboard data, and raw event timelines are never sent to AI.
+      </p>
+      <div className="grid gap-3 sm:grid-cols-[10rem_minmax(0,1fr)_auto] sm:items-end">
+        <label className="text-sm text-slate-500 dark:text-neutral-400">
+          Local port
+          <input type="number" min="1" max="65535" value={port} onChange={(event) => setPort(Number(event.target.value))} className="mt-1 block w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100" />
+        </label>
+        <label className="text-sm text-slate-500 dark:text-neutral-400">
+          Rollout mode
+          <select value={mode} onChange={(event) => setMode(event.target.value as ActivityMode)} className="mt-1 block w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100">
+            <option value="off">Off — do not collect</option>
+            <option value="shadow">Shadow — prepare observation only</option>
+            <option value="advisory">Advisory — show evidence and suggestions</option>
+          </select>
+        </label>
+        <button type="button" onClick={() => connect.mutate({ port, mode })} disabled={connect.isPending || !Number.isInteger(port) || port < 1 || port > 65535} className="rounded-md bg-teal-600 px-3 py-2 text-sm font-medium text-white disabled:opacity-50">
+          {connect.isPending ? 'Checking…' : 'Check connection'}
+        </button>
+      </div>
+      {connect.error && <p className="mt-3 text-sm text-rose-600 dark:text-rose-400">{connect.error.message}</p>}
+      <div className="mt-4 rounded-lg bg-slate-50 p-3 text-sm dark:bg-neutral-800">
+        <p className={status?.health === 'healthy' ? 'font-medium text-emerald-600 dark:text-emerald-400' : 'font-medium text-slate-600 dark:text-neutral-300'}>
+          {status?.health === 'healthy' ? `Connected to ActivityWatch ${status.version ?? ''}` : status?.configured ? 'ActivityWatch is unavailable' : 'Not connected'}
+        </p>
+        {status?.health === 'healthy' && <p className="mt-1 text-xs text-slate-500 dark:text-neutral-400">Detected watchers: {capabilityNames.join(', ') || 'none'}. {status.requiredSourcesAvailable ? 'Window and AFK support are ready for the future shadow pipeline.' : 'Window and AFK watchers are required for verification.'}</p>}
+      </div>
+      <p className="mt-3 text-xs leading-5 text-slate-500 dark:text-neutral-400">
+        Activity evidence can verify blocks and offer gentle suggestions, but never completes tasks, moves blocks, or changes your schedule automatically.
+      </p>
     </section>
   );
 }
@@ -571,7 +630,7 @@ export default function SettingsPage() {
 
       <section hidden={!sectionIsVisible('experience')} className="rounded-xl border border-slate-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
         <h3 className="mb-1 font-semibold text-slate-900 dark:text-neutral-100">Gamification</h3>
-        <p className="mb-3 text-sm text-slate-400 dark:text-neutral-500">XP, levels, and a streak with banked freezes to help you stick to your schedule.</p>
+        <p className="mb-3 text-sm text-slate-400 dark:text-neutral-500">Seasonal rank, permanent mastery XP, Credits, and real-life rewards. Legacy XP remains archived separately.</p>
         <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-neutral-400">
           <input type="checkbox" checked={form.gamificationEnabled} onChange={(e) => set('gamificationEnabled', e.target.checked)} />
           Enable XP, levels, streaks, and achievements
@@ -589,6 +648,17 @@ export default function SettingsPage() {
               <input type="checkbox" checked={form.celebrationToasts} onChange={(e) => set('celebrationToasts', e.target.checked)} />
               Show celebration toasts (+XP, achievements, level-ups)
             </label>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <label className="text-sm text-slate-500 dark:text-neutral-400">Contract lock time
+                <input type="time" value={form.progressionContractLockTime} onChange={(e) => set('progressionContractLockTime', e.target.value)} className="mt-1 block rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100" />
+              </label>
+              <label className="text-sm text-slate-500 dark:text-neutral-400">Celebration intensity
+                <select value={form.celebrationIntensity} onChange={(e) => set('celebrationIntensity', e.target.value as Settings['celebrationIntensity'])} className="mt-1 block rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"><option value="minimal">Minimal</option><option value="standard">Standard</option><option value="full">Full</option></select>
+              </label>
+            </div>
+            <fieldset className="mt-4"><legend className="text-sm text-slate-500 dark:text-neutral-400">Active days (planned rest days pause your streak)</legend><div className="mt-2 flex flex-wrap gap-x-3 gap-y-2">{(['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const).map((day) => <label key={day} className="flex items-center gap-1.5 text-sm text-slate-600 dark:text-neutral-300"><input type="checkbox" checked={form.progressionActiveWeekdays.includes(day)} onChange={(e) => { const next = e.target.checked ? [...form.progressionActiveWeekdays, day] : form.progressionActiveWeekdays.filter((d) => d !== day); if (next.length >= 3) set('progressionActiveWeekdays', next); }} />{day}</label>)}</div></fieldset>
+            <label className="mt-4 flex items-center gap-2 text-sm text-slate-600 dark:text-neutral-400"><input type="checkbox" checked={form.activityWatchBonusConsent} onChange={(e) => set('activityWatchBonusConsent', e.target.checked)} />Allow ActivityWatch’s positive-only focus bonus after verified evidence</label>
+            <label className="mt-3 block text-sm text-slate-500 dark:text-neutral-400">Sanitized ActivityWatch retention (days)<input type="number" min="1" max="365" value={form.activitySanitizedRetentionDays} onChange={(e) => set('activitySanitizedRetentionDays', Math.max(1, Math.min(365, Number(e.target.value) || 30)))} className="mt-1 block w-24 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100" /></label>
           </>
         )}
       </section>
@@ -946,6 +1016,10 @@ export default function SettingsPage() {
         )}
         {restoreBackup.data && <p className="mt-2 text-xs text-emerald-600 dark:text-emerald-400">Snapshot downloaded to {restoreBackup.data.inspectionPath}. Extract it there to inspect; your active vault was not changed.</p>}
       </section>
+
+      <div hidden={!sectionIsVisible('activity')}>
+        <ActivityWatchPanel />
+      </div>
 
       <section hidden={!sectionIsVisible('graph')} className="rounded-xl border border-slate-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
         <div className="mb-1 flex items-center justify-between">

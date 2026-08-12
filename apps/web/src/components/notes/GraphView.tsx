@@ -309,6 +309,7 @@ export default function GraphView({
   const sigmaRef = useRef<Sigma | null>(null);
   const graphRef = useRef<Graph | null>(null);
   const layoutRef = useRef<FA2Layout | null>(null);
+  const topologySignatureRef = useRef('');
   const hoveredRef = useRef<string | null>(null);
   const focusRef = useRef<Set<string>>(new Set());
   const ambientNodeIdsRef = useRef<string[]>([]);
@@ -1262,6 +1263,12 @@ export default function GraphView({
     typedEdgesRef.current = links.filter((e) => e.type === 'semantic' || e.type === 'tag').map((e) => ({ source: e.source, target: e.target, type: e.type }));
     // Edges that live in sigma + drive the layout: explicit always, concept when the layer is on.
     const graphLinks = links.filter((e) => e.type === 'explicit' || (showConcepts && e.type === 'concept'));
+    const topologySignature = JSON.stringify({
+      nodes: visibleNodes.map((node) => node.id).sort(),
+      edges: graphLinks.map((edge) => [pairKey(edge.source, edge.target), edge.type]).sort(),
+    });
+    const topologyChanged = topologySignatureRef.current !== topologySignature;
+    topologySignatureRef.current = topologySignature;
 
     const desired = new Set(visibleNodes.map((n) => n.id));
     for (const id of graph.nodes()) if (!desired.has(id)) graph.dropNode(id);
@@ -1316,7 +1323,9 @@ export default function GraphView({
     }
 
     sigma.refresh();
-    reheat();
+    // The graph query polls while this view is open. Reheating on every poll makes
+    // ForceAtlas2 repeatedly restart, which looks like shaking on dense graphs.
+    if (topologyChanged) reheat();
   }, [nodes, links, dto.nodes, conceptLayer, reheat]);
 
   useEffect(() => {

@@ -64,6 +64,8 @@ export const AI_TASK_POLICIES: Record<string, AiTaskPolicy> = {
   complex_answer: { task: 'complex_answer', inputBudget: 10_000, outputBudget: 1_200, defaultTier: 'quality-cloud' },
   wishlist_import: { task: 'wishlist_import', inputBudget: 900, outputBudget: 120, defaultTier: 'cheap-cloud', cacheTtlMs: 30 * 24 * 60 * 60_000 },
   wishlist_advice: { task: 'wishlist_advice', inputBudget: 4_000, outputBudget: 500, defaultTier: 'cheap-cloud', cacheTtlMs: 7 * 24 * 60 * 60_000 },
+  // Explicitly reviewed aggregate activity only. Do not cache preview payloads or responses.
+  activity_aggregate_analysis: { task: 'activity_aggregate_analysis', inputBudget: 3_000, outputBudget: 700, defaultTier: 'cheap-cloud', privacy: 'cloud-allowed' },
 };
 
 function cacheKey(input: Pick<ModelGatewayRequest<unknown>, 'task' | 'promptVersion' | 'model' | 'prompt'>): string {

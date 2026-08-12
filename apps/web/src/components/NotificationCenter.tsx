@@ -12,6 +12,7 @@ import {
 } from '../lib/notifications.js';
 
 const KIND_ICON: Record<AppNotification['kind'], string> = {
+  activity: 'Activity',
   reminder: '🔔',
   achievement: '🏅',
   levelup: '⬆️',

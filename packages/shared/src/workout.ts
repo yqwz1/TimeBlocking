@@ -139,6 +139,89 @@ export const WorkoutExerciseSchema = z.object({
 });
 export type WorkoutExerciseDTO = z.infer<typeof WorkoutExerciseSchema>;
 
+const WorkoutPowerliftingSlotSchema = z.enum(['squat', 'bench', 'deadlift']);
+export type WorkoutPowerliftingSlot = z.infer<typeof WorkoutPowerliftingSlotSchema>;
+
+export const WorkoutPowerliftingConfigSchema = z.object({
+  lifts: z.object({
+    squat: z.string().trim().min(1).max(200),
+    bench: z.string().trim().min(1).max(200),
+    deadlift: z.string().trim().min(1).max(200),
+  }),
+  bar_weight_kg: z.number().positive().max(100),
+  plate_pairs_kg: z.array(z.number().positive().max(100)).min(1).max(24),
+  sex: z.enum(['male', 'female']),
+  score: z.enum(['dots', 'wilks']),
+  meet_date: z.string().date().nullable(),
+  attempt_pct: z.tuple([z.number(), z.number(), z.number()]),
+  standards: z.object({
+    labels: z.array(z.string()),
+    bw_mult: z.object({
+      squat: z.array(z.number()),
+      bench: z.array(z.number()),
+      deadlift: z.array(z.number()),
+    }),
+  }),
+});
+export type WorkoutPowerliftingConfig = z.infer<typeof WorkoutPowerliftingConfigSchema>;
+
+export const WorkoutPowerliftingProfileInputSchema = WorkoutPowerliftingConfigSchema.pick({
+  lifts: true,
+  bar_weight_kg: true,
+  plate_pairs_kg: true,
+  sex: true,
+  score: true,
+  meet_date: true,
+  attempt_pct: true,
+}).superRefine((value, context) => {
+  if (new Set(value.plate_pairs_kg).size !== value.plate_pairs_kg.length) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ['plate_pairs_kg'], message: 'Plate pairs must not contain duplicates.' });
+  }
+  const [opener, second, third] = value.attempt_pct;
+  if (!(opener > 0 && opener < second && second < third && third <= 1.15)) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ['attempt_pct'], message: 'Attempts must increase from opener to third and remain realistic.' });
+  }
+});
+export type WorkoutPowerliftingProfileInput = z.infer<typeof WorkoutPowerliftingProfileInputSchema>;
+
+export const WorkoutPowerliftingLiftSchema = z.object({
+  slot: WorkoutPowerliftingSlotSchema,
+  name: z.string().nullable(),
+  present: z.boolean(),
+  best_e1rm: NullableNumber.optional(),
+  recent_sets: z.array(z.object({
+    date: z.string().date(),
+    weight: z.number(),
+    reps: z.number(),
+    e1rm: NullableNumber,
+  })).optional(),
+});
+export type WorkoutPowerliftingLift = z.infer<typeof WorkoutPowerliftingLiftSchema>;
+
+export const WorkoutPowerliftingSummarySchema = z.object({
+  config: WorkoutPowerliftingConfigSchema,
+  bodyweight_kg: NullableNumber,
+  lifts: z.array(WorkoutPowerliftingLiftSchema),
+  lifts_present: z.number().int().min(0).max(3),
+  total_series: z.array(z.object({
+    date: z.string().date(),
+    present: z.number().int().min(0).max(3),
+    total: z.number(),
+    squat: NullableNumber.optional(),
+    bench: NullableNumber.optional(),
+    deadlift: NullableNumber.optional(),
+  })),
+  current_total: NullableNumber,
+  current_total_present: z.number().int().min(0).max(3),
+});
+export type WorkoutPowerliftingSummary = z.infer<typeof WorkoutPowerliftingSummarySchema>;
+
+export const WorkoutSettingsSchema = z.object({
+  settings: z.record(z.unknown()),
+  powerlifting: WorkoutPowerliftingConfigSchema,
+});
+export type WorkoutSettingsDTO = z.infer<typeof WorkoutSettingsSchema>;
+
 export const WorkoutRecordSchema = z.object({
   name: z.string(),
   muscle: z.string(),
@@ -157,21 +240,33 @@ export const WorkoutGoalSchema = z.object({
   target_value: z.number(),
   target_reps: z.number().nullable(),
   target_date: z.string().nullable(),
-  current: z.number().nullable(),
+  // Older cached summaries omitted these derived forecast fields when no
+  // progression data existed. Accept that legacy shape and normalize it at
+  // the boundary instead of hiding the user's workout history.
+  current: z.number().nullable().optional(),
   projected_date: z.string().nullable(),
-  weeks_needed: z.number().nullable(),
+  weeks_needed: z.number().nullable().optional(),
   verdict: z.string(),
 });
 
 export const WorkoutVolumeRecommendationSchema = z.object({
   muscle: z.string(),
   current_sets: z.number(),
+  current_sets_4wk: z.number().optional(),
+  current_sets_recent: NullableNumber.optional(),
+  active_weeks_4wk: z.number().int().nonnegative().optional(),
   target_sets: z.number(),
   final_target: z.number(),
+  ramping: z.boolean().optional(),
   delta: z.number(),
   action: z.string(),
   recovery: z.string(),
   recovery_score: NullableNumber,
+  momentum: NullableNumber.optional(),
+  fatigue: NullableNumber.optional(),
+  rpe: NullableNumber.optional(),
+  mean_rpe: NullableNumber.optional(),
+  form_z: NullableNumber.optional(),
   confidence: z.string(),
   signals: z.array(z.string()),
   reason: z.string(),
@@ -271,6 +366,70 @@ export const WorkoutExerciseHistoryQuerySchema = z.object({
   message: '`from` must be on or before `to`.',
 });
 
+export const WorkoutVolumeAnalyticsRangeSchema = z.enum(['4w', '8w', '12w', 'all']);
+export type WorkoutVolumeAnalyticsRange = z.infer<typeof WorkoutVolumeAnalyticsRangeSchema>;
+export const WorkoutVolumeAnalyticsQuerySchema = z.object({
+  range: WorkoutVolumeAnalyticsRangeSchema.default('12w'),
+  compare: z.enum(['0', '1']).optional().default('0').transform((value) => value === '1'),
+});
+export type WorkoutVolumeAnalyticsQuery = z.infer<typeof WorkoutVolumeAnalyticsQuerySchema>;
+
+const WorkoutVolumeAnalyticsPeriodSchema = z.object({
+  from: z.string().date(),
+  to: z.string().date(),
+  weeks: z.number().int().positive(),
+});
+const WorkoutVolumeAnalyticsWeekSchema = z.object({
+  week: z.string().date(),
+  credited_sets: z.number(),
+  load_index: NullableNumber,
+  sessions: z.number().int().nonnegative(),
+  recovery_score: NullableNumber,
+  recovery_state: z.string(),
+});
+const WorkoutVolumeAnalyticsContributionSchema = z.object({
+  exercise: z.string(),
+  credited_sets: z.number(),
+  load_index: NullableNumber,
+});
+const WorkoutVolumeAnalyticsMuscleSchema = z.object({
+  muscle: z.string(),
+  region: z.string().nullable(),
+  landmarks: z.object({ mev: NullableNumber, mav: NullableNumber, mrv: NullableNumber }),
+  credited_sets: z.number(),
+  recent_sets: z.number(),
+  active_weeks: z.number().int().nonnegative(),
+  load_index: NullableNumber,
+  recommendation: WorkoutVolumeRecommendationSchema.nullable(),
+  weekly: z.array(z.object({ week: z.string().date(), credited_sets: z.number(), load_index: NullableNumber })),
+  exercise_contributions: z.array(WorkoutVolumeAnalyticsContributionSchema),
+  comparison_delta: z.object({ credited_sets: NullableNumber, load_index: NullableNumber }).nullable(),
+});
+export const WorkoutVolumeAnalyticsSchema = z.object({
+  schema_version: z.literal(1),
+  range: WorkoutVolumeAnalyticsRangeSchema,
+  selected: WorkoutVolumeAnalyticsPeriodSchema,
+  previous: WorkoutVolumeAnalyticsPeriodSchema.nullable(),
+  comparison_available: z.boolean(),
+  comparison_reason: z.string().nullable(),
+  overview: z.object({
+    credited_sets: z.number(),
+    target_gap: NullableNumber,
+    muscles_requiring_action: z.number().int().nonnegative(),
+    recovery_confidence: z.string(),
+    recovery_confidence_basis: z.string(),
+    push_pull: NullableNumber,
+    push_pull_target: NullableNumber,
+    upper_lower: NullableNumber,
+    upper_lower_target: NullableNumber,
+  }),
+  comparison_overview: z.object({ credited_sets: z.number(), load_index: NullableNumber }).nullable(),
+  weekly: z.array(WorkoutVolumeAnalyticsWeekSchema),
+  previous_weekly: z.array(WorkoutVolumeAnalyticsWeekSchema),
+  muscles: z.array(WorkoutVolumeAnalyticsMuscleSchema),
+});
+export type WorkoutVolumeAnalyticsDTO = z.infer<typeof WorkoutVolumeAnalyticsSchema>;
+
 export const WorkoutSummarySchema = z.object({
   schema_version: z.literal(4),
   generated_at: z.string(),
@@ -324,13 +483,14 @@ export const WorkoutSummarySchema = z.object({
   }).passthrough(),
   exercises: z.array(WorkoutExerciseSchema),
   records: z.array(WorkoutRecordSchema),
-  powerlifting: z.record(z.unknown()),
+  powerlifting: WorkoutPowerliftingSummarySchema,
   goals: z.array(WorkoutGoalSchema),
   headline_flags: z.array(z.string()),
 }).passthrough();
 export type WorkoutSummaryDTO = z.infer<typeof WorkoutSummarySchema>;
 
 export const WorkoutCredentialInputSchema = z.object({ apiKey: z.string().trim().min(1).max(500) });
+export { WorkoutPowerliftingSlotSchema };
 export const WorkoutSyncInputSchema = z.object({ full: z.boolean().default(false), date: z.string().date().optional() });
 export const WorkoutBodyweightInputSchema = z.object({
   weight: z.number().positive().max(500),

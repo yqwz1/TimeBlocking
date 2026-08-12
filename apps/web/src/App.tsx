@@ -9,6 +9,8 @@ import SecondBrainPage from './pages/SecondBrainPage.js';
 import WishlistPage from './pages/WishlistPage.js';
 import WorkoutPage from './pages/WorkoutPage.js';
 import SettingsPage from './pages/SettingsPage.js';
+import ProgressPage from './pages/ProgressPage.js';
+import KitchenPage from './pages/KitchenPage.js';
 import { decodeNoteDeepLinkId } from './lib/noteDeepLinks.js';
 import { CommandPaletteProvider } from './lib/commandPalette.js';
 import { getUiPreferences, WORKSPACE_PATHS } from './lib/uiPreferences.js';
@@ -44,8 +46,10 @@ export default function App() {
             <Route path="/whiteboard" element={<WhiteboardPage />} />
             <Route path="/notes" element={<SecondBrainPage />} />
             <Route path="/wishlist" element={<WishlistPage />} />
+            <Route path="/kitchen" element={<KitchenPage />} />
             <Route path="/workout" element={<WorkoutPage />} />
             <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/progress" element={<ProgressPage />} />
             <Route path="/calendar" element={<Navigate to="/tasks?view=calendar" replace />} />
             <Route path="/habits" element={<Navigate to="/tasks?view=habits" replace />} />
             <Route path="/objectives" element={<Navigate to="/tasks?view=objectives" replace />} />

@@ -1,16 +1,16 @@
-# Graph Report - TimeBlocking  (2026-08-04)
+# Graph Report - TimeBlocking  (2026-08-12)
 
 ## Corpus Check
-- 451 files · ~377,806 words
+- 499 files · ~426,805 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 7831 nodes · 12052 edges · 549 communities (516 shown, 33 thin omitted)
-- Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 20 edges (avg confidence: 0.86)
+- 8402 nodes · 13207 edges · 503 communities (470 shown, 33 thin omitted)
+- Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 23 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `6e6aef6d`
+- Built from commit: `00591972`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -307,28 +307,28 @@
 - [[_COMMUNITY_preferred start|preferred start]]
 - [[_COMMUNITY_Community 291|Community 291]]
 - [[_COMMUNITY_Community 292|Community 292]]
-- [[_COMMUNITY_start utc|start utc]]
+- [[_COMMUNITY_Community 293|Community 293]]
 - [[_COMMUNITY_Community 294|Community 294]]
 - [[_COMMUNITY_updated at utc|updated at utc]]
 - [[_COMMUNITY_Community 296|Community 296]]
-- [[_COMMUNITY_calendar id|calendar id]]
+- [[_COMMUNITY_Community 297|Community 297]]
 - [[_COMMUNITY_Community 298|Community 298]]
 - [[_COMMUNITY_end utc|end utc]]
 - [[_COMMUNITY_gcal event id|gcal event id]]
 - [[_COMMUNITY_gcal updated|gcal updated]]
-- [[_COMMUNITY_habit instance id|habit instance id]]
+- [[_COMMUNITY_Community 302|Community 302]]
 - [[_COMMUNITY_Community 303|Community 303]]
 - [[_COMMUNITY_kind|kind]]
 - [[_COMMUNITY_Community 305|Community 305]]
 - [[_COMMUNITY_recorded at utc|recorded at utc]]
 - [[_COMMUNITY_Community 307|Community 307]]
 - [[_COMMUNITY_Community 308|Community 308]]
-- [[_COMMUNITY_task id|task id]]
+- [[_COMMUNITY_Community 309|Community 309]]
 - [[_COMMUNITY_updated at utc|updated at utc]]
 - [[_COMMUNITY_Community 311|Community 311]]
 - [[_COMMUNITY_calendar id|calendar id]]
 - [[_COMMUNITY_gcal event id|gcal event id]]
-- [[_COMMUNITY_gcal updated|gcal updated]]
+- [[_COMMUNITY_Community 314|Community 314]]
 - [[_COMMUNITY_Community 315|Community 315]]
 - [[_COMMUNITY_Community 316|Community 316]]
 - [[_COMMUNITY_last pushed hash|last pushed hash]]
@@ -341,7 +341,7 @@
 - [[_COMMUNITY_Community 324|Community 324]]
 - [[_COMMUNITY_Community 325|Community 325]]
 - [[_COMMUNITY_Community 326|Community 326]]
-- [[_COMMUNITY_calendar id|calendar id]]
+- [[_COMMUNITY_Community 327|Community 327]]
 - [[_COMMUNITY_gcal event id|gcal event id]]
 - [[_COMMUNITY_gcal updated|gcal updated]]
 - [[_COMMUNITY_Community 330|Community 330]]
@@ -409,7 +409,6 @@
 - [[_COMMUNITY_Community 402|Community 402]]
 - [[_COMMUNITY_Community 403|Community 403]]
 - [[_COMMUNITY_Community 404|Community 404]]
-- [[_COMMUNITY_Community 405|Community 405]]
 - [[_COMMUNITY_Community 406|Community 406]]
 - [[_COMMUNITY_Community 407|Community 407]]
 - [[_COMMUNITY_Community 408|Community 408]]
@@ -429,9 +428,7 @@
 - [[_COMMUNITY_Community 423|Community 423]]
 - [[_COMMUNITY_Community 424|Community 424]]
 - [[_COMMUNITY_Community 425|Community 425]]
-- [[_COMMUNITY_Community 426|Community 426]]
 - [[_COMMUNITY_Community 427|Community 427]]
-- [[_COMMUNITY_Community 428|Community 428]]
 - [[_COMMUNITY_Community 429|Community 429]]
 - [[_COMMUNITY_Community 430|Community 430]]
 - [[_COMMUNITY_Community 431|Community 431]]
@@ -479,7 +476,6 @@
 - [[_COMMUNITY_Community 473|Community 473]]
 - [[_COMMUNITY_Community 474|Community 474]]
 - [[_COMMUNITY_Community 475|Community 475]]
-- [[_COMMUNITY_Community 476|Community 476]]
 - [[_COMMUNITY_Community 477|Community 477]]
 - [[_COMMUNITY_Community 478|Community 478]]
 - [[_COMMUNITY_Community 479|Community 479]]
@@ -497,83 +493,41 @@
 - [[_COMMUNITY_Community 492|Community 492]]
 - [[_COMMUNITY_Community 493|Community 493]]
 - [[_COMMUNITY_Community 494|Community 494]]
-- [[_COMMUNITY_Community 495|Community 495]]
 - [[_COMMUNITY_Community 496|Community 496]]
 - [[_COMMUNITY_Community 497|Community 497]]
-- [[_COMMUNITY_Community 498|Community 498]]
-- [[_COMMUNITY_Community 499|Community 499]]
 - [[_COMMUNITY_Community 500|Community 500]]
 - [[_COMMUNITY_Community 501|Community 501]]
-- [[_COMMUNITY_Community 502|Community 502]]
-- [[_COMMUNITY_Community 503|Community 503]]
 - [[_COMMUNITY_Community 504|Community 504]]
-- [[_COMMUNITY_Community 505|Community 505]]
-- [[_COMMUNITY_Community 506|Community 506]]
-- [[_COMMUNITY_Community 507|Community 507]]
-- [[_COMMUNITY_Community 508|Community 508]]
-- [[_COMMUNITY_Community 509|Community 509]]
-- [[_COMMUNITY_Community 510|Community 510]]
-- [[_COMMUNITY_Community 511|Community 511]]
 - [[_COMMUNITY_Community 512|Community 512]]
 - [[_COMMUNITY_Community 513|Community 513]]
 - [[_COMMUNITY_Community 514|Community 514]]
 - [[_COMMUNITY_Community 515|Community 515]]
 - [[_COMMUNITY_Community 516|Community 516]]
-- [[_COMMUNITY_Community 517|Community 517]]
-- [[_COMMUNITY_Community 518|Community 518]]
-- [[_COMMUNITY_Community 519|Community 519]]
-- [[_COMMUNITY_Community 520|Community 520]]
-- [[_COMMUNITY_Community 521|Community 521]]
-- [[_COMMUNITY_Community 522|Community 522]]
-- [[_COMMUNITY_Community 523|Community 523]]
-- [[_COMMUNITY_Community 524|Community 524]]
 - [[_COMMUNITY_Community 525|Community 525]]
-- [[_COMMUNITY_Community 526|Community 526]]
-- [[_COMMUNITY_Community 527|Community 527]]
-- [[_COMMUNITY_Community 528|Community 528]]
-- [[_COMMUNITY_Community 529|Community 529]]
-- [[_COMMUNITY_Community 530|Community 530]]
-- [[_COMMUNITY_Community 531|Community 531]]
-- [[_COMMUNITY_Community 532|Community 532]]
-- [[_COMMUNITY_Community 533|Community 533]]
-- [[_COMMUNITY_Community 534|Community 534]]
-- [[_COMMUNITY_Community 535|Community 535]]
-- [[_COMMUNITY_Community 536|Community 536]]
-- [[_COMMUNITY_Community 537|Community 537]]
-- [[_COMMUNITY_Community 539|Community 539]]
-- [[_COMMUNITY_Community 540|Community 540]]
-- [[_COMMUNITY_Community 541|Community 541]]
-- [[_COMMUNITY_Community 542|Community 542]]
-- [[_COMMUNITY_Community 543|Community 543]]
-- [[_COMMUNITY_Community 544|Community 544]]
-- [[_COMMUNITY_Community 545|Community 545]]
-- [[_COMMUNITY_Community 546|Community 546]]
-- [[_COMMUNITY_Community 547|Community 547]]
-- [[_COMMUNITY_Community 548|Community 548]]
 
 ## God Nodes (most connected - your core abstractions)
-1. `DB` - 94 edges
-2. `nowUtcIso()` - 84 edges
+1. `nowUtcIso()` - 105 edges
+2. `DB` - 104 edges
 3. `exercises` - 61 edges
-4. `getSettings()` - 47 edges
-5. `registerApiRoutes()` - 33 edges
+4. `getSettings()` - 51 edges
+5. `registerApiRoutes()` - 35 edges
 6. `SyncManager` - 33 edges
-7. `tasks` - 30 edges
+7. `tasks` - 32 edges
 8. `plan()` - 28 edges
-9. `readNoteFile()` - 26 edges
-10. `fmtDur()` - 26 edges
+9. `SecondBrainPage()` - 28 edges
+10. `ModelGateway` - 26 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `QuickCaptureModal()` --calls--> `getYouTubeThumbnailUrl()`  [INFERRED]
   apps/web/src/components/notes/QuickCaptureModal.tsx → packages/shared/src/youtube.ts
+- `capturePath()` --calls--> `buildInboxNotePath()`  [INFERRED]
+  apps/server/src/notes/inbox.ts → packages/shared/src/voice.ts
+- `saveNoteAsset()` --calls--> `sanitizeVoiceNoteTitle()`  [INFERRED]
+  apps/server/src/notes/inbox.ts → packages/shared/src/voice.ts
 - `renderMarkdown()` --calls--> `getYouTubeCanonicalUrl()`  [INFERRED]
   apps/web/src/lib/markdown.ts → packages/shared/src/youtube.ts
 - `renderMarkdown()` --calls--> `getYouTubeEmbedUrl()`  [INFERRED]
   apps/web/src/lib/markdown.ts → packages/shared/src/youtube.ts
-- `renderMarkdown()` --calls--> `getYouTubeVideoId()`  [INFERRED]
-  apps/web/src/lib/markdown.ts → packages/shared/src/youtube.ts
-- `capturePath()` --calls--> `buildInboxNotePath()`  [INFERRED]
-  apps/server/src/notes/inbox.ts → packages/shared/src/voice.ts
 
 ## Import Cycles
 - None detected.
@@ -585,19 +539,19 @@
 - **Cursor Gaze Direction Variants** — src_cat_sprites_head_look_left, src_cat_sprites_head_look_right, src_cat_sprites_head_look_down, src_cat_sprites_cursor_gaze [EXTRACTED 1.00]
 - **Walk Pose Sequence** — src_cat_sprites_legs_step_a, src_cat_sprites_legs_stand, src_cat_sprites_legs_step_b, src_cat_sprites_walk_cycle [EXTRACTED 1.00]
 
-## Communities (549 total, 33 thin omitted)
+## Communities (503 total, 33 thin omitted)
 
 ### Community 0 - "types.ts"
 Cohesion: 0.01
-Nodes (275): AchievementDTO, ActionProposal, ActionProposalStatus, ActionProposalType, AnalyticsDailyDTO, AssistantChatInput, AssistantChatResponse, AssistantChatSchema (+267 more)
+Nodes (284): AchievementDTO, AchievementProgress, ActionProposal, ActionProposalStatus, ActionProposalType, AnalyticsDailyDTO, AssistantChatInput, AssistantChatResponse (+276 more)
 
 ### Community 1 - "Task Editor Panel.tsx"
-Cohesion: 0.08
-Nodes (40): useKanbanColumns(), listItem, useLabelColorMap(), useReorderTasks(), useUpdateTask(), FocusView(), BarRow, dayWidthFor() (+32 more)
+Cohesion: 0.04
+Nodes (74): useKanbanColumns(), usePersistentStringSet(), NoteTree(), EMBEDDED_VIEWS, TasksPage(), taskToInput(), useLabelColorMap(), useReorderTasks() (+66 more)
 
 ### Community 2 - "proposals.ts"
-Cohesion: 0.07
-Nodes (49): planProposals, BusyInterval, eventIdForBlock(), GEvent, OFFLINE_CODES, REQ_OPTS, BlockOp, CurrentBlockLite (+41 more)
+Cohesion: 0.06
+Nodes (42): priorityBadge(), TABS, TaskRow(), fadeInUp, listItem, springs, currentWeekStart(), ObjectiveRow() (+34 more)
 
 ### Community 3 - "hooks.ts"
 Cohesion: 0.05
@@ -605,43 +559,43 @@ Nodes (12): AnchoredPredictTest, BacktestGoldenTest, BayesTest, E1rmRpeTest, For
 
 ### Community 4 - "Today View.tsx"
 Cohesion: 0.17
-Nodes (21): useWorkoutBacktest(), useWorkoutBodyweight(), useWorkoutCalibrate(), useWorkoutCompare(), useWorkoutCredential(), useWorkoutGoal(), useWorkoutMutation(), useWorkoutNote() (+13 more)
+Nodes (20): useWorkoutBacktest(), useWorkoutBodyweight(), useWorkoutCalibrate(), useWorkoutCompare(), useWorkoutCredential(), useWorkoutGoal(), useWorkoutMutation(), useWorkoutNote() (+12 more)
 
 ### Community 5 - "main.ts"
 Cohesion: 0.06
-Nodes (43): bootstrapData(), buildTrayMenu(), copyRecursiveSync(), createTray(), createWindow(), __dirname, findFreePort(), hasSingleInstanceLock (+35 more)
+Nodes (44): attentionNotifications, bootstrapData(), buildTrayMenu(), copyRecursiveSync(), createTray(), createWindow(), __dirname, findFreePort() (+36 more)
 
 ### Community 6 - "mappers.ts"
-Cohesion: 0.08
-Nodes (41): attachments, blocks, labels, projects, reminders, taskDependencies, tasks, NodeMetric (+33 more)
+Cohesion: 0.06
+Nodes (41): attachments, whiteboardFiles, whiteboards, whiteboardScenes, AttachmentRow, attachmentToDTO(), BlockRow, blockToItem() (+33 more)
 
 ### Community 7 - "motion.ts"
-Cohesion: 0.07
-Nodes (37): HabitsCard(), computeGoalDisplay(), GoalCard(), GoalDisplay, GoalFormModal(), GoalsPage(), isBehindPace(), MilestoneChecklist() (+29 more)
+Cohesion: 0.13
+Nodes (16): computeGoalDisplay(), GoalCard(), GoalDisplay, GoalFormModal(), GoalsPage(), isBehindPace(), MilestoneChecklist(), QUARTERS (+8 more)
 
 ### Community 8 - "schema.ts"
-Cohesion: 0.10
-Nodes (31): useConceptStatus(), useEmbeddingsStatus(), useExtractConcepts(), useRebuildGraph(), useReindexEmbeddings(), PeakHoursCard(), ALL_SETTINGS_SECTIONS, DEVICE_SECTION_IDS (+23 more)
+Cohesion: 0.09
+Nodes (34): useConceptStatus(), useEmbeddingsStatus(), useExtractConcepts(), useRebuildGraph(), useReindexEmbeddings(), PeakHoursCard(), ActivityWatchPanel(), ALL_SETTINGS_SECTIONS (+26 more)
 
 ### Community 9 - "background.js"
 Cohesion: 0.08
 Nodes (40): addRecent(), addWishlistProduct(), enqueue(), getLocalList(), getSettings(), postCapture(), retryPending(), saveCapture() (+32 more)
 
 ### Community 10 - "manager.ts"
-Cohesion: 0.08
-Nodes (21): rollupDay(), settings, syncLog, Gcal, isOfflineError(), statusOf(), logSync(), trimLog() (+13 more)
+Cohesion: 0.15
+Nodes (22): ACTIVE_STATUSES, ApplyProposalResult, autoPickMissed(), buildCandidates(), classify(), createProposal(), discardExistingDrafts(), getCurrentProposal() (+14 more)
 
 ### Community 11 - "Gcal"
 Cohesion: 0.05
 Nodes (10): AlphaTest, ConformalDbTest, ConformalIntervalTest, ConformalQuantileTest, ForecastCorrectionTest, MondrianTest, NormScaleTest, PredictRepsConformalTest (+2 more)
 
 ### Community 12 - "client.ts"
-Cohesion: 0.08
-Nodes (33): Bucket, analyticsDaily, briefs, habitInstances, habits, objectives, weeklyReviews, computeObjectiveProgress() (+25 more)
+Cohesion: 0.17
+Nodes (24): useActionProposals(), useApproveActionProposal(), useAssistantChat(), useAssistantMessageFeedback(), useAssistantOnboarding(), useAssistantThread(), useAssistantThreads(), useCreateAssistantThread() (+16 more)
 
 ### Community 13 - "DB"
-Cohesion: 0.15
-Nodes (18): CelebrationToasts(), Toast, COLORS, ConfettiBurst(), Particle, celebrateTaskComplete(), Listener, listeners (+10 more)
+Cohesion: 0.12
+Nodes (26): useWorkoutPowerliftingProfile(), attemptRows(), buildPowerliftingModel(), dotsCoefficient(), meetProjection(), percentageRows(), plateBreakdown(), POWERLIFTING_SLOTS (+18 more)
 
 ### Community 14 - "dependencies"
 Cohesion: 0.05
@@ -652,20 +606,20 @@ Cohesion: 0.08
 Nodes (41): Beg Pose, Cat Body, Stretched Cat Body, Carry Pose, Whole-Frame Cursor Gaze, Eat Cycle, Closed-Eyed Face, Down-Looking Face (+33 more)
 
 ### Community 16 - "notes.ts"
-Cohesion: 0.14
-Nodes (14): answerGraphChat(), ChatContextChunk, ChatResult, CommunityContext, CompiledGraphQuery, compileGraphQuery(), DigestSourceNote, generateWeeklyDigest() (+6 more)
+Cohesion: 0.10
+Nodes (15): Layout(), workspaceTabs, UndoRedoControls(), useKitchenStatus(), DEFAULT_OPTIONS, useResizableSidebar(), pageVariants, setSoundEnabled() (+7 more)
 
 ### Community 17 - "Voice Capture.tsx"
-Cohesion: 0.18
-Nodes (14): useNoteSearch(), usePublicNote(), escapeHtml(), highlightSnippet(), isTableDivider(), ListItem, MarkdownOptions, renderInline() (+6 more)
+Cohesion: 0.13
+Nodes (19): useNoteSearch(), usePublicNote(), escapeHtml(), highlightSnippet(), isTableDivider(), ListItem, MarkdownOptions, renderInline() (+11 more)
 
 ### Community 18 - "habits.ts"
-Cohesion: 0.06
-Nodes (32): BriefCard(), ScheduleStateChip(), relTime(), SyncStatusBar(), useBrowserOnline(), formatMinutes(), TodayFocusPanel(), WARNING_TEXT (+24 more)
+Cohesion: 0.21
+Nodes (15): DayWeekPlanner(), Mode, PlanDayModal(), CandidateRow(), FullnessMeter(), PlanItemRow(), REASON_LABEL, CHANGE_STYLES (+7 more)
 
 ### Community 19 - "notes.ts"
-Cohesion: 0.11
-Nodes (28): NoteConflictError, useCreateNoteFolder(), useCreateNoteFromTemplate(), useDeleteNote(), useGenerateDigest(), useInboxNotes(), useMoveNote(), useNoteFolders() (+20 more)
+Cohesion: 0.10
+Nodes (36): encodeNotePath(), NoteConflictError, useCreateNoteFolder(), useCreateNoteFromTemplate(), useCreateNoteShare(), useDeleteNote(), useDeleteNoteFolder(), useDraftLinkedInPost() (+28 more)
 
 ### Community 20 - "dependencies"
 Cohesion: 0.06
@@ -676,60 +630,60 @@ Cohesion: 0.05
 Nodes (11): _cfg(), CurvilinearDbTest, DispatchTest, FailureRepsTest, FitAnchorTest, IndividualRmSplineTest, MonotoneCurveTest, Tests for the curvilinear, regularized 1RM model (design 04).  Core claims:   1. (+3 more)
 
 ### Community 22 - "markdown.ts"
-Cohesion: 0.10
-Nodes (11): buildDecorations(), fetchQueryResult(), HorizontalRuleWidget, isTableDivider(), ListMarkerWidget, livePreviewExtension(), MarkdownTable, QueryBlockWidget (+3 more)
+Cohesion: 0.08
+Nodes (12): buildDecorations(), fetchQueryResult(), HorizontalRuleWidget, isTableDivider(), ListMarkerWidget, livePreviewExtension(), MarkdownTable, MarkdownTableWidget (+4 more)
 
 ### Community 23 - "communities.ts"
-Cohesion: 0.10
-Nodes (40): nameCommunity(), runExtraction(), triggerConceptExtraction(), graphJobs, nodeMetrics, coarseCommunitySummaries(), CommunityComputation, communityId() (+32 more)
+Cohesion: 0.31
+Nodes (6): ensureTimezoneDefault(), normalizeAiModel(), RETIRED_GEMINI_MODELS, setSecret(), updateSettings(), upsertRow()
 
 ### Community 24 - "Analytics Page.tsx"
-Cohesion: 0.06
-Nodes (30): popIn, AchievementsCard(), AnalyticsPage(), buildInsights(), C, ConsistencyHeatmap(), DailyRhythmCard(), DAY_RESULT_COLOR (+22 more)
+Cohesion: 0.09
+Nodes (18): AnalyticsPage(), buildInsights(), C, DailyRhythmCard(), DAY_RESULT_COLOR, fmtMin(), HABIT_DOT, HabitsCard() (+10 more)
 
 ### Community 25 - "client.ts"
-Cohesion: 0.15
-Nodes (12): EMBEDDED_VIEWS, DUE_OPTIONS, PRIORITY_OPTIONS, SORT_OPTIONS, STATUS_OPTIONS, VIEW_TABS, PRIORITY_COLOR, PRIORITY_LABEL (+4 more)
+Cohesion: 0.03
+Nodes (101): Bucket, createDb(), DB, achievementsUnlocked, activityAiPreviews, activityRecommendations, analyticsDaily, blockActivitySummaries (+93 more)
 
 ### Community 26 - "Focus View.tsx"
-Cohesion: 0.15
-Nodes (12): Layout(), workspaceTabs, CommandPaletteCommand, CommandPaletteContext, CommandPaletteProvider(), useCommandPaletteScope(), useCommandPaletteState(), pageVariants (+4 more)
+Cohesion: 0.13
+Nodes (24): eventIdForBlock(), loadLearned(), buildTodayPlan(), latestWarnings(), diffBlocks(), expandChronotype(), daysToRrule(), RRULE_TOKENS (+16 more)
 
 ### Community 27 - "vault.ts"
-Cohesion: 0.05
-Nodes (12): ConfidenceMappingTest, DecideConfidenceTest, EwmaBalanceTest, FitCutoffsTest, Trust-focused tests for the volume & recovery refinements: frequency-aware volum, The RPE fatigue read: gated until enough data, negative when grinding,     mildl, Low confidence must fall back to landmarks; high reproduces old behavior., Frequency-aware 'now': a recent surge after empty weeks must read higher     on (+4 more)
+Cohesion: 0.04
+Nodes (13): ConfidenceMappingTest, DecideConfidenceTest, EwmaBalanceTest, FitCutoffsTest, HistoricalRecoveryBoundaryTest, Trust-focused tests for the volume & recovery refinements: frequency-aware volum, The RPE fatigue read: gated until enough data, negative when grinding,     mildl, Frequency-aware 'now': a recent surge after empty weeks must read higher     on (+5 more)
 
 ### Community 28 - "engine.ts"
-Cohesion: 0.16
-Nodes (18): buildEnergyIntervals(), CHRONOTYPE_PRESETS, EnergyIntervals, EnergyLevel, energyMatch(), expandChronotype(), hhmmParts(), overlap() (+10 more)
+Cohesion: 0.17
+Nodes (17): buildEnergyIntervals(), CHRONOTYPE_PRESETS, EnergyIntervals, EnergyLevel, energyMatch(), hhmmParts(), overlap(), TaskClass (+9 more)
 
 ### Community 29 - "indexer.ts"
 Cohesion: 0.36
 Nodes (5): useNoteSnapshot(), useNoteSnapshots(), useRestoreNoteSnapshot(), DiffRow, VersionHistoryModal()
 
 ### Community 30 - "Goals Page.tsx"
-Cohesion: 0.18
-Nodes (9): CalendarView, KIND_LEGEND, PRIORITY_CHIPS, SlotDuration, VIEWS, STYLES, useCalendarShortcuts(), ALL_KINDS (+1 more)
+Cohesion: 0.07
+Nodes (31): CelebrationToasts(), ScheduleStateChip(), relTime(), SyncStatusBar(), useBrowserOnline(), popIn, formatMinutes(), TodayFocusPanel() (+23 more)
 
 ### Community 31 - "recompute.ts"
-Cohesion: 0.20
-Nodes (13): graphIndexFreshness(), buildEraGraphFromNotes(), collectSnapshots(), communityLabel(), folderOf(), graphTimeline(), historicalGraph(), HistoricalNoteInput (+5 more)
+Cohesion: 0.13
+Nodes (21): graphIndexFreshness(), buildEraGraphFromNotes(), collectSnapshots(), communityLabel(), folderOf(), graphTimeline(), historicalGraph(), HistoricalNoteInput (+13 more)
 
 ### Community 32 - "embeddings.ts"
 Cohesion: 0.09
 Nodes (42): acwr_gate_audit(), conformal_rep_intervals(), _conformal_rep_records(), _cur_epoch(), _e1rm_series(), effort_rep_prediction(), _exercises(), _fit_cutoffs() (+34 more)
 
 ### Community 33 - "Habits Page.tsx"
-Cohesion: 0.06
-Nodes (42): DetailPopover(), PRIORITY_LABEL, EventCard(), PRIORITY_COLOR, priorityColor(), Style, styleKey(), priorityBadge() (+34 more)
+Cohesion: 0.18
+Nodes (20): computeProgress(), currentWeekStart(), isBehindPace(), ObjectiveCard(), ObjectiveForm(), ObjectivesPage(), paceFor(), TRACK_BY_OPTIONS (+12 more)
 
 ### Community 34 - "Filter Bar.tsx"
 Cohesion: 0.07
 Nodes (41): create_exercise_template(), create_routine(), create_routine_folder(), get_routine(), get_workout(), iter_body_measurements(), iter_exercise_templates(), iter_routine_folders() (+33 more)
 
 ### Community 35 - "Layout.tsx"
-Cohesion: 0.10
-Nodes (11): ALL_DAYS_9_17, ENERGY_OFF, LEARNED_OFF, WEEKDAYS_ONLY, ALL_DAYS, ENERGY_OFF, NEUTRAL, PlanHabitInput (+3 more)
+Cohesion: 0.09
+Nodes (15): BlockOp, CurrentBlockLite, ALL_DAYS_9_17, ENERGY_OFF, LEARNED_OFF, WEEKDAYS_ONLY, ALL_DAYS, ENERGY_OFF (+7 more)
 
 ### Community 36 - "slot Score.ts"
 Cohesion: 0.05
@@ -740,8 +694,8 @@ Cohesion: 0.10
 Nodes (19): action, default_popup, default_title, background, service_worker, type, commands, save-page (+11 more)
 
 ### Community 38 - "Graph View.tsx"
-Cohesion: 0.10
-Nodes (29): useAcceptSuggestion(), useCreateNote(), useDismissSuggestion(), useGraphEra(), useGraphIndexFreshness(), useGraphInsights(), useGraphPath(), useGraphQuery() (+21 more)
+Cohesion: 0.06
+Nodes (38): useAcceptSuggestion(), useDismissSuggestion(), useGraphEra(), useGraphIndexFreshness(), useGraphInsights(), useGraphPath(), useGraphQuery(), useGraphSuggestions() (+30 more)
 
 ### Community 39 - "scripts"
 Cohesion: 0.08
@@ -756,8 +710,8 @@ Cohesion: 0.11
 Nodes (19): dependencies, archiver, better-sqlite3, dotenv, drizzle-orm, electron-updater, fastify, @fastify/cors (+11 more)
 
 ### Community 42 - "blocks"
-Cohesion: 0.15
-Nodes (13): indexes, columns, isUnique, name, columns, isUnique, name, columns (+5 more)
+Cohesion: 0.11
+Nodes (19): checkConstraints, compositePrimaryKeys, foreignKeys, indexes, name, uniqueConstraints, columns, isUnique (+11 more)
 
 ### Community 43 - "created at utc"
 Cohesion: 0.08
@@ -772,8 +726,8 @@ Cohesion: 0.06
 Nodes (8): EbLevelTest, ExTypeTest, PooledSlopeForTest, PoolingDbTest, PredictAnchoredPooledTest, Tests for hierarchical partial pooling of the load->reps slope (design 02).  Cor, A starved upper-press lift borrows a data-rich upper-press lift's slope., ShrinkSlopeTest
 
 ### Community 46 - "notifications.ts"
-Cohesion: 0.21
-Nodes (11): appendInboxTriage(), buildInboxCaptureContent(), capturePath(), normalizeVaultFolder(), safeMarkdownUrl(), saveNoteAsset(), simpleHtmlToMarkdown(), yamlString() (+3 more)
+Cohesion: 0.06
+Nodes (55): notes, studyCards, NodeMetric, folderOf(), inRange(), localDate(), matchesNoteFilters(), NoteRow (+47 more)
 
 ### Community 47 - "Brainclip for Brave"
 Cohesion: 0.12
@@ -813,83 +767,83 @@ Nodes (7): Configuration, Daily notes and blocks, Event log, Manual test checkli
 
 ### Community 56 - "Calendar Page.tsx"
 Cohesion: 0.08
-Nodes (45): wishlistBudgets, wishlistItems, AiImportedProduct, aiProductContext(), amazonImage(), amazonPrice(), assertPublicUrl(), assignedJson() (+37 more)
+Nodes (46): settings, wishlistBudgets, wishlistItems, AiImportedProduct, aiProductContext(), amazonImage(), amazonPrice(), assertPublicUrl() (+38 more)
 
 ### Community 57 - "columns"
-Cohesion: 0.11
-Nodes (23): communities, conceptMentions, concepts, graphEdges, noteChunks, noteLinks, notes, studyCards (+15 more)
+Cohesion: 0.03
+Nodes (131): aiConfigured(), nameCommunity(), rowToEvidence(), sourceDeepLink(), activeKnowledgeIndex(), semanticKnowledgeScores(), buildContextPack(), lexicalScore() (+123 more)
 
 ### Community 58 - "columns"
-Cohesion: 0.28
-Nodes (12): learnedStats, bumpDuration(), bumpHour(), durationRatio(), ewmaStep(), getStat(), loadLearned(), putStat() (+4 more)
+Cohesion: 0.05
+Nodes (72): kitchenDeals, kitchenDealSync, kitchenFoods, kitchenPlanLines, kitchenPlans, kitchenSettings, kitchenStockMovements, kitchenStockPortions (+64 more)
 
 ### Community 59 - "Section Card()"
-Cohesion: 0.08
-Nodes (35): registerAnalyticsRoutes(), registerAssistantRoutes(), registerAttachmentRoutes(), registerBlockRoutes(), registerBriefRoutes(), registerDailyRoutes(), registerDemoRoutes(), registerDependencyRoutes() (+27 more)
+Cohesion: 0.13
+Nodes (19): Toast, COLORS, ConfettiBurst(), Particle, celebrateTaskComplete(), Listener, listeners, onCelebrate() (+11 more)
 
 ### Community 60 - "Celebration Toasts.tsx"
-Cohesion: 0.19
-Nodes (4): DriveListResponse, Gdrive, normalize(), q()
+Cohesion: 0.05
+Nodes (41): finiteQuantity, KitchenAlertDTO, KitchenDashboardDTO, KitchenDealDTO, KitchenDealQuality, KitchenDealsDTO, KitchenFoodDTO, KitchenFoodForecastDTO (+33 more)
 
 ### Community 61 - "tables"
 Cohesion: 0.10
 Nodes (32): _active_days(), acwr(), acwr_gated(), assess(), chronic_adequacy(), chronic_ref(), _chronic_ref_from_dense(), classify_state() (+24 more)
 
 ### Community 62 - "tables"
-Cohesion: 0.09
-Nodes (21): checkConstraints, compositePrimaryKeys, foreignKeys, indexes, name, uniqueConstraints, checkConstraints, compositePrimaryKeys (+13 more)
+Cohesion: 0.07
+Nodes (28): checkConstraints, compositePrimaryKeys, foreignKeys, indexes, name, uniqueConstraints, checkConstraints, compositePrimaryKeys (+20 more)
 
 ### Community 63 - "achievements unlocked"
-Cohesion: 0.10
-Nodes (20): columns, id, unlocked_at_utc, xp_awarded, autoincrement, name, notNull, primaryKey (+12 more)
+Cohesion: 0.07
+Nodes (27): checkConstraints, columns, compositePrimaryKeys, foreignKeys, indexes, name, uniqueConstraints, id (+19 more)
 
 ### Community 64 - "Task Context Menu.tsx"
-Cohesion: 0.07
-Nodes (39): oauthTokens, clearState(), getState(), setState(), decrypt(), disconnectGoogle(), encrypt(), encryptionKey() (+31 more)
+Cohesion: 0.14
+Nodes (6): workoutJobs, registerWorkoutRoutes(), dto(), jsonObject(), jsonValue(), WorkoutEngineService
 
 ### Community 65 - "compiler Options"
 Cohesion: 0.14
 Nodes (13): compilerOptions, esModuleInterop, forceConsistentCasingInFileNames, isolatedModules, lib, module, moduleResolution, noEmit (+5 more)
 
 ### Community 66 - "goals.ts"
-Cohesion: 0.21
-Nodes (15): DayWeekPlanner(), Mode, PlanDayModal(), CandidateRow(), FullnessMeter(), PlanItemRow(), REASON_LABEL, CHANGE_STYLES (+7 more)
+Cohesion: 0.08
+Nodes (38): ActivityAiGateway, ActivityAiPreviewError, analyzeActivityAiPreview(), applicationFamily(), applicationFamilyTotals(), average(), boundedRatio(), connectActivityWatch() (+30 more)
 
 ### Community 67 - "build"
 Cohesion: 0.15
 Nodes (13): build, appId, asarUnpack, directories, extraResources, files, productName, publish (+5 more)
 
 ### Community 68 - "api.ts"
-Cohesion: 0.04
-Nodes (48): autoincrement, default, name, notNull, primaryKey, type, at_risk, created (+40 more)
+Cohesion: 0.16
+Nodes (7): generateBrief(), cacheKey(), ModelGateway, policyFor(), toUsage(), trimToBudget(), briefs
 
 ### Community 69 - "access token"
 Cohesion: 0.11
 Nodes (20): AMBIENCE_META, AmbienceMeta, AmbienceType, getAmbienceVolume(), Playback, playNoise(), playRecordings(), setAmbienceVolume() (+12 more)
 
 ### Community 70 - "columns"
-Cohesion: 0.33
-Nodes (11): folderOf(), inRange(), localDate(), matchesNoteFilters(), NoteRow, parseDateRange(), parseJsonArray(), parseNoteQuery() (+3 more)
+Cohesion: 0.06
+Nodes (72): blockOutcomes, dailyContracts, progressionAchievements, progressionLedger, progressionMissions, progressionProfiles, progressionRedemptions, progressionRewards (+64 more)
 
 ### Community 71 - "created at utc"
-Cohesion: 0.11
-Nodes (19): columns, content, created_at_utc, date, autoincrement, name, notNull, primaryKey (+11 more)
-
-### Community 72 - "date"
 Cohesion: 0.10
 Nodes (20): habit_id, id, status, autoincrement, name, notNull, primaryKey, type (+12 more)
 
+### Community 72 - "date"
+Cohesion: 0.06
+Nodes (17): AchievementCard(), achievementIcons, contractCopy(), formatDate(), Missions(), Overview(), ProgressPage(), rankFloor() (+9 more)
+
 ### Community 73 - "columns"
-Cohesion: 0.07
-Nodes (27): DraftMode, elapsedLabel(), EMPTY_TASK, Stage, TaskForm, VoiceCapture(), DEFAULT_OPTIONS, useResizableSidebar() (+19 more)
+Cohesion: 0.22
+Nodes (27): AiProvider, audioFormat(), embedContentWithUsage(), emptyUsage(), geminiUsage(), generateAudioJson(), generateAudioJsonWithUsage(), generateJson() (+19 more)
 
 ### Community 74 - "columns"
 Cohesion: 0.12
 Nodes (16): DAY_LABELS, EMPTY, Filter, FILTERS, fmtMin(), HabitForm(), HabitRow(), HabitsPage() (+8 more)
 
 ### Community 75 - "columns"
-Cohesion: 0.15
-Nodes (9): getNotifications(), MotionPreference, SidebarMode, TextScale, ThemeDensity, DevicePreferencesPanels(), DeviceSettingsSectionId, formatBytes() (+1 more)
+Cohesion: 0.22
+Nodes (11): useWorkoutVolumeAnalytics(), ATTENTION, chartSeries(), filterAndSortVolumeMuscles(), formatVolumeState(), periodDelta(), VolumeChartMetric, VolumeSort (+3 more)
 
 ### Community 76 - "indexes"
 Cohesion: 0.11
@@ -904,8 +858,8 @@ Cohesion: 0.10
 Nodes (20): date, habit_id, status, autoincrement, name, notNull, primaryKey, type (+12 more)
 
 ### Community 79 - "columns"
-Cohesion: 0.10
-Nodes (20): decided_at_utc, freezes_after, result, columns, autoincrement, name, notNull, primaryKey (+12 more)
+Cohesion: 0.06
+Nodes (34): decided_at_utc, done_count, freezes_after, result, streak_after, columns, autoincrement, name (+26 more)
 
 ### Community 80 - "key"
 Cohesion: 0.10
@@ -916,24 +870,24 @@ Cohesion: 0.18
 Nodes (10): exactName(), interpretVoiceAudio(), normalizeVoiceInterpretation(), RawNoteSchema, RawTaskSchema, RawVoiceInterpretation, RawVoiceInterpretationSchema, context (+2 more)
 
 ### Community 82 - "id"
-Cohesion: 0.14
-Nodes (14): checkConstraints, columns, compositePrimaryKeys, foreignKeys, indexes, name, uniqueConstraints, unlocked_at_utc (+6 more)
+Cohesion: 0.07
+Nodes (27): checkConstraints, columns, compositePrimaryKeys, foreignKeys, indexes, name, uniqueConstraints, id (+19 more)
 
 ### Community 83 - "columns"
-Cohesion: 0.29
-Nodes (7): autoincrement, default, name, notNull, primaryKey, type, by_habit
+Cohesion: 0.19
+Nodes (4): DriveListResponse, Gdrive, normalize(), q()
 
 ### Community 84 - "indexes"
 Cohesion: 0.11
 Nodes (19): checkConstraints, compositePrimaryKeys, foreignKeys, indexes, name, uniqueConstraints, columns, isUnique (+11 more)
 
 ### Community 85 - "created at utc"
-Cohesion: 0.10
-Nodes (20): checkConstraints, columns, compositePrimaryKeys, foreignKeys, indexes, name, uniqueConstraints, content (+12 more)
+Cohesion: 0.08
+Nodes (26): checkConstraints, columns, compositePrimaryKeys, foreignKeys, indexes, name, uniqueConstraints, content (+18 more)
 
 ### Community 86 - "columns"
-Cohesion: 0.10
-Nodes (21): decided_at_utc, freezes_after, planned_count, columns, autoincrement, name, notNull, primaryKey (+13 more)
+Cohesion: 0.06
+Nodes (34): decided_at_utc, done_count, freezes_after, planned_count, result, columns, autoincrement, name (+26 more)
 
 ### Community 87 - "key"
 Cohesion: 0.10
@@ -941,7 +895,7 @@ Nodes (20): key, value, checkConstraints, columns, compositePrimaryKeys, foreign
 
 ### Community 88 - "tables"
 Cohesion: 0.05
-Nodes (39): columns, dow_local, estimated_min, hour_local, kind, outcome, project_id, autoincrement (+31 more)
+Nodes (39): columns, dow_local, estimated_min, hour_local, kind, project_id, recorded_at_utc, autoincrement (+31 more)
 
 ### Community 89 - "id"
 Cohesion: 0.07
@@ -957,7 +911,7 @@ Nodes (19): checkConstraints, compositePrimaryKeys, foreignKeys, indexes, name, 
 
 ### Community 92 - "columns"
 Cohesion: 0.06
-Nodes (33): highlight, highlight_task_id, rating, reflection, updated_at_utc, columns, autoincrement, default (+25 more)
+Nodes (34): highlight, highlight_task_id, intention, reflection, shutdown_done_at_utc, columns, autoincrement, default (+26 more)
 
 ### Community 93 - "tables"
 Cohesion: 0.09
@@ -977,7 +931,7 @@ Nodes (19): checkConstraints, compositePrimaryKeys, foreignKeys, indexes, name, 
 
 ### Community 97 - "columns"
 Cohesion: 0.06
-Nodes (33): highlight, highlight_task_id, rating, reflection, updated_at_utc, columns, autoincrement, default (+25 more)
+Nodes (34): highlight_done, highlight_task_id, intention, reflection, shutdown_done_at_utc, columns, autoincrement, default (+26 more)
 
 ### Community 98 - "dev Dependencies"
 Cohesion: 0.12
@@ -992,32 +946,36 @@ Cohesion: 0.18
 Nodes (8): goalFields, habitFields, HHMM, result(), server, taskFields, tool(), WEEKDAYS
 
 ### Community 101 - "use Theme.tsx"
-Cohesion: 0.16
-Nodes (8): ResolvedTheme, ThemeContext, ThemeProvider(), ThemeSetting, queryClient, useUiPreferences(), TasksPage(), AppWithPreferences()
+Cohesion: 0.14
+Nodes (14): JsonSchema, ProviderUsage, AI_TASK_POLICIES, AiResult, AiRouteTier, AiTaskPolicy, AiUsage, inFlight (+6 more)
+
+### Community 102 - "Undo Stack"
+Cohesion: 0.11
+Nodes (20): apply(), clamp(), DEFAULT_UI_PREFERENCES, emit(), listeners, load(), MotionPreference, normalize() (+12 more)
 
 ### Community 103 - "habit instances"
 Cohesion: 0.18
 Nodes (11): checkConstraints, compositePrimaryKeys, foreignKeys, indexes, name, uniqueConstraints, columns, isUnique (+3 more)
 
 ### Community 104 - "habit instances"
-Cohesion: 0.07
-Nodes (28): CreateTaskPopover(), DIFFICULTIES, Mode, PRIORITIES, REMINDERS, SWATCHES, PRIORITY_COLOR, PRIORITY_LABEL (+20 more)
+Cohesion: 0.13
+Nodes (15): DraftMode, elapsedLabel(), EMPTY_TASK, Stage, TaskForm, VoiceCapture(), useCreateNote(), BrowserSpeechController (+7 more)
 
 ### Community 105 - "attachments"
 Cohesion: 0.18
 Nodes (11): checkConstraints, compositePrimaryKeys, foreignKeys, indexes, name, uniqueConstraints, columns, isUnique (+3 more)
 
 ### Community 106 - "attachments"
-Cohesion: 0.10
-Nodes (25): init(), migrate(), SQLite store: schema, connection, migrations., Bring a pre-existing DB up to the current schema version., _bodyweight(), build(), _calendar(), _data_quality() (+17 more)
+Cohesion: 0.14
+Nodes (21): _bodyweight(), build(), _calendar(), _data_quality(), _headline_flags(), _history(), _next_actions(), _powerlifting() (+13 more)
 
 ### Community 107 - "chunking.test.ts"
 Cohesion: 0.08
 Nodes (26): columns, detail, id, message_id, rating, autoincrement, default, name (+18 more)
 
 ### Community 108 - "energy.test.ts"
-Cohesion: 0.22
-Nodes (6): classifyTask(), ALL_DAYS_9_18, baseInput(), energy(), LEARNED_OFF, WINDOWS
+Cohesion: 0.25
+Nodes (5): ALL_DAYS_9_18, baseInput(), energy(), LEARNED_OFF, WINDOWS
 
 ### Community 109 - "engine.test.ts"
 Cohesion: 0.08
@@ -1032,7 +990,7 @@ Cohesion: 0.33
 Nodes (6): scripts, build, dev, preview, test, typecheck
 
 ### Community 112 - "Note Tree.tsx"
-Cohesion: 0.10
+Cohesion: 0.11
 Nodes (18): NOTE_COLORS, NOTE_ICONS, NoteAppearancePicker(), NoteIcon(), compareNotes(), FileRow(), FlatNoteRow(), formatNoteDate() (+10 more)
 
 ### Community 113 - "Desktop Update Panel.tsx"
@@ -1052,84 +1010,84 @@ Cohesion: 0.25
 Nodes (7): name, private, scripts, check, test, type, version
 
 ### Community 117 - "columns"
-Cohesion: 0.21
-Nodes (13): apply(), clamp(), DEFAULT_UI_PREFERENCES, emit(), listeners, load(), normalize(), resetUiPreferences() (+5 more)
+Cohesion: 0.10
+Nodes (17): CreateTaskPopover(), DIFFICULTIES, Mode, PRIORITIES, REMINDERS, SWATCHES, PRIORITY_COLOR, PRIORITY_LABEL (+9 more)
 
 ### Community 118 - "columns"
-Cohesion: 0.48
-Nodes (6): useBlacklistConcept(), useConcepts(), useMergeConcepts(), useRenameConcept(), ConceptInspector(), InspectorTarget
+Cohesion: 0.12
+Nodes (27): useAddKitchenPlanLine(), useAddKitchenStock(), useAdjustKitchenStock(), useArchiveKitchenFood(), useCancelKitchenPlan(), useConsumeKitchenPlanLine(), useCreateKitchenFood(), useGenerateKitchenPlan() (+19 more)
 
 ### Community 119 - "columns"
-Cohesion: 0.29
-Nodes (7): autoincrement, default, name, notNull, primaryKey, type, by_label
+Cohesion: 0.22
+Nodes (9): usePersistentBoolean(), getNoteProperties(), normalisePropertyKey(), NoteProperty, RESERVED_KEYS, unquote(), withNoteProperty(), NoteProperties() (+1 more)
 
 ### Community 120 - "dev Dependencies"
 Cohesion: 0.29
 Nodes (7): devDependencies, electron, electron-builder, @electron/rebuild, @types/better-sqlite3, @types/node, typescript
 
 ### Community 121 - "Concept Inspector.tsx"
-Cohesion: 0.29
-Nodes (7): autoincrement, default, name, notNull, primaryKey, type, active
+Cohesion: 0.23
+Nodes (8): goalMilestones, computeGoalProgress(), GoalProgress, goalWindow(), GoalRow, MilestoneRow, milestonesFor(), toDTO()
 
 ### Community 122 - "active"
-Cohesion: 0.29
-Nodes (7): priority, autoincrement, default, name, notNull, primaryKey, type
+Cohesion: 0.05
+Nodes (38): columns, evidence_ids, executed_at_utc, freshness_version, idempotency_key, preview, type, autoincrement (+30 more)
 
 ### Community 123 - "at risk"
 Cohesion: 0.05
-Nodes (38): columns, autoincrement, name, notNull, primaryKey, type, cache_key, error (+30 more)
+Nodes (38): columns, error, model, prompt_version, provider, status, task, autoincrement (+30 more)
 
 ### Community 124 - "briefs"
 Cohesion: 0.11
-Nodes (24): _ensure_session(), _f(), _i(), last_import_sha(), Parse a Hevy CSV export, merge it idempotently, and recompute derived data.  Eac, Ingest one export. Returns a dict of import counts.     force=True bypasses the, Recompute all derived columns for every set. Full recompute is cheap at     this, Insert the session if unseen; return its session_id. Shared by CSV + API. (+16 more)
+Nodes (23): _ensure_session(), _f(), _i(), last_import_sha(), Parse a Hevy CSV export, merge it idempotently, and recompute derived data.  Eac, Ingest one export. Returns a dict of import counts.     force=True bypasses the, Recompute all derived columns for every set. Full recompute is cheap at     this, Insert the session if unseen; return its session_id. Shared by CSV + API. (+15 more)
 
 ### Community 125 - "by habit"
-Cohesion: 0.05
-Nodes (38): NullableNumber, WorkoutActionSchema, WorkoutBodyweightInputSchema, WorkoutCredentialInputSchema, WorkoutDataQualitySchema, WorkoutEngineResult, WorkoutExerciseDTO, WorkoutExerciseHistoryDTO (+30 more)
+Cohesion: 0.03
+Nodes (60): NullableNumber, WorkoutActionSchema, WorkoutBodyweightInputSchema, WorkoutCredentialInputSchema, WorkoutDataQualitySchema, WorkoutEngineResult, WorkoutExerciseDTO, WorkoutExerciseHistoryDTO (+52 more)
 
 ### Community 126 - "by label"
-Cohesion: 0.22
-Nodes (9): goalMilestones, goals, computeGoalProgress(), GoalProgress, goalWindow(), GoalRow, MilestoneRow, milestonesFor() (+1 more)
+Cohesion: 0.14
+Nodes (14): answerGraphChat(), ChatContextChunk, ChatResult, CommunityContext, CompiledGraphQuery, compileGraphQuery(), DigestSourceNote, generateWeeklyDigest() (+6 more)
 
 ### Community 127 - "chunk index"
-Cohesion: 0.10
-Nodes (20): columns, gcal_event_id, gcal_updated, locked, autoincrement, name, notNull, primaryKey (+12 more)
+Cohesion: 0.05
+Nodes (37): columns, autoincrement, name, notNull, primaryKey, type, calendar_id, gcal_event_id (+29 more)
 
 ### Community 128 - "completed min"
-Cohesion: 0.08
-Nodes (43): DB, achievementsUnlocked, blockOutcomes, dailyPlans, dayResults, gamificationState, scheduleRuns, syncState (+35 more)
+Cohesion: 0.21
+Nodes (8): formatMoney(), COLORS, WishlistAnalytics(), FIT, pricePresentation(), VERDICT, WishlistCard(), WishlistListItem()
 
 ### Community 129 - "created"
 Cohesion: 0.11
 Nodes (25): _all_exercises(), analyze_exercise(), calibration_protocol(), _cur_epoch(), _eb_level(), ex_type(), fit_load_rep(), fresh_points() (+17 more)
 
 ### Community 130 - "deleted"
-Cohesion: 0.27
-Nodes (6): decodeNoteDeepLinkId(), getUiPreferences(), WORKSPACE_PATHS, HomeRedirect(), NoteDeepLink(), TaskContextMenuProvider()
+Cohesion: 0.09
+Nodes (25): CalendarView, KIND_LEGEND, PRIORITY_CHIPS, SlotDuration, VIEWS, DetailPopover(), PRIORITY_LABEL, EventCard() (+17 more)
 
 ### Community 131 - "columns"
-Cohesion: 0.13
-Nodes (38): generateBrief(), AiProvider, audioFormat(), embedContent(), embedContentWithUsage(), emptyUsage(), geminiUsage(), generateAudioJson() (+30 more)
+Cohesion: 0.29
+Nodes (7): autoincrement, default, name, notNull, primaryKey, type, by_habit
 
 ### Community 132 - "external busy min"
-Cohesion: 0.29
-Nodes (7): checkConstraints, compositePrimaryKeys, foreignKeys, indexes, name, uniqueConstraints, block_outcomes
+Cohesion: 0.21
+Nodes (9): embedContent(), resolveEmbeddingModel(), originalEnv, AiUsageDashboard, getAiUsageDashboard(), OpenRouterCreditsResponse, OpenRouterKeyResponse, thisMonthStart() (+1 more)
 
 ### Community 133 - "kind"
 Cohesion: 0.09
 Nodes (6): _cfg(), MedianTargetRirTest, PredictAtEffortTest, Tests for folding RIR into the live in-band rep model (design 05).  Core claims:, A spread lift logged with recent RPE: target_rir reads the median effort,     th, RirRepDbTest
 
 ### Community 134 - "locked"
-Cohesion: 0.11
-Nodes (19): columns, end_utc, last_pushed_hash, task_id, autoincrement, name, notNull, primaryKey (+11 more)
+Cohesion: 0.27
+Nodes (8): checkFocusTimer(), defaults, FocusSettings, FocusState, FocusTimerPhase, phaseMs(), readJson(), readState()
 
 ### Community 135 - "missed min"
 Cohesion: 0.29
-Nodes (7): kind, autoincrement, default, name, notNull, primaryKey, type
+Nodes (7): completed_min, autoincrement, default, name, notNull, primaryKey, type
 
 ### Community 136 - "moved"
-Cohesion: 0.21
-Nodes (21): dedupePlacementRisks(), partsToReasons(), plan(), computeDayLoads(), DayLoad, deadlinePressure(), forecastCapacity(), ForecastTask (+13 more)
+Cohesion: 0.17
+Nodes (25): Chunk, decompose(), classifyTask(), dedupePlacementRisks(), partsToReasons(), plan(), computeDayLoads(), DayLoad (+17 more)
 
 ### Community 137 - "notes"
 Cohesion: 0.10
@@ -1144,16 +1102,16 @@ Cohesion: 0.09
 Nodes (22): corr_high, corr_moderate, min_n, under, well, recovery, acwr_high, acwr_low (+14 more)
 
 ### Community 140 - "status"
-Cohesion: 0.14
-Nodes (13): isImageAutoUploadEnabled(), isSupportedPastedImage(), PASTED_IMAGE_EXTENSIONS, pastedImageFileName(), highlightStyle, INSERT_BLOCKS, InsertBlock, moveCursorVertical() (+5 more)
+Cohesion: 0.13
+Nodes (17): isImageAutoUploadEnabled(), isSupportedPastedImage(), PASTED_IMAGE_EXTENSIONS, pastedImageFileName(), highlightStyle, INSERT_BLOCKS, InsertBlock, moveCursorVertical() (+9 more)
 
 ### Community 141 - "unplaceable"
-Cohesion: 0.36
-Nodes (7): getNoteProperties(), normalisePropertyKey(), NoteProperty, RESERVED_KEYS, unquote(), withNoteProperty(), NoteProperties()
+Cohesion: 0.33
+Nodes (12): _aggregate_muscles(), build(), _credit_rows(), _iso(), _monday(), _period(), _ratio(), Read-only time-series data for the Volume & recovery dashboard.  The command del (+4 more)
 
 ### Community 142 - "window end"
-Cohesion: 0.29
-Nodes (7): checkConstraints, compositePrimaryKeys, foreignKeys, indexes, name, uniqueConstraints, analytics_daily
+Cohesion: 0.07
+Nodes (27): checkConstraints, compositePrimaryKeys, foreignKeys, indexes, name, uniqueConstraints, dialect, checkConstraints (+19 more)
 
 ### Community 143 - "window start"
 Cohesion: 0.07
@@ -1168,8 +1126,8 @@ Cohesion: 0.07
 Nodes (28): checkConstraints, compositePrimaryKeys, foreignKeys, indexes, name, uniqueConstraints, checkConstraints, compositePrimaryKeys (+20 more)
 
 ### Community 146 - "objectives"
-Cohesion: 0.14
-Nodes (5): workoutJobs, dto(), jsonObject(), jsonValue(), WorkoutEngineService
+Cohesion: 0.29
+Nodes (7): external_busy_min, autoincrement, default, name, notNull, primaryKey, type
 
 ### Community 147 - "schedule runs"
 Cohesion: 0.18
@@ -1180,40 +1138,40 @@ Cohesion: 0.15
 Nodes (12): F1 — Achievement / Milestone, F2 — Advice / Educational, F3 — Formal / Corporate Announcement, F4 — Project Showcase / Devlog, F5 — Story / Behind-the-Scenes, F6 — Community / Event Recap, F7 — Gratitude / Shoutout, F8 — Discussion Starter / Perspective (+4 more)
 
 ### Community 149 - "block outcomes"
-Cohesion: 0.10
-Nodes (19): checkConstraints, compositePrimaryKeys, foreignKeys, indexes, name, uniqueConstraints, checkConstraints, compositePrimaryKeys (+11 more)
+Cohesion: 0.07
+Nodes (26): checkConstraints, compositePrimaryKeys, foreignKeys, indexes, name, uniqueConstraints, checkConstraints, compositePrimaryKeys (+18 more)
 
 ### Community 150 - "columns"
 Cohesion: 0.18
 Nodes (10): Analytics, Comment on another person’s post, Content plan, ideas, or an event, LinkedIn Content Engine, Non-negotiables, PDF carousel, Ramadan mode, Read before responding (+2 more)
 
 ### Community 151 - "briefs"
-Cohesion: 0.13
-Nodes (15): duration_min, preferred_start, weekly_target_min, autoincrement, name, notNull, primaryKey, type (+7 more)
+Cohesion: 0.29
+Nodes (7): kind, autoincrement, default, name, notNull, primaryKey, type
 
 ### Community 152 - "by habit"
 Cohesion: 0.29
 Nodes (7): autoincrement, default, name, notNull, primaryKey, type, chunk_index
 
 ### Community 153 - "by label"
-Cohesion: 0.32
-Nodes (5): ThemeToggle(), useTheme(), whiteboardApi, STROKE_COLORS, WhiteboardCanvas()
+Cohesion: 0.29
+Nodes (7): planned_min, autoincrement, default, name, notNull, primaryKey, type
 
 ### Community 154 - "by project"
-Cohesion: 0.15
-Nodes (13): columns, estimated_min, project_id, autoincrement, name, notNull, primaryKey, type (+5 more)
+Cohesion: 0.05
+Nodes (39): columns, dow_local, estimated_min, outcome, planned_min, project_id, task_id, autoincrement (+31 more)
 
 ### Community 155 - "chunk index"
 Cohesion: 0.11
 Nodes (16): analyze(), analyze_muscle(), _monthly_e1rm(), _monthly_volume(), Experiment-and-compare engine: does higher volume (or higher effort) actually pr, Credited weekly sets per month for a muscle (primary 1.0 + secondary 0.5)., representative_lift(), iso_week() (+8 more)
 
 ### Community 156 - "completed min"
-Cohesion: 0.14
-Nodes (19): canonical_exercise_name(), exercise_info(), exercises(), hevy_api_key(), hevy_settings(), landmarks(), _load(), powerlifting() (+11 more)
+Cohesion: 0.13
+Nodes (23): canonical_exercise_name(), ensure_dirs(), exercise_info(), exercises(), hevy_api_key(), hevy_settings(), landmarks(), _load() (+15 more)
 
 ### Community 157 - "done count"
-Cohesion: 0.15
-Nodes (13): autoincrement, name, notNull, primaryKey, type, access_token, provider, columns (+5 more)
+Cohesion: 0.05
+Nodes (38): autoincrement, name, notNull, primaryKey, type, access_token, expiry_utc, provider (+30 more)
 
 ### Community 158 - "dow local"
 Cohesion: 0.13
@@ -1221,7 +1179,7 @@ Nodes (15): checkConstraints, compositePrimaryKeys, foreignKeys, indexes, name, 
 
 ### Community 159 - "freezes after"
 Cohesion: 0.04
-Nodes (113): andStatus(), approveAndExecuteActionProposal(), assertString(), createActionProposal(), executeProposal(), freshnessVersion(), jsonObject(), listActionProposals() (+105 more)
+Nodes (124): andStatus(), approveAndExecuteActionProposal(), assertString(), createActionProposal(), executeProposal(), freshnessVersion(), jsonObject(), listActionProposals() (+116 more)
 
 ### Community 160 - "hour local"
 Cohesion: 0.07
@@ -1252,32 +1210,32 @@ Cohesion: 0.11
 Nodes (17): 0. What we're fixing, 1. The model, 1a. The real fix — gate ACWR on chronic-baseline adequacy, 1b. Uncouple the windows (secondary, honest about being contested), 1c. EWMA smoothing (Williams 2017) — and why it is *not* the fix either, 1d. The unification with item #1 (the load-bearing insight), 1e. Demote monotony/strain; prefer sRPE-load when available, 1f. Readiness as an explicit state machine (+9 more)
 
 ### Community 167 - "planned min"
-Cohesion: 0.10
-Nodes (33): listTemplates(), renderTemplate(), templateIcon(), TemplateSummary, TemplateVars, listMarkdownFiles(), authorize(), dailyNote() (+25 more)
+Cohesion: 0.25
+Nodes (5): CommandPaletteCommand, CommandPaletteContext, CommandPaletteProvider(), useCommandPaletteScope(), useCommandPaletteState()
 
 ### Community 168 - "priority"
-Cohesion: 0.15
-Nodes (12): checkConstraints, compositePrimaryKeys, foreignKeys, name, uniqueConstraints, dialect, id, prevId (+4 more)
+Cohesion: 0.21
+Nodes (11): appendInboxTriage(), buildInboxCaptureContent(), capturePath(), normalizeVaultFolder(), safeMarkdownUrl(), saveNoteAsset(), simpleHtmlToMarkdown(), yamlString() (+3 more)
 
 ### Community 169 - "reasons"
 Cohesion: 0.17
 Nodes (5): FakeResp, HevyClientTest, _http_error(), Offline tests for the Hevy API adapter: auth header, pagination, retry, and erro, _seq_urlopen()
 
 ### Community 170 - "status"
-Cohesion: 0.29
-Nodes (7): autoincrement, default, name, notNull, primaryKey, type, by_project
+Cohesion: 0.16
+Nodes (15): AttentionAlerts(), acknowledgeAttentionAlert(), alerts, AttentionAlert, AttentionAlertKind, emit(), enqueueAttentionAlert(), getActiveAttentionAlert() (+7 more)
 
 ### Community 171 - "streak after"
 Cohesion: 0.10
 Nodes (21): checkConstraints, columns, compositePrimaryKeys, foreignKeys, indexes, name, uniqueConstraints, unlocked_at_utc (+13 more)
 
 ### Community 172 - "window end"
-Cohesion: 0.22
-Nodes (5): Chunk, decompose(), ALL_DAYS_9_17, ENERGY_OFF, LEARNED_OFF
+Cohesion: 0.29
+Nodes (3): ALL_DAYS_9_17, ENERGY_OFF, LEARNED_OFF
 
 ### Community 173 - "window start"
-Cohesion: 0.13
-Nodes (15): columns, autoincrement, default, name, notNull, primaryKey, type, by_habit (+7 more)
+Cohesion: 0.06
+Nodes (36): columns, autoincrement, default, name, notNull, primaryKey, type, autoincrement (+28 more)
 
 ### Community 174 - "xp awarded"
 Cohesion: 0.18
@@ -1300,16 +1258,16 @@ Cohesion: 0.05
 Nodes (41): columns, autoincrement, default, name, notNull, primaryKey, type, citations (+33 more)
 
 ### Community 179 - "columns"
-Cohesion: 0.33
-Nodes (6): last_pushed_hash, autoincrement, name, notNull, primaryKey, type
+Cohesion: 0.32
+Nodes (11): learnedStats, bumpDuration(), bumpHour(), durationRatio(), ewmaStep(), getStat(), putStat(), recordBlockMissed() (+3 more)
 
 ### Community 180 - "briefs"
 Cohesion: 0.29
-Nodes (7): done_count, autoincrement, default, name, notNull, primaryKey, type
+Nodes (7): autoincrement, default, name, notNull, primaryKey, type, active
 
 ### Community 181 - "by habit"
-Cohesion: 0.29
-Nodes (7): payload, autoincrement, default, name, notNull, primaryKey, type
+Cohesion: 0.30
+Nodes (7): useBoards(), useCreateBoard(), useDeleteBoard(), useRenameBoard(), WhiteboardPage(), api, BoardSidebar()
 
 ### Community 182 - "by label"
 Cohesion: 0.21
@@ -1328,48 +1286,48 @@ Cohesion: 0.12
 Nodes (21): ATTENTION, deltaPercent(), HistoryMetric, isoDay(), momentumCounts(), monday(), normalizedLiftSeries(), parseDay() (+13 more)
 
 ### Community 186 - "dow local"
-Cohesion: 0.29
-Nodes (7): dow_local, autoincrement, default, name, notNull, primaryKey, type
+Cohesion: 0.05
+Nodes (39): columns, dow_local, estimated_min, hour_local, outcome, project_id, recorded_at_utc, autoincrement (+31 more)
 
 ### Community 187 - "external busy min"
-Cohesion: 0.07
-Nodes (48): layoutCache, noteShares, suggestedEdgeDismissals, fallbackNarration(), classifyQuestion(), acceptSuggestion(), computeSuggestions(), dismissSuggestion() (+40 more)
+Cohesion: 0.08
+Nodes (36): DriveFile, archiveVault(), decryptBackupArchive(), deriveBackupKey(), DriveBackupService, DriveBackupStatus, encryptBackupArchive(), ENCRYPTED_MAGIC (+28 more)
 
 ### Community 188 - "freezes after"
-Cohesion: 0.07
-Nodes (35): aiConfigured(), JsonSchema, ProviderUsage, AI_TASK_POLICIES, AiResult, AiRouteTier, AiTaskPolicy, AiUsage (+27 more)
+Cohesion: 0.14
+Nodes (9): ThemeToggle(), ResolvedTheme, ThemeContext, ThemeProvider(), ThemeSetting, useTheme(), whiteboardApi, STROKE_COLORS (+1 more)
 
 ### Community 189 - "highlight"
-Cohesion: 0.36
-Nodes (4): effectiveDeadlineMs(), scoreTask(), WEIGHTS, PlanTaskInput
+Cohesion: 0.29
+Nodes (7): window_end, autoincrement, default, name, notNull, primaryKey, type
 
 ### Community 190 - "highlight done"
 Cohesion: 0.29
 Nodes (7): highlight_done, autoincrement, default, name, notNull, primaryKey, type
 
 ### Community 191 - "hour local"
-Cohesion: 0.15
-Nodes (13): columns, kind, project_id, autoincrement, name, notNull, primaryKey, type (+5 more)
+Cohesion: 0.03
+Nodes (65): ActivityAiAggregatePayload, ActivityAiAggregatePayloadSchema, ActivityAiAggregateTotals, ActivityAiAggregateTotalsSchema, ActivityAiAnalysis, ActivityAiAnalysisSchema, ActivityAiAnalyzeInput, ActivityAiAnalyzeInputSchema (+57 more)
 
 ### Community 192 - "intention"
-Cohesion: 0.29
-Nodes (7): checkConstraints, compositePrimaryKeys, foreignKeys, indexes, name, uniqueConstraints, briefs
+Cohesion: 0.05
+Nodes (41): duration_min, name, preferred_start, priority, rrule, weekly_target_min, window_start, autoincrement (+33 more)
 
 ### Community 193 - "locked"
-Cohesion: 0.13
-Nodes (15): columns, autoincrement, default, name, notNull, primaryKey, type, by_label (+7 more)
+Cohesion: 0.29
+Nodes (7): checkConstraints, compositePrimaryKeys, foreignKeys, indexes, name, uniqueConstraints, objectives
 
 ### Community 194 - "missed count"
-Cohesion: 0.29
-Nodes (7): dow_local, autoincrement, default, name, notNull, primaryKey, type
+Cohesion: 0.20
+Nodes (7): AchievementsCard(), ConsistencyHeatmap(), useAchievements(), useStreakCalendar(), AchievementsGrid(), SectionCard(), StreakHeatmap()
 
 ### Community 195 - "missed min"
 Cohesion: 0.13
 Nodes (5): GoldenSmokeTest, PipelineTest, Stdlib unittest suite. Run: python -m unittest discover -s tests Plants every ed, The dashboard data blocks added in v4 are present and well-formed., row()
 
 ### Community 196 - "overrun min"
-Cohesion: 0.29
-Nodes (7): overrun_min, autoincrement, default, name, notNull, primaryKey, type
+Cohesion: 0.18
+Nodes (15): KIND_ICON, addNotification(), AppNotification, clearNotifications(), emit(), getNotifications(), getUnreadCount(), Listener (+7 more)
 
 ### Community 197 - "planned count"
 Cohesion: 0.15
@@ -1377,23 +1335,23 @@ Nodes (15): daily_muscle_load(), densify_daily(), form_by_date(), _form_cfg(), f
 
 ### Community 198 - "planned min"
 Cohesion: 0.05
-Nodes (39): columns, dow_local, estimated_min, hour_local, kind, outcome, project_id, autoincrement (+31 more)
+Nodes (38): columns, estimated_min, hour_local, kind, outcome, project_id, recorded_at_utc, autoincrement (+30 more)
 
 ### Community 199 - "columns"
-Cohesion: 0.11
-Nodes (19): highlight_task_id, rating, shutdown_done_at_utc, columns, autoincrement, name, notNull, primaryKey (+11 more)
+Cohesion: 0.05
+Nodes (40): highlight, highlight_task_id, intention, rating, reflection, shutdown_done_at_utc, columns, autoincrement (+32 more)
 
 ### Community 200 - "reasons"
-Cohesion: 0.29
-Nodes (7): reasons, autoincrement, default, name, notNull, primaryKey, type
+Cohesion: 0.05
+Nodes (38): columns, autoincrement, name, notNull, primaryKey, type, calendar_id, end_utc (+30 more)
 
 ### Community 201 - "reflection"
 Cohesion: 0.17
 Nodes (15): asymptotic(), cusum(), deload_recommendation(), detraining(), Change-point / plateau detection and deload + detraining intelligence.  Operates, Compare the REAL current date (not the last session) to the last session,     so, Advisory deload trigger from plateaus + fatigue + volume vs MRV., series: [(date_str, value)] -> (days_from_first, values, dates). (+7 more)
 
 ### Community 202 - "status"
-Cohesion: 0.29
-Nodes (7): status, autoincrement, default, name, notNull, primaryKey, type
+Cohesion: 0.25
+Nodes (8): columns, autoincrement, default, name, notNull, primaryKey, type, by_project
 
 ### Community 203 - "streak after"
 Cohesion: 0.13
@@ -1404,20 +1362,20 @@ Cohesion: 0.13
 Nodes (14): 0. What we're fixing, 1. The model, 1a. Split / inductive conformal for the rep predictor, 1b. CQR — adaptive (heteroscedastic) intervals, 1c. THE SMALL-n FIX — Mondrian (group-conditional) conformal by exercise-type, 1d. Unify with the forecast band — one shared conformal utility, 1e. Tie to #5 — RIR-inflated observation variance, 2. Small-data caveats & honesty (+6 more)
 
 ### Community 205 - "Community 205"
-Cohesion: 0.06
-Nodes (31): columns, executed_at_utc, freshness_version, idempotency_key, preview, type, autoincrement, name (+23 more)
+Cohesion: 0.29
+Nodes (7): missed_count, autoincrement, default, name, notNull, primaryKey, type
 
 ### Community 206 - "day results"
-Cohesion: 0.21
-Nodes (10): currentWeekStart(), ObjectiveRow(), ScoreHero(), weekLabel(), WeeklyReviewPage(), WeekNav(), useCompleteWeeklyReview(), useReopenWeeklyReview() (+2 more)
+Cohesion: 0.29
+Nodes (7): missed_min, autoincrement, default, name, notNull, primaryKey, type
 
 ### Community 207 - "gamification state"
 Cohesion: 0.20
 Nodes (14): _ewma(), muscle_credits(), neglected(), Muscle-group balance: weekly sets vs MEV/MAV/MRV, push/pull & upper/lower., Credited sets per muscle over the last 7 days (rounded)., Muscles below MEV, worst first., Credited set counts per muscle in [start,end]: primary 1.0, secondary     (confi, Credited sets per muscle, bucketed into the last `weeks` 7-day windows.     Retu (+6 more)
 
 ### Community 208 - "achievements unlocked"
-Cohesion: 0.11
-Nodes (19): link_value, target_count, week_start, autoincrement, name, notNull, primaryKey, type (+11 more)
+Cohesion: 0.05
+Nodes (38): link_kind, link_value, notes, target_count, title, week_start, autoincrement, name (+30 more)
 
 ### Community 209 - "analytics daily"
 Cohesion: 0.07
@@ -1428,8 +1386,8 @@ Cohesion: 0.18
 Nodes (11): checkConstraints, compositePrimaryKeys, foreignKeys, indexes, name, uniqueConstraints, columns, isUnique (+3 more)
 
 ### Community 211 - "columns"
-Cohesion: 0.08
-Nodes (39): buildTypedEdges(), pairKey(), topKPerNode(), noteTags(), whyRelated(), allChunks(), chunkCount(), ChunkRow (+31 more)
+Cohesion: 0.29
+Nodes (7): completed_min, autoincrement, default, name, notNull, primaryKey, type
 
 ### Community 212 - "briefs"
 Cohesion: 0.16
@@ -1440,12 +1398,12 @@ Cohesion: 0.14
 Nodes (13): 0. What we're fixing, 1.1 Banister foundation (the thing everyone builds on), 1.2 Why NOT to fit the full Banister model on this data, 1.3 Recommended form: normalized EWMA traces (CTL / ATL / TSB), 1.4 Per muscle, with self-relative thresholds, 1.5 Why this beats ACWR + drop-off here, 1. The model, 2. Honest, leakage-free validation (the methodology fix) (+5 more)
 
 ### Community 214 - "chunk index"
-Cohesion: 0.06
-Nodes (33): columns, autoincrement, default, name, notNull, primaryKey, type, chunk_index (+25 more)
+Cohesion: 0.05
+Nodes (37): columns, autoincrement, name, notNull, primaryKey, type, calendar_id, gcal_event_id (+29 more)
 
 ### Community 215 - "completed min"
-Cohesion: 0.38
-Nodes (4): UndoRedoControls(), Listener, UndoCommand, useUndoRedo()
+Cohesion: 0.33
+Nodes (8): useCreateWishlistItem(), useDeleteWishlistImage(), useDeleteWishlistItem(), usePreviewWishlistLink(), useUpdateWishlistItem(), useUploadWishlistImage(), WISHLIST_CATEGORIES, WishlistEditorPanel()
 
 ### Community 216 - "dow local"
 Cohesion: 0.15
@@ -1457,11 +1415,11 @@ Nodes (11): checkConstraints, compositePrimaryKeys, foreignKeys, indexes, name, 
 
 ### Community 218 - "highlight"
 Cohesion: 0.29
-Nodes (7): autoincrement, default, name, notNull, primaryKey, type, by_project
+Nodes (7): autoincrement, default, name, notNull, primaryKey, type, by_label
 
 ### Community 219 - "highlight done"
-Cohesion: 0.06
-Nodes (36): taskToInput(), useAddDependency(), useAttachments(), useCreateReminder(), useCreateTask(), useDeleteAttachment(), useDeleteReminder(), useReminders() (+28 more)
+Cohesion: 0.27
+Nodes (6): decodeNoteDeepLinkId(), getUiPreferences(), WORKSPACE_PATHS, HomeRedirect(), NoteDeepLink(), TaskContextMenuProvider()
 
 ### Community 220 - "hour local"
 Cohesion: 0.17
@@ -1472,16 +1430,16 @@ Cohesion: 0.17
 Nodes (12): bench, deadlift, squat, powerlifting, attempt_pct, bar_weight_kg, _comment, lifts (+4 more)
 
 ### Community 222 - "locked"
-Cohesion: 0.29
-Nodes (7): checkConstraints, compositePrimaryKeys, foreignKeys, indexes, name, uniqueConstraints, habits
+Cohesion: 0.22
+Nodes (9): classify_weight(), correct_reps(), _digit_drop_candidates(), plausible_reps_cap(), Data-quality: anomaly detection and correction proposals.  Every correction keep, Per-exercise implausibility ceiling for reps., Plausible values reachable by deleting one digit from r., Return (reps_clean, flag). flag is None when the value is plausible. (+1 more)
 
 ### Community 223 - "missed count"
-Cohesion: 0.33
-Nodes (6): habit_instance_id, autoincrement, name, notNull, primaryKey, type
+Cohesion: 0.29
+Nodes (7): planned_count, autoincrement, default, name, notNull, primaryKey, type
 
 ### Community 224 - "missed min"
-Cohesion: 0.29
-Nodes (7): risk_level, autoincrement, default, name, notNull, primaryKey, type
+Cohesion: 0.14
+Nodes (14): init(), migrate(), SQLite store: schema, connection, migrations., Bring a pre-existing DB up to the current schema version., WorkOut Coach - personal strength-coaching analysis engine., _auto_month_to_epoch(), _merge_small(), _monthly_medians() (+6 more)
 
 ### Community 225 - "overrun min"
 Cohesion: 0.26
@@ -1508,12 +1466,12 @@ Cohesion: 0.18
 Nodes (11): aliases, Calf Raise, Crunches Machine, Deadlift, Leg Curl, Leg Extension, Leg Press, Lying Leg Curl (+3 more)
 
 ### Community 231 - "xp awarded"
-Cohesion: 0.19
-Nodes (13): Path, BridgeContractTest, execute(), _exercise_history(), _latest_path(), main(), _open(), _payload() (+5 more)
+Cohesion: 0.17
+Nodes (15): Path, BridgeContractTest, execute(), _exercise_history(), _latest_path(), main(), _open(), _payload() (+7 more)
 
 ### Community 232 - "daily plans"
-Cohesion: 0.15
-Nodes (16): useWorkoutExerciseHistory(), epochPerformanceSeries(), filterAndSortExercises(), addWeeks(), CoachView(), ExerciseFilters(), ExerciseRow(), PerformanceMetric (+8 more)
+Cohesion: 0.14
+Nodes (17): useWorkoutExerciseHistory(), epochPerformanceSeries(), filterAndSortExercises(), addWeeks(), CoachView(), ExerciseFilters(), ExerciseRow(), PerformanceMetric (+9 more)
 
 ### Community 233 - "achievements unlocked"
 Cohesion: 0.18
@@ -1528,8 +1486,8 @@ Cohesion: 0.29
 Nodes (3): _fresh_db(), Offline tests for routine push (update-in-place): matched exercises get the new, RoutinePushTest
 
 ### Community 236 - "columns"
-Cohesion: 0.22
-Nodes (9): classify_weight(), correct_reps(), _digit_drop_candidates(), plausible_reps_cap(), Data-quality: anomaly detection and correction proposals.  Every correction keep, Per-exercise implausibility ceiling for reps., Plausible values reachable by deleting one digit from r., Return (reps_clean, flag). flag is None when the value is plausible. (+1 more)
+Cohesion: 0.42
+Nodes (6): currencyDigits(), itemBudgetFit(), majorToMinor(), minorToMajor(), summary, PurchaseDialog()
 
 ### Community 237 - "briefs"
 Cohesion: 0.18
@@ -1540,16 +1498,16 @@ Cohesion: 0.18
 Nodes (11): checkConstraints, compositePrimaryKeys, foreignKeys, indexes, name, uniqueConstraints, columns, isUnique (+3 more)
 
 ### Community 239 - "chunk index"
-Cohesion: 0.06
-Nodes (33): columns, autoincrement, default, name, notNull, primaryKey, type, chunk_index (+25 more)
+Cohesion: 0.05
+Nodes (37): columns, autoincrement, name, notNull, primaryKey, type, calendar_id, gcal_event_id (+29 more)
 
 ### Community 240 - "completed min"
 Cohesion: 0.18
 Nodes (11): checkConstraints, compositePrimaryKeys, foreignKeys, indexes, name, uniqueConstraints, columns, isUnique (+3 more)
 
 ### Community 241 - "dow local"
-Cohesion: 0.29
-Nodes (7): autoincrement, default, name, notNull, primaryKey, type, by_project
+Cohesion: 0.05
+Nodes (34): rollupDay(), oauthTokens, decrypt(), disconnectGoogle(), encrypt(), encryptionKey(), getAuthedClient(), getAuthUrl() (+26 more)
 
 ### Community 242 - "external busy min"
 Cohesion: 0.29
@@ -1560,36 +1518,36 @@ Cohesion: 0.20
 Nodes (10): rep_pooling, borrowed_conf_base, borrowed_conf_cap, borrowed_conf_per_lift, enabled, _help, min_n_starved, rich_min_points (+2 more)
 
 ### Community 244 - "highlight done"
-Cohesion: 0.20
-Nodes (17): useWorkoutImport(), useWorkoutJob(), useWorkoutStatus(), useWorkoutSummary(), useWorkoutSync(), LoadingWorkspace(), VIEWS, WorkoutPage() (+9 more)
+Cohesion: 0.10
+Nodes (29): useWorkoutImport(), useWorkoutJob(), useWorkoutStatus(), useWorkoutSummary(), useWorkoutSync(), LoadingWorkspace(), VIEWS, WorkoutPage() (+21 more)
 
 ### Community 245 - "hour local"
-Cohesion: 0.18
-Nodes (14): KIND_ICON, addNotification(), AppNotification, clearNotifications(), emit(), getUnreadCount(), Listener, listeners (+6 more)
+Cohesion: 0.29
+Nodes (7): overrun_min, autoincrement, default, name, notNull, primaryKey, type
 
 ### Community 246 - "intention"
 Cohesion: 0.20
 Nodes (10): reps_at_pct1rm, upper_press, 100, 65, 70, 75, 80, 85 (+2 more)
 
 ### Community 247 - "locked"
-Cohesion: 0.09
-Nodes (22): columns, autoincrement, default, name, notNull, primaryKey, type, autoincrement (+14 more)
+Cohesion: 0.06
+Nodes (36): columns, autoincrement, default, name, notNull, primaryKey, type, autoincrement (+28 more)
 
 ### Community 248 - "missed count"
 Cohesion: 0.20
 Nodes (9): 0. What we're fixing, 1. The model — two-level hierarchy (exercise ⊂ exercise-type), 2. Empirical-Bayes math (closed form, numpy — keeps the low-dep ethos), 3. Three-level option / statsmodels, 4. Integration (individualize.py) — DONE, 5. Validation — DONE (adopted), 6. Pseudocode, 7. Honest expectation (+1 more)
 
 ### Community 249 - "missed min"
-Cohesion: 0.36
-Nodes (8): decodeGraphView(), encodeGraphView(), fromBase64Url(), graphViewUrl(), SavedGraphView, SerializableGraphView, toBase64Url(), viewFromUrl()
+Cohesion: 0.29
+Nodes (7): reasons, autoincrement, default, name, notNull, primaryKey, type
 
 ### Community 250 - "overrun min"
 Cohesion: 0.29
-Nodes (7): hour_local, autoincrement, default, name, notNull, primaryKey, type
+Nodes (7): overrun_min, autoincrement, default, name, notNull, primaryKey, type
 
 ### Community 251 - "planned count"
 Cohesion: 0.29
-Nodes (7): planned_min, autoincrement, default, name, notNull, primaryKey, type
+Nodes (7): autoincrement, default, name, notNull, primaryKey, type, chunk_index
 
 ### Community 252 - "planned min"
 Cohesion: 0.06
@@ -1601,7 +1559,7 @@ Nodes (7): reasons, autoincrement, default, name, notNull, primaryKey, type
 
 ### Community 254 - "reflection"
 Cohesion: 0.29
-Nodes (9): _auto_month_to_epoch(), _merge_small(), _monthly_medians(), normalize_exercise(), _override_month_to_epoch(), Per-exercise unit-epoch detection and relative-load indexing.  Absolute logged w, boundaries: ISO dates (YYYY-MM or YYYY-MM-DD) where a new epoch starts., Collapse epochs with fewer than min_sets sets into the prior kept epoch. (+1 more)
+Nodes (7): hour_local, autoincrement, default, name, notNull, primaryKey, type
 
 ### Community 255 - "status"
 Cohesion: 0.22
@@ -1641,7 +1599,7 @@ Nodes (9): 100, 65, 70, 75, 80, 85, 90, 95 (+1 more)
 
 ### Community 265 - "habit instance id"
 Cohesion: 0.29
-Nodes (7): priority, autoincrement, default, name, notNull, primaryKey, type
+Nodes (7): created, autoincrement, default, name, notNull, primaryKey, type
 
 ### Community 266 - "Community 266"
 Cohesion: 0.25
@@ -1665,7 +1623,7 @@ Nodes (8): _personal_strong(), pooled_slope_for(), Posterior (shrunken) slope + 
 
 ### Community 271 - "Community 271"
 Cohesion: 0.29
-Nodes (7): streak_after, autoincrement, default, name, notNull, primaryKey, type
+Nodes (7): kind, autoincrement, default, name, notNull, primaryKey, type
 
 ### Community 272 - "rrule"
 Cohesion: 0.29
@@ -1680,40 +1638,40 @@ Cohesion: 0.29
 Nodes (7): rpe_to_rir, 10, 5, 6, 7, 8, 9
 
 ### Community 275 - "target count"
-Cohesion: 0.29
-Nodes (7): kind, autoincrement, default, name, notNull, primaryKey, type
+Cohesion: 0.06
+Nodes (33): duration_min, preferred_start, priority, weekly_target_min, window_start, autoincrement, name, notNull (+25 more)
 
 ### Community 276 - "target minutes"
 Cohesion: 0.29
-Nodes (7): missed_min, autoincrement, default, name, notNull, primaryKey, type
+Nodes (7): autoincrement, default, name, notNull, primaryKey, type, by_project
 
 ### Community 277 - "task id"
-Cohesion: 0.53
-Nodes (4): useApplyInboxTriage(), useInboxTriageSuggestion(), useNote(), InboxTriageModal()
+Cohesion: 0.05
+Nodes (51): ActivityAnalyticsPanel(), minutes(), minutes(), percent(), PersonalActivityAnalyticsPanel(), BriefCard(), AiUsageDashboard, TaskListFilters (+43 more)
 
 ### Community 278 - "updated at utc"
 Cohesion: 0.29
-Nodes (7): reasons, autoincrement, default, name, notNull, primaryKey, type
+Nodes (7): missed_min, autoincrement, default, name, notNull, primaryKey, type
 
 ### Community 279 - "week start"
 Cohesion: 0.29
-Nodes (7): window_start, autoincrement, default, name, notNull, primaryKey, type
+Nodes (7): checkConstraints, compositePrimaryKeys, foreignKeys, indexes, name, uniqueConstraints, daily_plans
 
 ### Community 280 - "Community 280"
 Cohesion: 0.29
 Nodes (7): autoincrement, default, name, notNull, primaryKey, type, affected_records
 
 ### Community 281 - "calendar id"
-Cohesion: 0.14
-Nodes (11): StrengthSort, WorkoutRange, OVERVIEW_METRICS, RANGES, STRENGTH_MODES, STRENGTH_SORTS, VIEWS, groups (+3 more)
+Cohesion: 0.29
+Nodes (7): reasons, autoincrement, default, name, notNull, primaryKey, type
 
 ### Community 282 - "duration min"
-Cohesion: 0.29
-Nodes (7): notes, autoincrement, default, name, notNull, primaryKey, type
+Cohesion: 0.48
+Nodes (6): useBlacklistConcept(), useConcepts(), useMergeConcepts(), useRenameConcept(), ConceptInspector(), InspectorTarget
 
 ### Community 283 - "end utc"
 Cohesion: 0.29
-Nodes (7): checkConstraints, compositePrimaryKeys, foreignKeys, indexes, name, uniqueConstraints, day_results
+Nodes (7): status, autoincrement, default, name, notNull, primaryKey, type
 
 ### Community 284 - "estimated min"
 Cohesion: 0.06
@@ -1721,23 +1679,23 @@ Nodes (32): checkConstraints, columns, compositePrimaryKeys, foreignKeys, indexe
 
 ### Community 285 - "gcal event id"
 Cohesion: 0.29
-Nodes (7): completed_min, autoincrement, default, name, notNull, primaryKey, type
+Nodes (7): planned_min, autoincrement, default, name, notNull, primaryKey, type
 
 ### Community 286 - "gcal updated"
-Cohesion: 0.53
-Nodes (4): useCaptureYouTubeNote(), useClipUrlToInbox(), useQuickCaptureNote(), QuickCaptureModal()
+Cohesion: 0.38
+Nodes (5): queryClient, useUiPreferences(), DevicePreferencesPanels(), formatBytes(), AppWithPreferences()
 
 ### Community 287 - "Community 287"
 Cohesion: 0.29
-Nodes (7): planned_min, autoincrement, default, name, notNull, primaryKey, type
+Nodes (7): window_end, autoincrement, default, name, notNull, primaryKey, type
 
 ### Community 288 - "Community 288"
 Cohesion: 0.29
-Nodes (7): checkConstraints, compositePrimaryKeys, foreignKeys, indexes, name, uniqueConstraints, schedule_runs
+Nodes (7): autoincrement, default, name, notNull, primaryKey, type, chunk_index
 
 ### Community 289 - "outcome"
-Cohesion: 0.29
-Nodes (7): completed_min, autoincrement, default, name, notNull, primaryKey, type
+Cohesion: 0.53
+Nodes (4): useApplyInboxTriage(), useInboxTriageSuggestion(), useNote(), InboxTriageModal()
 
 ### Community 290 - "preferred start"
 Cohesion: 0.29
@@ -1748,44 +1706,40 @@ Cohesion: 0.29
 Nodes (7): autoincrement, default, name, notNull, primaryKey, type, by_project
 
 ### Community 292 - "Community 292"
-Cohesion: 0.29
-Nodes (7): autoincrement, default, name, notNull, primaryKey, type, by_label
-
-### Community 293 - "start utc"
-Cohesion: 0.29
-Nodes (7): status, autoincrement, default, name, notNull, primaryKey, type
+Cohesion: 0.08
+Nodes (26): checkConstraints, columns, compositePrimaryKeys, foreignKeys, indexes, name, uniqueConstraints, content (+18 more)
 
 ### Community 295 - "updated at utc"
 Cohesion: 0.29
-Nodes (7): window_end, autoincrement, default, name, notNull, primaryKey, type
+Nodes (7): completed_min, autoincrement, default, name, notNull, primaryKey, type
 
 ### Community 296 - "Community 296"
 Cohesion: 0.33
 Nodes (6): end_utc, autoincrement, name, notNull, primaryKey, type
 
-### Community 297 - "calendar id"
-Cohesion: 0.29
-Nodes (7): checkConstraints, compositePrimaryKeys, foreignKeys, indexes, name, uniqueConstraints, oauth_tokens
+### Community 297 - "Community 297"
+Cohesion: 0.06
+Nodes (35): autoincrement, default, name, notNull, primaryKey, type, at_risk, deleted (+27 more)
 
 ### Community 298 - "Community 298"
 Cohesion: 0.33
 Nodes (6): end_utc, autoincrement, name, notNull, primaryKey, type
 
 ### Community 299 - "end utc"
-Cohesion: 0.15
-Nodes (13): columns, end_utc, start_utc, autoincrement, name, notNull, primaryKey, type (+5 more)
+Cohesion: 0.29
+Nodes (7): status, autoincrement, default, name, notNull, primaryKey, type
 
 ### Community 300 - "gcal event id"
-Cohesion: 0.33
-Nodes (6): gcal_event_id, autoincrement, name, notNull, primaryKey, type
+Cohesion: 0.29
+Nodes (7): highlight_done, autoincrement, default, name, notNull, primaryKey, type
 
 ### Community 301 - "gcal updated"
 Cohesion: 0.33
-Nodes (6): gcal_updated, autoincrement, name, notNull, primaryKey, type
+Nodes (6): trigger, autoincrement, name, notNull, primaryKey, type
 
-### Community 302 - "habit instance id"
-Cohesion: 0.33
-Nodes (6): habit_instance_id, autoincrement, name, notNull, primaryKey, type
+### Community 302 - "Community 302"
+Cohesion: 0.29
+Nodes (7): locked, autoincrement, default, name, notNull, primaryKey, type
 
 ### Community 303 - "Community 303"
 Cohesion: 0.29
@@ -1797,23 +1751,23 @@ Nodes (7): autoincrement, default, name, notNull, primaryKey, type, by_label
 
 ### Community 305 - "Community 305"
 Cohesion: 0.29
-Nodes (7): checkConstraints, compositePrimaryKeys, foreignKeys, indexes, name, uniqueConstraints, objectives
+Nodes (7): autoincrement, default, name, notNull, primaryKey, type, by_project
 
 ### Community 306 - "recorded at utc"
 Cohesion: 0.29
 Nodes (7): completed_min, autoincrement, default, name, notNull, primaryKey, type
 
 ### Community 307 - "Community 307"
-Cohesion: 0.08
-Nodes (20): databases, memoryDb(), DurableJobContext, DurableJobHandler, DurableJobRunner, enqueueDurableJob(), jsonObject(), listDurableJobs() (+12 more)
+Cohesion: 0.29
+Nodes (7): input_tokens, autoincrement, default, name, notNull, primaryKey, type
 
 ### Community 308 - "Community 308"
 Cohesion: 0.29
-Nodes (7): external_busy_min, autoincrement, default, name, notNull, primaryKey, type
+Nodes (7): latency_ms, autoincrement, default, name, notNull, primaryKey, type
 
-### Community 309 - "task id"
+### Community 309 - "Community 309"
 Cohesion: 0.29
-Nodes (7): checkConstraints, compositePrimaryKeys, foreignKeys, indexes, name, uniqueConstraints, analytics_daily
+Nodes (3): ALL_DAYS_9_17, ENERGY_OFF, LEARNED_OFF
 
 ### Community 310 - "updated at utc"
 Cohesion: 0.29
@@ -1829,11 +1783,11 @@ Nodes (7): autoincrement, default, name, notNull, primaryKey, type, chunk_index
 
 ### Community 313 - "gcal event id"
 Cohesion: 0.29
-Nodes (7): latency_ms, autoincrement, default, name, notNull, primaryKey, type
+Nodes (7): risk_level, autoincrement, default, name, notNull, primaryKey, type
 
-### Community 314 - "gcal updated"
+### Community 314 - "Community 314"
 Cohesion: 0.29
-Nodes (7): checkConstraints, compositePrimaryKeys, foreignKeys, indexes, name, uniqueConstraints, block_outcomes
+Nodes (7): input_tokens, autoincrement, default, name, notNull, primaryKey, type
 
 ### Community 315 - "Community 315"
 Cohesion: 0.29
@@ -1872,16 +1826,16 @@ Cohesion: 0.33
 Nodes (6): mav, mev, mrv, region, side, hamstrings
 
 ### Community 325 - "Community 325"
-Cohesion: 0.29
-Nodes (7): done_count, autoincrement, default, name, notNull, primaryKey, type
+Cohesion: 0.33
+Nodes (6): start_utc, autoincrement, name, notNull, primaryKey, type
 
 ### Community 326 - "Community 326"
 Cohesion: 0.33
 Nodes (6): neck, mav, mev, mrv, region, side
 
-### Community 327 - "calendar id"
+### Community 327 - "Community 327"
 Cohesion: 0.33
-Nodes (6): result, autoincrement, name, notNull, primaryKey, type
+Nodes (6): last_pushed_hash, autoincrement, name, notNull, primaryKey, type
 
 ### Community 328 - "gcal event id"
 Cohesion: 0.33
@@ -1913,7 +1867,7 @@ Nodes (6): set_order_fatigue_default, 1, 2, 3, 4, 5
 
 ### Community 335 - "Community 335"
 Cohesion: 0.29
-Nodes (7): external_busy_min, autoincrement, default, name, notNull, primaryKey, type
+Nodes (7): dow_local, autoincrement, default, name, notNull, primaryKey, type
 
 ### Community 336 - "Community 336"
 Cohesion: 0.33
@@ -1925,15 +1879,15 @@ Nodes (6): increment_overrides, band, barbell, cable, dumbbell, machine
 
 ### Community 338 - "start utc"
 Cohesion: 0.29
-Nodes (7): latency_ms, autoincrement, default, name, notNull, primaryKey, type
+Nodes (7): highlight, autoincrement, default, name, notNull, primaryKey, type
 
 ### Community 339 - "Community 339"
-Cohesion: 0.33
-Nodes (6): title, autoincrement, name, notNull, primaryKey, type
+Cohesion: 0.16
+Nodes (7): ALL_DAYS, ENERGY_OFF, LEARNED_OFF, effectiveDeadlineMs(), scoreTask(), WEIGHTS, PlanTaskInput
 
 ### Community 340 - "Community 340"
 Cohesion: 0.29
-Nodes (7): highlight, autoincrement, default, name, notNull, primaryKey, type
+Nodes (7): status, autoincrement, default, name, notNull, primaryKey, type
 
 ### Community 341 - "nsis"
 Cohesion: 0.40
@@ -1948,12 +1902,12 @@ Cohesion: 0.40
 Nodes (4): compilerOptions, types, extends, include
 
 ### Community 344 - "Chat Panel.tsx"
-Cohesion: 0.05
-Nodes (59): useActionProposals(), useApproveActionProposal(), useAssistantChat(), useAssistantMessageFeedback(), useAssistantOnboarding(), useAssistantThread(), useAssistantThreads(), useCreateAssistantThread() (+51 more)
+Cohesion: 0.24
+Nodes (12): usePurchaseWishlistItem(), useSaveWishlistBudget(), useUpdateWishlistSettings(), useWishlistAdvice(), useWishlistBudget(), useWishlistItems(), useWishlistSettings(), useWishlistSummary() (+4 more)
 
 ### Community 345 - "Community 345"
-Cohesion: 0.29
-Nodes (7): risk_level, autoincrement, default, name, notNull, primaryKey, type
+Cohesion: 0.33
+Nodes (6): updated_at_utc, autoincrement, name, notNull, primaryKey, type
 
 ### Community 346 - "journal.json"
 Cohesion: 0.50
@@ -1961,7 +1915,7 @@ Nodes (3): dialect, entries, version
 
 ### Community 347 - "voice.ts"
 Cohesion: 0.29
-Nodes (7): completed_min, autoincrement, default, name, notNull, primaryKey, type
+Nodes (7): evidence_ids, autoincrement, default, name, notNull, primaryKey, type
 
 ### Community 348 - "run Carry Physics"
 Cohesion: 0.50
@@ -1976,8 +1930,8 @@ Cohesion: 0.40
 Nodes (4): graphify, Incremental Graph Updates, Scoped Subgraph Queries, Second Brain graph
 
 ### Community 355 - "Community 355"
-Cohesion: 0.29
-Nodes (7): hour_local, autoincrement, default, name, notNull, primaryKey, type
+Cohesion: 0.33
+Nodes (6): recorded_at_utc, autoincrement, name, notNull, primaryKey, type
 
 ### Community 360 - "Note DTO"
 Cohesion: 0.50
@@ -2008,8 +1962,8 @@ Cohesion: 0.29
 Nodes (7): autoincrement, default, name, notNull, primaryKey, type, by_project
 
 ### Community 384 - "Community 384"
-Cohesion: 0.33
-Nodes (6): last_pushed_hash, autoincrement, name, notNull, primaryKey, type
+Cohesion: 0.29
+Nodes (7): latency_ms, autoincrement, default, name, notNull, primaryKey, type
 
 ### Community 385 - "Community 385"
 Cohesion: 0.29
@@ -2019,49 +1973,41 @@ Nodes (7): payload, autoincrement, default, name, notNull, primaryKey, type
 Cohesion: 0.29
 Nodes (7): reasoning, autoincrement, default, name, notNull, primaryKey, type
 
-### Community 387 - "Community 387"
-Cohesion: 0.33
-Nodes (6): name, autoincrement, name, notNull, primaryKey, type
-
 ### Community 388 - "Community 388"
-Cohesion: 0.33
-Nodes (6): outcome, autoincrement, name, notNull, primaryKey, type
+Cohesion: 0.29
+Nodes (7): locked, autoincrement, default, name, notNull, primaryKey, type
 
 ### Community 389 - "Community 389"
-Cohesion: 0.33
-Nodes (6): rrule, autoincrement, name, notNull, primaryKey, type
+Cohesion: 0.29
+Nodes (7): payload, autoincrement, default, name, notNull, primaryKey, type
 
 ### Community 390 - "Community 390"
 Cohesion: 0.33
-Nodes (6): task_id, autoincrement, name, notNull, primaryKey, type
+Nodes (6): kind, autoincrement, name, notNull, primaryKey, type
 
 ### Community 391 - "Community 391"
 Cohesion: 0.33
-Nodes (6): updated_at_utc, autoincrement, name, notNull, primaryKey, type
+Nodes (6): outcome, autoincrement, name, notNull, primaryKey, type
 
 ### Community 392 - "Community 392"
 Cohesion: 0.29
-Nodes (7): evidence_ids, autoincrement, default, name, notNull, primaryKey, type
+Nodes (7): locked, autoincrement, default, name, notNull, primaryKey, type
 
 ### Community 393 - "Community 393"
 Cohesion: 0.33
 Nodes (6): gcal_event_id, autoincrement, name, notNull, primaryKey, type
-
-### Community 394 - "Community 394"
-Cohesion: 0.33
-Nodes (6): gcal_updated, autoincrement, name, notNull, primaryKey, type
 
 ### Community 395 - "Community 395"
 Cohesion: 0.29
 Nodes (7): reasoning, autoincrement, default, name, notNull, primaryKey, type
 
 ### Community 396 - "Community 396"
-Cohesion: 0.10
-Nodes (20): duration_min, name, window_start, autoincrement, name, notNull, primaryKey, type (+12 more)
+Cohesion: 0.33
+Nodes (6): rrule, autoincrement, name, notNull, primaryKey, type
 
 ### Community 398 - "Community 398"
 Cohesion: 0.33
-Nodes (6): link_kind, autoincrement, name, notNull, primaryKey, type
+Nodes (6): habit_instance_id, autoincrement, name, notNull, primaryKey, type
 
 ### Community 400 - "Community 400"
 Cohesion: 0.33
@@ -2072,8 +2018,8 @@ Cohesion: 0.33
 Nodes (6): _norm_scale(), predict_reps_anchored(), predict_reps_conformal(), Anchor on the most recent actual top-set, then adjust for the load change     us, Heteroscedastic width factor for normalized conformal (design 06 section     1b), Conformal drop-in for predict_reps_anchored's interval. The POINT is     predict
 
 ### Community 402 - "Community 402"
-Cohesion: 0.33
-Nodes (6): preferred_start, autoincrement, name, notNull, primaryKey, type
+Cohesion: 0.05
+Nodes (37): columns, autoincrement, name, notNull, primaryKey, type, calendar_id, end_utc (+29 more)
 
 ### Community 403 - "Community 403"
 Cohesion: 0.53
@@ -2082,10 +2028,6 @@ Nodes (5): _fmt(), Render report.md and dashboard.html - both pure functions of 
 ### Community 404 - "Community 404"
 Cohesion: 0.40
 Nodes (5): equipment, pattern, primary, secondary, Back 1
-
-### Community 405 - "Community 405"
-Cohesion: 0.70
-Nodes (4): useCreateNoteShare(), useNoteShare(), useRevokeNoteShare(), PublishNoteModal()
 
 ### Community 406 - "Community 406"
 Cohesion: 0.33
@@ -2159,17 +2101,9 @@ Nodes (5): equipment, pattern, primary, secondary, Decline Bench Press (Barbell)
 Cohesion: 0.40
 Nodes (5): Face Pull, equipment, pattern, primary, secondary
 
-### Community 426 - "Community 426"
-Cohesion: 0.29
-Nodes (7): intention, autoincrement, default, name, notNull, primaryKey, type
-
 ### Community 427 - "Community 427"
 Cohesion: 0.40
 Nodes (5): Forearm Curl, equipment, pattern, primary, secondary
-
-### Community 428 - "Community 428"
-Cohesion: 0.33
-Nodes (6): autoincrement, name, notNull, primaryKey, type, calendar_id
 
 ### Community 429 - "Community 429"
 Cohesion: 0.40
@@ -2220,8 +2154,8 @@ Cohesion: 0.40
 Nodes (5): Lat Pulldown (Cable), equipment, pattern, primary, secondary
 
 ### Community 441 - "Community 441"
-Cohesion: 0.29
-Nodes (7): locked, autoincrement, default, name, notNull, primaryKey, type
+Cohesion: 0.33
+Nodes (6): start_utc, autoincrement, name, notNull, primaryKey, type
 
 ### Community 442 - "Community 442"
 Cohesion: 0.40
@@ -2359,13 +2293,9 @@ Nodes (5): weightdep_1rm, a, b, beta, _help
 Cohesion: 0.40
 Nodes (5): hevy, base_url, max_retries, page_size, timeout_seconds
 
-### Community 476 - "Community 476"
-Cohesion: 0.29
-Nodes (7): missed_count, autoincrement, default, name, notNull, primaryKey, type
-
 ### Community 481 - "Community 481"
-Cohesion: 0.29
-Nodes (7): missed_min, autoincrement, default, name, notNull, primaryKey, type
+Cohesion: 0.33
+Nodes (6): name, autoincrement, name, notNull, primaryKey, type
 
 ### Community 485 - "Community 485"
 Cohesion: 0.50
@@ -2373,27 +2303,23 @@ Nodes (4): normal_normal_update(), Closed-form conjugate update of a mean. Retur
 
 ### Community 486 - "Community 486"
 Cohesion: 0.33
-Nodes (6): refresh_token, autoincrement, name, notNull, primaryKey, type
+Nodes (6): rating, autoincrement, name, notNull, primaryKey, type
 
 ### Community 488 - "Community 488"
-Cohesion: 0.29
-Nodes (7): overrun_min, autoincrement, default, name, notNull, primaryKey, type
+Cohesion: 0.33
+Nodes (6): start_utc, autoincrement, name, notNull, primaryKey, type
 
 ### Community 489 - "Community 489"
-Cohesion: 0.29
-Nodes (7): planned_count, autoincrement, default, name, notNull, primaryKey, type
+Cohesion: 0.33
+Nodes (6): model, autoincrement, name, notNull, primaryKey, type
 
 ### Community 490 - "Community 490"
-Cohesion: 0.29
-Nodes (7): window_end, autoincrement, default, name, notNull, primaryKey, type
-
-### Community 491 - "Community 491"
-Cohesion: 0.33
-Nodes (6): rrule, autoincrement, name, notNull, primaryKey, type
+Cohesion: 0.53
+Nodes (4): useCaptureYouTubeNote(), useClipUrlToInbox(), useQuickCaptureNote(), QuickCaptureModal()
 
 ### Community 492 - "Community 492"
 Cohesion: 0.33
-Nodes (6): start_utc, autoincrement, name, notNull, primaryKey, type
+Nodes (6): autoincrement, name, notNull, primaryKey, type, cache_key
 
 ### Community 493 - "Community 493"
 Cohesion: 0.29
@@ -2401,219 +2327,63 @@ Nodes (7): missed_count, autoincrement, default, name, notNull, primaryKey, type
 
 ### Community 494 - "Community 494"
 Cohesion: 0.33
-Nodes (6): target_minutes, autoincrement, name, notNull, primaryKey, type
-
-### Community 495 - "Community 495"
-Cohesion: 0.33
 Nodes (6): updated_at_utc, autoincrement, name, notNull, primaryKey, type
 
 ### Community 496 - "Community 496"
 Cohesion: 0.33
-Nodes (6): weekly_target_min, autoincrement, name, notNull, primaryKey, type
+Nodes (6): target_minutes, autoincrement, name, notNull, primaryKey, type
 
 ### Community 497 - "Community 497"
-Cohesion: 0.33
-Nodes (6): autoincrement, name, notNull, primaryKey, type, calendar_id
-
-### Community 498 - "Community 498"
 Cohesion: 0.29
-Nodes (7): reflection, autoincrement, default, name, notNull, primaryKey, type
-
-### Community 499 - "Community 499"
-Cohesion: 0.33
-Nodes (6): recorded_at_utc, autoincrement, name, notNull, primaryKey, type
+Nodes (7): risk_level, autoincrement, default, name, notNull, primaryKey, type
 
 ### Community 500 - "Community 500"
 Cohesion: 0.33
-Nodes (6): autoincrement, name, notNull, primaryKey, type, calendar_id
+Nodes (6): task_id, autoincrement, name, notNull, primaryKey, type
 
 ### Community 501 - "Community 501"
-Cohesion: 0.29
-Nodes (7): autoincrement, default, name, notNull, primaryKey, type, by_project
-
-### Community 502 - "Community 502"
-Cohesion: 0.29
-Nodes (7): missed_min, autoincrement, default, name, notNull, primaryKey, type
-
-### Community 503 - "Community 503"
-Cohesion: 0.29
-Nodes (7): status, autoincrement, default, name, notNull, primaryKey, type
+Cohesion: 0.33
+Nodes (6): end_utc, autoincrement, name, notNull, primaryKey, type
 
 ### Community 504 - "Community 504"
 Cohesion: 0.29
 Nodes (7): streak_after, autoincrement, default, name, notNull, primaryKey, type
 
-### Community 505 - "Community 505"
-Cohesion: 0.29
-Nodes (7): xp_awarded, autoincrement, default, name, notNull, primaryKey, type
-
-### Community 506 - "Community 506"
-Cohesion: 0.29
-Nodes (7): highlight_done, autoincrement, default, name, notNull, primaryKey, type
-
-### Community 507 - "Community 507"
-Cohesion: 0.29
-Nodes (7): intention, autoincrement, default, name, notNull, primaryKey, type
-
-### Community 508 - "Community 508"
-Cohesion: 0.29
-Nodes (7): highlight_done, autoincrement, default, name, notNull, primaryKey, type
-
-### Community 509 - "Community 509"
-Cohesion: 0.29
-Nodes (7): intention, autoincrement, default, name, notNull, primaryKey, type
-
-### Community 510 - "Community 510"
-Cohesion: 0.29
-Nodes (7): evidence_ids, autoincrement, default, name, notNull, primaryKey, type
-
 ### Community 512 - "Community 512"
-Cohesion: 0.29
-Nodes (7): input_tokens, autoincrement, default, name, notNull, primaryKey, type
-
-### Community 513 - "Community 513"
-Cohesion: 0.43
-Nodes (4): tagColorFor(), TagColors, tagPillStyle(), withAlpha()
+Cohesion: 0.33
+Nodes (6): rating, autoincrement, name, notNull, primaryKey, type
 
 ### Community 514 - "Community 514"
-Cohesion: 0.29
-Nodes (3): ALL_DAYS_9_17, ENERGY_OFF, LEARNED_OFF
+Cohesion: 0.83
+Nodes (3): forgetRecentNote(), getRecentNoteIds(), recordNoteOpened()
 
 ### Community 515 - "Community 515"
-Cohesion: 0.29
-Nodes (7): input_tokens, autoincrement, default, name, notNull, primaryKey, type
+Cohesion: 0.33
+Nodes (6): start_utc, autoincrement, name, notNull, primaryKey, type
 
 ### Community 516 - "Community 516"
 Cohesion: 0.50
 Nodes (3): Add it in ChatGPT, Connect TimeBlocking to ChatGPT, Start it beside the desktop app
 
-### Community 517 - "Community 517"
-Cohesion: 0.29
-Nodes (3): ALL_DAYS, ENERGY_OFF, LEARNED_OFF
-
-### Community 518 - "Community 518"
-Cohesion: 0.33
-Nodes (6): autoincrement, name, notNull, primaryKey, type, calendar_id
-
-### Community 519 - "Community 519"
-Cohesion: 0.83
-Nodes (3): forgetRecentNote(), getRecentNoteIds(), recordNoteOpened()
-
-### Community 520 - "Community 520"
-Cohesion: 0.33
-Nodes (6): expiry_utc, autoincrement, name, notNull, primaryKey, type
-
-### Community 521 - "Community 521"
-Cohesion: 0.33
-Nodes (6): model, autoincrement, name, notNull, primaryKey, type
-
-### Community 522 - "Community 522"
-Cohesion: 0.33
-Nodes (6): scopes, autoincrement, name, notNull, primaryKey, type
-
-### Community 523 - "Community 523"
-Cohesion: 0.33
-Nodes (6): habit_instance_id, autoincrement, name, notNull, primaryKey, type
-
-### Community 524 - "Community 524"
-Cohesion: 0.33
-Nodes (6): autoincrement, name, notNull, primaryKey, type, calendar_id
-
-### Community 525 - "Community 525"
-Cohesion: 0.33
-Nodes (6): end_utc, autoincrement, name, notNull, primaryKey, type
-
-### Community 526 - "Community 526"
-Cohesion: 0.33
-Nodes (6): start_utc, autoincrement, name, notNull, primaryKey, type
-
-### Community 527 - "Community 527"
-Cohesion: 0.33
-Nodes (6): date, autoincrement, name, notNull, primaryKey, type
-
-### Community 528 - "Community 528"
-Cohesion: 0.33
-Nodes (6): estimated_min, autoincrement, name, notNull, primaryKey, type
-
-### Community 529 - "Community 529"
-Cohesion: 0.33
-Nodes (6): recorded_at_utc, autoincrement, name, notNull, primaryKey, type
-
-### Community 530 - "Community 530"
-Cohesion: 0.33
-Nodes (6): id, autoincrement, name, notNull, primaryKey, type
-
-### Community 531 - "Community 531"
-Cohesion: 0.33
-Nodes (6): outcome, autoincrement, name, notNull, primaryKey, type
-
-### Community 532 - "Community 532"
-Cohesion: 0.33
-Nodes (6): task_id, autoincrement, name, notNull, primaryKey, type
-
-### Community 533 - "Community 533"
-Cohesion: 0.33
-Nodes (6): updated_at_utc, autoincrement, name, notNull, primaryKey, type
-
-### Community 534 - "Community 534"
-Cohesion: 0.33
-Nodes (6): gcal_event_id, autoincrement, name, notNull, primaryKey, type
-
-### Community 535 - "Community 535"
-Cohesion: 0.33
-Nodes (6): gcal_updated, autoincrement, name, notNull, primaryKey, type
-
-### Community 536 - "Community 536"
-Cohesion: 0.33
-Nodes (6): recorded_at_utc, autoincrement, name, notNull, primaryKey, type
-
-### Community 537 - "Community 537"
-Cohesion: 0.33
-Nodes (6): shutdown_done_at_utc, autoincrement, name, notNull, primaryKey, type
-
-### Community 539 - "Community 539"
-Cohesion: 0.60
-Nodes (5): getYouTubeCanonicalUrl(), getYouTubeEmbedUrl(), getYouTubeThumbnailUrl(), getYouTubeVideoId(), validVideoId()
-
-### Community 540 - "Community 540"
-Cohesion: 0.33
-Nodes (6): gcal_event_id, autoincrement, name, notNull, primaryKey, type
-
-### Community 542 - "Community 542"
-Cohesion: 0.33
-Nodes (6): gcal_updated, autoincrement, name, notNull, primaryKey, type
-
-### Community 543 - "Community 543"
-Cohesion: 0.33
-Nodes (6): recorded_at_utc, autoincrement, name, notNull, primaryKey, type
-
-### Community 544 - "Community 544"
-Cohesion: 0.33
-Nodes (6): shutdown_done_at_utc, autoincrement, name, notNull, primaryKey, type
-
-### Community 545 - "Community 545"
-Cohesion: 0.33
-Nodes (6): model, autoincrement, name, notNull, primaryKey, type
-
 ## Knowledge Gaps
-- **3970 isolated node(s):** `src`, `destDir`, `name`, `version`, `private` (+3965 more)
+- **4149 isolated node(s):** `src`, `destDir`, `name`, `version`, `private` (+4144 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **33 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `renderMarkdown()` connect `Voice Capture.tsx` to `Community 539`, `status`?**
-  _High betweenness centrality (0.031) - this node is a cross-community bridge._
-- **Why does `saveNoteAsset()` connect `notifications.ts` to `external busy min`?**
-  _High betweenness centrality (0.022) - this node is a cross-community bridge._
+- **Why does `buildDailySummary()` connect `client.ts` to `task id`?**
+  _High betweenness centrality (0.064) - this node is a cross-community bridge._
+- **Why does `minutes()` connect `task id` to `client.ts`?**
+  _High betweenness centrality (0.064) - this node is a cross-community bridge._
+- **Why does `DB` connect `client.ts` to `external busy min`, `mappers.ts`, `Community 263`, `manager.ts`, `communities.ts`, `Focus View.tsx`, `recompute.ts`, `freezes after`, `notifications.ts`, `columns`, `Calendar Page.tsx`, `columns`, `columns`, `external busy min`, `Task Context Menu.tsx`, `goals.ts`, `api.ts`, `columns`, `use Theme.tsx`, `dow local`, `Concept Inspector.tsx`?**
+  _High betweenness centrality (0.021) - this node is a cross-community bridge._
 - **What connects `src`, `destDir`, `name` to the rest of the system?**
-  _4217 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _4400 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `types.ts` be split into smaller, more focused modules?**
-  _Cohesion score 0.007246376811594203 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.007017543859649123 - nodes in this community are weakly interconnected._
 - **Should `Task Editor Panel.tsx` be split into smaller, more focused modules?**
-  _Cohesion score 0.07764876632801161 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.036303630363036306 - nodes in this community are weakly interconnected._
 - **Should `proposals.ts` be split into smaller, more focused modules?**
-  _Cohesion score 0.068997668997669 - nodes in this community are weakly interconnected._
-- **Should `hooks.ts` be split into smaller, more focused modules?**
-  _Cohesion score 0.0463768115942029 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.06286748077792854 - nodes in this community are weakly interconnected._

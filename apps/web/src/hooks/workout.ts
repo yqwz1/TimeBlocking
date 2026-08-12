@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { WorkoutExerciseHistoryDTO, WorkoutJobDTO, WorkoutStatusDTO, WorkoutSummaryDTO } from '@timeblock/shared';
+import type { WorkoutExerciseHistoryDTO, WorkoutJobDTO, WorkoutPowerliftingProfileInput, WorkoutSettingsDTO, WorkoutStatusDTO, WorkoutSummaryDTO, WorkoutVolumeAnalyticsDTO, WorkoutVolumeAnalyticsRange } from '@timeblock/shared';
 import { api } from '../api.js';
 
 export const useWorkoutStatus = () => useQuery({
@@ -12,6 +12,12 @@ export const useWorkoutSummary = () => useQuery({
   queryKey: ['workout', 'summary', 4],
   queryFn: () => api.get<WorkoutSummaryDTO>('/workout/summary'),
   retry: 1,
+});
+
+export const useWorkoutSettings = () => useQuery({
+  queryKey: ['workout', 'settings'],
+  queryFn: () => api.get<WorkoutSettingsDTO>('/workout/settings'),
+  staleTime: 60_000,
 });
 
 export const useWorkoutExerciseHistory = (exercise: string | null, from?: string, to?: string) => useQuery({
@@ -27,6 +33,12 @@ export const useWorkoutExerciseHistory = (exercise: string | null, from?: string
   staleTime: 60_000,
 });
 
+export const useWorkoutVolumeAnalytics = (range: WorkoutVolumeAnalyticsRange, compare: boolean) => useQuery({
+  queryKey: ['workout', 'volume-analytics', range, compare],
+  queryFn: () => api.get<WorkoutVolumeAnalyticsDTO>(`/workout/volume-analytics?${new URLSearchParams({ range, compare: compare ? '1' : '0' }).toString()}`),
+  staleTime: 30_000,
+});
+
 export const useWorkoutJob = (id: string | null) => useQuery({
   queryKey: ['workout', 'job', id],
   queryFn: () => api.get<WorkoutJobDTO>(`/workout/jobs/${id}`),
@@ -38,7 +50,7 @@ function useWorkoutMutation<T = Record<string, unknown>>(path: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (body?: T) => api.post<WorkoutJobDTO>(path, body),
-    onSuccess: () => { void qc.invalidateQueries({ queryKey: ['workout', 'status'] }); },
+    onSuccess: () => { void qc.invalidateQueries({ queryKey: ['workout', 'status'] }); void qc.invalidateQueries({ queryKey: ['workout', 'volume-analytics'] }); },
   });
 }
 
@@ -59,7 +71,18 @@ export function useWorkoutCredential() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (apiKey: string) => api.put<{ saved: boolean; hevyConnected: boolean }>('/workout/settings/credential', { apiKey }),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: ['workout', 'status'] }),
+    onSuccess: () => { void qc.invalidateQueries({ queryKey: ['workout', 'status'] }); void qc.invalidateQueries({ queryKey: ['workout', 'volume-analytics'] }); },
+  });
+}
+
+export function useWorkoutPowerliftingProfile() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (profile: WorkoutPowerliftingProfileInput) => api.put<WorkoutJobDTO>('/workout/settings/powerlifting', profile),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['workout', 'status'] });
+      void qc.invalidateQueries({ queryKey: ['workout', 'settings'] });
+    },
   });
 }
 

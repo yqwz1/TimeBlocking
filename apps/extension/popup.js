@@ -164,27 +164,54 @@ async function extractCurrentProduct() {
         }
         return null;
       };
+      const currencyForHost = (hostname) => {
+        if (hostname.endsWith('.sa')) return 'SAR';
+        if (hostname.endsWith('.ae')) return 'AED';
+        if (hostname.endsWith('.co.uk')) return 'GBP';
+        if (/\.(?:de|fr|it|es|nl|at|ie|be)$/.test(hostname)) return 'EUR';
+        if (hostname.endsWith('.com.au')) return 'AUD';
+        if (hostname.endsWith('.ca')) return 'CAD';
+        if (hostname.endsWith('.co.jp')) return 'JPY';
+        if (hostname === 'amazon.com' || hostname === 'ebay.com') return 'USD';
+        return '';
+      };
+      const imageFromNode = (node) => {
+        if (!node) return '';
+        const dynamic = node.getAttribute('data-a-dynamic-image');
+        if (dynamic) {
+          try {
+            const entries = Object.entries(JSON.parse(dynamic));
+            entries.sort(([, left], [, right]) => (Number(right?.[0]) * Number(right?.[1])) - (Number(left?.[0]) * Number(left?.[1])));
+            const source = entries.find(([url]) => /^https?:/i.test(url))?.[0];
+            if (source) return source;
+          } catch { /* Fall through to normal image attributes. */ }
+        }
+        return node.getAttribute('data-old-hires') || node.currentSrc || node.getAttribute('src') || '';
+      };
       const titleNode = firstNode('[itemprop="name"]', '#productTitle', '[data-testid="x-item-title"]', 'main h1', 'h1');
-      const imageNode = firstNode('[itemprop="image"]', '#landingImage', '[data-testid="ux-image-carousel-item"] img', '.product-intro__main img', 'main img');
-      const priceNode = firstNode('[itemprop="price"]', '.x-price-primary', '.priceToPay .a-offscreen', '.a-price .a-offscreen', '[class*="product"][class*="price"]', '[class*="sale-price"]');
+      const imageNode = firstNode('[itemprop="image"]', '#landingImage', '#imgTagWrapperId img', '#main-image-container img', '[data-csa-c-content-id="main-image"] img', '[data-testid="ux-image-carousel-item"] img', '.product-intro__main img', 'main img');
+      const priceNode = firstNode('[itemprop="price"]', '#corePriceDisplay_desktop_feature_div .a-offscreen', '#corePrice_feature_div .a-offscreen', '#apex_desktop .a-offscreen', '#priceblock_ourprice', '#priceblock_dealprice', '#price_inside_buybox', '#twister-plus-price-data-price', '[data-a-color="price"] .a-offscreen', '.x-price-primary', '.priceToPay .a-offscreen', '.a-price .a-offscreen', '[class*="product"][class*="price"]', '[class*="sale-price"]');
       const rawPrice = scalar(offer.price ?? offer.lowPrice ?? offer.highPrice, ['price', 'amount', 'value'])
         ?? meta('product:price:amount', 'og:price:amount')
         ?? priceNode?.getAttribute('content')
+        ?? priceNode?.getAttribute('data-a-price')
+        ?? priceNode?.getAttribute('data-price')
         ?? priceNode?.textContent
         ?? '';
       const priceText = clean(rawPrice);
-      const numberText = priceText.replace(/[^\d.,-]/g, '').replace(/,(?=\d{3}(?:\D|$))/g, '').replace(',', '.');
+      const latinPriceText = priceText.replace(/[٠-٩]/g, (digit) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit))).replace(/[٫]/g, '.').replace(/[٬]/g, ',');
+      const numberText = latinPriceText.replace(/[^\d.,-]/g, '').replace(/,(?=\d{3}(?:\D|$))/g, '').replace(',', '.');
       const price = /\d/.test(numberText) && Number.isFinite(Number(numberText)) ? Number(numberText) : null;
       const currencyText = clean(scalar(offer.priceCurrency ?? offer.priceSpecification, ['priceCurrency', 'currency'])
         ?? meta('product:price:currency', 'og:price:currency')
         ?? document.querySelector('[itemprop="priceCurrency"]')?.getAttribute('content')
         ?? priceText).toUpperCase();
       const currency = currencyText.match(/(?:^|[^A-Z])([A-Z]{3})(?=[^A-Z]|$)/)?.[1]
-        || (currencyText.includes('€') ? 'EUR' : currencyText.includes('£') ? 'GBP' : currencyText.includes('ر.س') ? 'SAR' : '');
+        || (currencyText.includes('€') ? 'EUR' : currencyText.includes('£') ? 'GBP' : currencyText.includes('ر.س') || currencyText.includes('ريال') ? 'SAR' : '')
+        || currencyForHost(location.hostname.replace(/^www\./, '').toLowerCase());
       const imageValue = scalar(product.image, ['url', 'contentUrl', 'src'])
         ?? meta('og:image:secure_url', 'og:image', 'twitter:image')
-        ?? imageNode?.getAttribute('data-old-hires')
-        ?? imageNode?.getAttribute('src')
+        ?? imageFromNode(imageNode)
         ?? '';
       const metadataHtml = [...document.querySelectorAll('meta[property],meta[name],meta[itemprop]')]
         .filter((node) => /(?:title|image|price|currency|product)/i.test(`${node.getAttribute('property')} ${node.getAttribute('name')} ${node.getAttribute('itemprop')}`))

@@ -2,7 +2,7 @@ import { useSyncExternalStore } from 'react';
 import type { SortBy, TasksView } from '../components/tasks/types.js';
 import type { CalendarView, SlotDuration } from '../components/calendar/CalendarToolbar.js';
 
-export type WorkspaceId = 'tasks' | 'whiteboard' | 'notes' | 'wishlist' | 'workout';
+export type WorkspaceId = 'tasks' | 'whiteboard' | 'notes' | 'wishlist' | 'kitchen' | 'workout' | 'progress';
 export type ThemeDensity = 'compact' | 'comfortable' | 'spacious';
 export type TextScale = 'small' | 'default' | 'large' | 'xlarge';
 export type MotionPreference = 'system' | 'reduce' | 'full';
@@ -39,6 +39,9 @@ export interface UiPreferences {
   focusAutoStart: boolean;
   focusAmbienceVolume: number;
   notificationRetention: 10 | 25 | 50 | 100;
+  /** High-attention reminder alarms are deliberately independent of UI sounds. */
+  alarmSoundEnabled: boolean;
+  alarmVolume: number;
 }
 
 const STORAGE_KEY = 'tb.ui.preferences';
@@ -48,7 +51,9 @@ export const WORKSPACE_PATHS: Record<WorkspaceId, string> = {
   whiteboard: '/whiteboard',
   notes: '/notes',
   wishlist: '/wishlist',
+  kitchen: '/kitchen',
   workout: '/workout',
+  progress: '/progress',
 };
 
 export const DEFAULT_UI_PREFERENCES: UiPreferences = {
@@ -60,8 +65,8 @@ export const DEFAULT_UI_PREFERENCES: UiPreferences = {
   underlineLinks: false,
   largeTargets: false,
   defaultWorkspace: 'tasks',
-  workspaceOrder: ['tasks', 'whiteboard', 'notes', 'wishlist', 'workout'],
-  visibleWorkspaces: { tasks: true, whiteboard: true, notes: true, wishlist: true, workout: true },
+  workspaceOrder: ['tasks', 'whiteboard', 'notes', 'wishlist', 'kitchen', 'workout', 'progress'],
+  visibleWorkspaces: { tasks: true, whiteboard: true, notes: true, wishlist: true, kitchen: true, workout: true, progress: true },
   sidebarMode: 'remember',
   sidebarWidth: 176,
   showQuickCapture: true,
@@ -82,6 +87,8 @@ export const DEFAULT_UI_PREFERENCES: UiPreferences = {
   focusAutoStart: false,
   focusAmbienceVolume: 0.45,
   notificationRetention: 50,
+  alarmSoundEnabled: true,
+  alarmVolume: 1,
 };
 
 const WORKSPACE_IDS = Object.keys(WORKSPACE_PATHS) as WorkspaceId[];
@@ -105,6 +112,7 @@ function normalize(input: Partial<UiPreferences> | null | undefined): UiPreferen
     focusLongBreakMin: clamp(merged.focusLongBreakMin, 1, 120, DEFAULT_UI_PREFERENCES.focusLongBreakMin),
     focusLongEvery: clamp(merged.focusLongEvery, 2, 12, DEFAULT_UI_PREFERENCES.focusLongEvery),
     focusAmbienceVolume: clamp(merged.focusAmbienceVolume, 0, 1, DEFAULT_UI_PREFERENCES.focusAmbienceVolume),
+    alarmVolume: clamp(merged.alarmVolume, 0, 1, DEFAULT_UI_PREFERENCES.alarmVolume),
   };
 }
 

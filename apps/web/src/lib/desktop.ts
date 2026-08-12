@@ -19,6 +19,10 @@ interface DesktopBridge {
   checkForUpdates: () => Promise<{ ok: boolean; message?: string }>;
   installUpdate: () => Promise<void>;
   onUpdateStatus: (cb: (status: UpdateStatus) => void) => () => void;
+  showAttention: (alert: { id: string; title: string; body: string }) => Promise<void>;
+  escalateAttention: () => Promise<void>;
+  clearAttention: (id: string) => Promise<void>;
+  onAttentionOpen: (cb: (id: string) => void) => () => void;
 }
 
 declare global {

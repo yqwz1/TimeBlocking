@@ -6,6 +6,8 @@ import type { WorkoutJobDTO } from '@timeblock/shared';
 import WorkoutSidebar, { workoutItems, type WorkoutView } from '../components/workout/WorkoutSidebar.js';
 import WorkoutOverview from '../components/workout/WorkoutOverview.js';
 import WorkoutStrength from '../components/workout/WorkoutStrength.js';
+import WorkoutPowerlifting from '../components/workout/WorkoutPowerlifting.js';
+import WorkoutVolumeRecovery from '../components/workout/WorkoutVolumeRecovery.js';
 import type { WorkoutRange } from '../components/workout/workoutAnalytics.js';
 import { resolveWorkoutRoute, selectWorkoutSection, setWorkoutParameter } from '../components/workout/workoutNavigation.js';
 import {
@@ -13,11 +15,9 @@ import {
   CalendarView,
   GoalsView,
   JobResult,
-  PowerliftingView,
   RecordsView,
   SettingsView,
   ToolsView,
-  VolumeView,
 } from '../components/workout/WorkoutViews.js';
 import { useWorkoutImport, useWorkoutJob, useWorkoutStatus, useWorkoutSummary, useWorkoutSync } from '../hooks/workout.js';
 
@@ -40,7 +40,7 @@ export default function WorkoutPage() {
   const workoutImport = useWorkoutImport();
   const job = watchedJob.data ?? statusQuery.data?.activeJob ?? null;
   const route = resolveWorkoutRoute(params);
-  const { section: view, range, compare, overviewMetric, strengthMode, strengthSort } = route;
+  const { section: view, range, compare, overviewMetric, strengthMode, strengthSort, powerliftingPanel, powerliftingLift, volumeMetric, volumeRegion, volumeSort } = route;
   const summaryError = summary.error instanceof Error ? summary.error.message : '';
   const summaryMissing = summaryError.includes('No workout summary exists');
 
@@ -49,6 +49,7 @@ export default function WorkoutPage() {
       void qc.invalidateQueries({ queryKey: ['workout', 'summary'] });
       void qc.invalidateQueries({ queryKey: ['workout', 'status'] });
       void qc.invalidateQueries({ queryKey: ['workout', 'exercise-history'] });
+      void qc.invalidateQueries({ queryKey: ['workout', 'volume-analytics'] });
     }
   }, [watchedJob.data?.status, qc]);
 
@@ -63,8 +64,8 @@ export default function WorkoutPage() {
   const content = summary.data ? (() => {
     switch (view) {
       case 'strength': return <WorkoutStrength summary={summary.data} range={range} exerciseName={route.exercise} search={route.search} status={route.status} muscle={route.muscle} sort={strengthSort} mode={strengthMode} onParam={updateParam} />;
-      case 'powerlifting': return <PowerliftingView summary={summary.data} />;
-      case 'volume': return <VolumeView summary={summary.data} />;
+      case 'powerlifting': return <WorkoutPowerlifting summary={summary.data} range={range} panel={powerliftingPanel} selectedSlot={powerliftingLift} onNavigate={(nextPanel, nextSlot) => { let next = setWorkoutParameter(params, 'panel', nextPanel); if (nextSlot) next = setWorkoutParameter(next, 'lift', nextSlot); setParams(next); }} onJob={track} />;
+      case 'volume': return <WorkoutVolumeRecovery range={range} compare={compare} metric={volumeMetric} region={volumeRegion} sort={volumeSort} onParam={updateParam} />;
       case 'body': return <BodyMapView summary={summary.data} onNavigate={(target) => navigate(VIEWS.has(target as WorkoutView) ? target as WorkoutView : 'overview')} />;
       case 'calendar': return <CalendarView summary={summary.data} />;
       case 'records': return <RecordsView summary={summary.data} />;
@@ -79,7 +80,7 @@ export default function WorkoutPage() {
     <header className="z-30 flex min-h-14 shrink-0 items-center justify-between gap-2 border-b border-slate-200 bg-white px-3 py-2 dark:border-neutral-800 dark:bg-neutral-900 sm:px-4">
       <div className="min-w-0"><p className="truncate text-sm font-semibold tracking-[-0.02em] text-slate-900 dark:text-neutral-100">Workout coach</p><p className="truncate text-[10px] text-slate-400">{summary.data ? `Latest ${summary.data.window.latest_session} · ${statusQuery.data?.sessions ?? Object.keys(summary.data.sessions).length} sessions` : 'Loading your training history'}</p></div>
       <div className="flex min-w-0 items-center gap-1.5">
-        <div className="hidden rounded-lg bg-slate-100 p-1 dark:bg-neutral-800 xl:flex" aria-label="Workout time range">{(['4w', '8w', '12w', 'all'] as WorkoutRange[]).map((item) => <button key={item} type="button" aria-pressed={range === item} onClick={() => updateParam('range', item, true)} className={`h-7 rounded-md px-2 text-[10px] font-semibold uppercase outline-none focus-visible:ring-2 focus-visible:ring-teal-500/60 ${range === item ? 'bg-white text-slate-900 shadow-sm dark:bg-neutral-700 dark:text-white' : 'text-slate-400'}`}>{item}</button>)}</div>
+        {view !== 'volume' && <div className="hidden rounded-lg bg-slate-100 p-1 dark:bg-neutral-800 xl:flex" aria-label="Workout time range">{(['4w', '8w', '12w', 'all'] as WorkoutRange[]).map((item) => <button key={item} type="button" aria-pressed={range === item} onClick={() => updateParam('range', item, true)} className={`h-7 rounded-md px-2 text-[10px] font-semibold uppercase outline-none focus-visible:ring-2 focus-visible:ring-teal-500/60 ${range === item ? 'bg-white text-slate-900 shadow-sm dark:bg-neutral-700 dark:text-white' : 'text-slate-400'}`}>{item}</button>)}</div>}
         <label className="relative hidden lg:block"><span className="sr-only">Search exercises</span><Search size={13} className="absolute left-2.5 top-2.5 text-slate-400" /><input value={params.get('search') ?? ''} onChange={(event) => { updateParam('search', event.target.value, true); if (event.target.value && view !== 'strength') navigate('strength'); }} className="h-9 w-40 rounded-lg border border-slate-200 bg-slate-50 pl-8 pr-2 text-xs outline-none focus:border-teal-500 dark:border-neutral-700 dark:bg-neutral-950" placeholder="Search lifts" /></label>
         <input ref={fileRef} type="file" accept=".csv,text/csv" className="hidden" onChange={(event) => { const file = event.target.files?.[0]; if (file) workoutImport.mutate(file, { onSuccess: track }); event.currentTarget.value = ''; }} />
         <button type="button" className={ACTION} onClick={() => sync.mutate({ full: false }, { onSuccess: track })} disabled={!statusQuery.data?.hevyConnected || sync.isPending || Boolean(statusQuery.data?.activeJob)} title={statusQuery.data?.hevyConnected ? 'Sync new workouts from Hevy' : 'Add your Hevy key in Workout settings'}><RefreshCw size={13} className={job?.command === 'sync' && job.status === 'running' ? 'animate-spin' : ''} /><span className="hidden sm:inline">Sync</span></button>

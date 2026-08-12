@@ -16,6 +16,7 @@ import type {
 } from '@timeblock/shared';
 import {
   attachments,
+  blockActivitySummaries,
   blocks,
   events,
   habitInstances,
@@ -62,6 +63,10 @@ function parseReasons(raw: string | null | undefined): BlockReason[] | undefined
 export function blockToItem(db: DB, b: BlockRow): ScheduleItemDTO {
   const status = b.status as ScheduleItemDTO['status'];
   const reasons = parseReasons(b.reasons);
+  const activity = db.select().from(blockActivitySummaries).where(eq(blockActivitySummaries.blockId, b.id)).get();
+  const activityVerification = activity
+    ? { state: activity.verificationState as NonNullable<ScheduleItemDTO['activityVerification']>['state'], confidence: activity.confidence, focusQuality: activity.focusQuality }
+    : undefined;
   if (b.taskId) {
     const t = db.select().from(tasks).where(eq(tasks.id, b.taskId)).get();
     const project = t?.projectId ? db.select().from(projects).where(eq(projects.id, t.projectId)).get() : null;
@@ -89,6 +94,7 @@ export function blockToItem(db: DB, b: BlockRow): ScheduleItemDTO {
       priority: t?.priority,
       difficulty: (t?.difficulty as ScheduleItemDTO['difficulty']) ?? null,
       dueDate: t?.dueDate ?? null,
+      activityVerification,
       ...(count > 1 ? { chunk: { index: b.chunkIndex, count } } : {}),
     };
   }
@@ -105,6 +111,7 @@ export function blockToItem(db: DB, b: BlockRow): ScheduleItemDTO {
     habitId: inst?.habitId,
     editable: b.status !== 'done',
     reasons,
+    activityVerification,
   };
 }
 

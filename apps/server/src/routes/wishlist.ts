@@ -306,6 +306,15 @@ function elementTextById(html: string, id: string): string | null {
 function amazonImage(html: string): string | null {
   const tag = html.match(/<img\b[^>]*\bid=["']landingImage["'][^>]*>/i)?.[0];
   if (!tag) return null;
+  const dynamic = /\bdata-a-dynamic-image=["']([^"']+)["']/i.exec(tag)?.[1];
+  if (dynamic) {
+    try {
+      const entries = Object.entries(JSON.parse(decodeHtml(dynamic)));
+      entries.sort(([, left], [, right]) => (Number((right as unknown[])[0]) * Number((right as unknown[])[1])) - (Number((left as unknown[])[0]) * Number((left as unknown[])[1])));
+      const image = entries.find(([url]) => /^https?:/i.test(url))?.[0];
+      if (image) return image;
+    } catch { /* Fall back to the normal image attributes. */ }
+  }
   return /\bdata-old-hires=["']([^"']+)["']/i.exec(tag)?.[1]
     || /\bsrc=["']([^"']+)["']/i.exec(tag)?.[1]
     || null;
@@ -431,13 +440,14 @@ export function parseWishlistProductHtml(html: string, finalUrl: string, baseCur
       ?? (amazon ? elementTextById(html, 'productTitle') : null)
       ?? (titleMatch ? decodeHtml(titleMatch[1]!) : ''),
   ).replace(/\s+/g, ' ').trim() || null;
-  const priceMinor = detectedCurrency === baseCurrency ? priceToMinor(rawPrice, detectedCurrency) : null;
+  const listedPriceMinor = priceToMinor(rawPrice, detectedCurrency);
+  const priceMinor = detectedCurrency === baseCurrency ? listedPriceMinor : null;
   const warnings: string[] = [];
   if (!title) warnings.push('No title was found; enter it manually.');
   if (!imageUrl) warnings.push('No usable product image was found.');
   if (!rawPrice) warnings.push('No listed price was found.');
   else if (detectedCurrency && detectedCurrency !== baseCurrency) warnings.push(`The store price is ${detectedCurrency}; convert it to ${baseCurrency} manually.`);
-  return { url: finalUrl, title, retailer: hostname, imageUrl, priceMinor, detectedCurrency, warnings };
+  return { url: finalUrl, title, retailer: hostname, imageUrl, priceMinor, listedPriceMinor, detectedCurrency, warnings };
 }
 
 interface AiImportedProduct {
@@ -512,8 +522,9 @@ async function enrichPreviewWithAi(gateway: ModelGateway, html: string, preview:
     const title = preview.title ?? extracted.title;
     const imageUrl = preview.imageUrl ?? extracted.imageUrl;
     const detectedCurrency = preview.detectedCurrency ?? extracted.currency;
-    const priceMinor = preview.priceMinor ?? (extracted.price != null && detectedCurrency === baseCurrency ? priceToMinor(extracted.price, detectedCurrency) : null);
-    const changed = title !== preview.title || imageUrl !== preview.imageUrl || priceMinor !== preview.priceMinor || detectedCurrency !== preview.detectedCurrency;
+    const listedPriceMinor = preview.listedPriceMinor ?? priceToMinor(extracted.price, detectedCurrency);
+    const priceMinor = preview.priceMinor ?? (detectedCurrency === baseCurrency ? listedPriceMinor : null);
+    const changed = title !== preview.title || imageUrl !== preview.imageUrl || priceMinor !== preview.priceMinor || listedPriceMinor !== preview.listedPriceMinor || detectedCurrency !== preview.detectedCurrency;
     const warnings: string[] = [];
     if (!title) warnings.push('No title was found; enter it manually.');
     if (!imageUrl) warnings.push('No usable product image was found.');
@@ -522,7 +533,7 @@ async function enrichPreviewWithAi(gateway: ModelGateway, html: string, preview:
       else warnings.push('No listed price was found.');
     }
     if (changed) warnings.push('AI filled missing product details; verify them before saving.');
-    return { ...preview, title, imageUrl, priceMinor, detectedCurrency, warnings };
+    return { ...preview, title, imageUrl, priceMinor, listedPriceMinor, detectedCurrency, warnings };
   } catch {
     return preview;
   }
@@ -770,7 +781,7 @@ export function registerWishlistRoutes(app: FastifyInstance, db: DB) {
       'You are a conservative purchase advisor. Return structured JSON only.',
       'Assess whether the user should buy now, wait, or skip. Respect the budget facts and never invent product features.',
       `Currency: ${summary.currency}`,
-      `Item: ${JSON.stringify({ title: row.title, notes: row.notes, retailer: row.retailer, category: row.category, priority: row.priority, priceMinor: row.priceMinor, targetDate: row.targetDate, confirmedGoalIds: JSON.parse(row.goalIds) })}`,
+      `Item: ${JSON.stringify({ title: row.title, notes: row.notes, retailer: row.retailer, category: row.category, priority: row.priority, priceMinor: row.priceMinor, listedPriceMinor: row.listedPriceMinor, listedCurrency: row.listedCurrency, targetDate: row.targetDate, confirmedGoalIds: JSON.parse(row.goalIds) })}`,
       `Budget: ${JSON.stringify({ month, budgetMinor: summary.budgetMinor, actualMinor: summary.actualMinor, plannedMinor: summary.plannedMinor, remainingMinor: summary.remainingMinor, fit })}`,
       `Active goals: ${JSON.stringify(activeGoals)}`,
       'Score 0-100. Suggest only goal IDs from the supplied list. Benefits and risks should each have at most 4 concise items. reviewDate must be YYYY-MM-DD or an empty string.',

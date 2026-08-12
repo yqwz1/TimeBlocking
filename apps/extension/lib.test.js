@@ -57,7 +57,35 @@ test('browser-extracted products become valid wishlist items', () => {
     priority: 1,
     status: 'considering',
     priceMinor: 2_995,
+    listedPriceMinor: 2_995,
+    listedCurrency: 'USD',
     targetDate: null,
     goalIds: [],
   });
+});
+
+test('foreign store prices are preserved without corrupting wishlist budget currency', () => {
+  const item = buildWishlistItem({
+    title: 'Unity asset',
+    url: 'https://assetstore.unity.com/packages/tools/example-123',
+    price: 65,
+    currency: 'USD',
+  }, 'SAR');
+
+  assert.equal(item.priceMinor, null);
+  assert.equal(item.listedPriceMinor, 6_500);
+  assert.equal(item.listedCurrency, 'USD');
+  assert.match(item.notes, /Convert to SAR/);
+});
+
+test('a missing extracted price is not silently stored as zero', () => {
+  const item = buildWishlistItem({
+    title: 'Product with delayed price',
+    url: 'https://www.amazon.sa/dp/EXAMPLE123',
+    price: null,
+    currency: 'SAR',
+  }, 'SAR');
+
+  assert.equal(item.priceMinor, null);
+  assert.equal(item.listedPriceMinor, null);
 });

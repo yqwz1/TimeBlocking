@@ -3,7 +3,7 @@ import type { WishlistItemDTO, WishlistSummaryDTO } from '@timeblock/shared';
 import { currencyDigits, formatMoney, itemBudgetFit, majorToMinor, minorToMajor } from './wishlist.js';
 
 const summary: WishlistSummaryDTO = { month: '2026-08', currency: 'SAR', budgetMinor: 100_000, actualMinor: 20_000, plannedMinor: 20_000, committedMinor: 40_000, remainingMinor: 60_000, activeValueMinor: 0, missingPriceCount: 0, byCategory: [], verdictCounts: [], monthly: [] };
-const item = (priceMinor: number | null): WishlistItemDTO => ({ id: '1', title: 'Wish', notes: '', productUrl: null, imageUrl: null, uploadedImage: false, retailer: null, category: 'Other', priority: 1, status: 'considering', priceMinor, targetDate: null, goalIds: [], purchasedAt: null, actualPriceMinor: null, advice: null, createdAtUtc: '', updatedAtUtc: '' });
+const item = (priceMinor: number | null): WishlistItemDTO => ({ id: '1', title: 'Wish', notes: '', productUrl: null, imageUrl: null, uploadedImage: false, retailer: null, category: 'Other', priority: 1, status: 'considering', priceMinor, listedPriceMinor: priceMinor, listedCurrency: priceMinor == null ? null : 'SAR', targetDate: null, goalIds: [], purchasedAt: null, actualPriceMinor: null, advice: null, createdAtUtc: '', updatedAtUtc: '' });
 
 describe('wishlist money helpers', () => {
   it('round-trips major and minor currency units', () => {

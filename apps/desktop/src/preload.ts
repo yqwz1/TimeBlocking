@@ -25,4 +25,12 @@ contextBridge.exposeInMainWorld('desktop', {
     ipcRenderer.on('updater:status', listener);
     return () => ipcRenderer.removeListener('updater:status', listener);
   },
+  showAttention: (alert: { id: string; title: string; body: string }): Promise<void> => ipcRenderer.invoke('attention:show', alert),
+  escalateAttention: (): Promise<void> => ipcRenderer.invoke('attention:escalate'),
+  clearAttention: (id: string): Promise<void> => ipcRenderer.invoke('attention:clear', id),
+  onAttentionOpen: (cb: (id: string) => void): (() => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, id: string) => cb(id);
+    ipcRenderer.on('attention:open', listener);
+    return () => ipcRenderer.removeListener('attention:open', listener);
+  },
 });

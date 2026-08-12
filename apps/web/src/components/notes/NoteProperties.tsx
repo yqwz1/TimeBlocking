@@ -1,15 +1,17 @@
 import { ChevronDown, ChevronRight, Plus, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { getNoteProperties, normalisePropertyKey } from '../../lib/noteProperties.js';
+import { usePersistentBoolean } from '../../hooks/usePersistentUiState.js';
 
-export default function NoteProperties({ content, onAdd, onUpdate, onRemove }: {
+export default function NoteProperties({ noteId, content, onAdd, onUpdate, onRemove }: {
+  noteId: string;
   content: string;
   onAdd: (key: string, value: string) => void;
   onUpdate: (key: string, value: string) => void;
   onRemove: (key: string) => void;
 }) {
   const properties = useMemo(() => getNoteProperties(content), [content]);
-  const [isOpen, setIsOpen] = useState(properties.length > 0);
+  const [isOpen, setIsOpen] = usePersistentBoolean(`second-brain.note-properties.${noteId}.open`, properties.length > 0);
   const [keyDraft, setKeyDraft] = useState('');
   const [valueDraft, setValueDraft] = useState('');
   const validKey = normalisePropertyKey(keyDraft);

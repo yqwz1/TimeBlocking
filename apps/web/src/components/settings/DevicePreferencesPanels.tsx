@@ -30,6 +30,8 @@ import {
   WORKSPACE_PATHS,
 } from '../../lib/uiPreferences.js';
 import { clearNotifications, getNotifications } from '../../lib/notifications.js';
+import { enqueueAttentionAlert } from '../../lib/attentionAlerts.js';
+import { primeAlarmAudio } from '../../lib/sound.js';
 
 export type DeviceSettingsSectionId =
   | 'appearance'
@@ -46,7 +48,9 @@ const WORKSPACE_LABELS: Record<WorkspaceId, string> = {
   whiteboard: 'Whiteboard',
   notes: 'Second Brain',
   wishlist: 'Wishlist',
+  kitchen: 'Kitchen',
   workout: 'Workout',
+  progress: 'Progress',
 };
 
 function SectionShell({
@@ -149,6 +153,11 @@ export default function DevicePreferencesPanels({ isVisible }: { isVisible: (id:
 
   const localBytes = useMemo(storageBytes, [preferences, notificationsCleared]);
   const set = <K extends keyof UiPreferences>(key: K, value: UiPreferences[K]) => updatePreferences({ [key]: value });
+  const testUltimateAlert = async () => {
+    await primeAlarmAudio();
+    if ('Notification' in window && Notification.permission === 'default') setNotificationPermission(await Notification.requestPermission());
+    enqueueAttentionAlert({ id: `test-alert:${Date.now()}`, kind: 'reminder', title: 'Ultimate alert test', body: 'This is the alarm you will hear for a real reminder.', link: '/settings' });
+  };
   const updateFocus = (patch: Partial<Pick<UiPreferences, 'focusWorkMin' | 'focusShortBreakMin' | 'focusLongBreakMin' | 'focusLongEvery' | 'focusAutoStart' | 'focusAmbienceVolume'>>) => updatePreferences(patch);
 
   const moveWorkspace = (id: WorkspaceId, direction: -1 | 1) => {
@@ -292,6 +301,11 @@ export default function DevicePreferencesPanels({ isVisible }: { isVisible: (id:
           <div className="grid gap-4 sm:grid-cols-2">
             <label><FieldLabel>Notification history kept</FieldLabel><select value={preferences.notificationRetention} onChange={(event) => set('notificationRetention', Number(event.target.value) as UiPreferences['notificationRetention'])} className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-800"><option value="10">10 items</option><option value="25">25 items</option><option value="50">50 items</option><option value="100">100 items</option></select></label>
             <div><FieldLabel>Browser notification permission</FieldLabel><button type="button" disabled={notificationPermission === 'unsupported' || notificationPermission === 'granted'} onClick={() => void Notification.requestPermission().then(setNotificationPermission)} className="flex w-full items-center justify-between rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-600 transition hover:bg-slate-50 disabled:opacity-60 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-white/5"><span>{notificationPermission === 'unsupported' ? 'Not supported' : notificationPermission === 'granted' ? 'Permission granted' : notificationPermission === 'denied' ? 'Blocked in browser settings' : 'Request permission'}</span><Keyboard size={15} /></button></div>
+          </div>
+          <div className="rounded-xl border border-amber-300/70 bg-amber-50/70 p-4 dark:border-amber-500/30 dark:bg-amber-500/10">
+            <div className="flex items-start justify-between gap-4"><div><p className="font-semibold text-slate-800 dark:text-neutral-100">Ultimate reminder alarm</p><p className="mt-1 text-sm text-slate-600 dark:text-neutral-300">Repeats every 30 seconds and brings the desktop app forward until you acknowledge or snooze it.</p></div><input type="checkbox" checked={preferences.alarmSoundEnabled} onChange={(event) => set('alarmSoundEnabled', event.target.checked)} aria-label="Enable ultimate reminder alarm" className="mt-1 h-4 w-4 accent-amber-500" /></div>
+            <label className="mt-4 block"><div className="mb-2 flex items-center justify-between"><FieldLabel>Alarm volume</FieldLabel><span className="text-xs tabular-nums text-slate-500 dark:text-neutral-400">{Math.round(preferences.alarmVolume * 100)}%</span></div><input type="range" min="0" max="1" step="0.05" value={preferences.alarmVolume} onChange={(event) => set('alarmVolume', Number(event.target.value))} disabled={!preferences.alarmSoundEnabled} className="w-full accent-amber-500 disabled:opacity-50" /></label>
+            <button type="button" onClick={() => void testUltimateAlert()} className="mt-4 inline-flex items-center gap-2 rounded-lg bg-amber-400 px-3 py-2 text-sm font-bold text-slate-950 transition hover:bg-amber-300"><Bell size={16} /> Test ultimate alert</button>
           </div>
           <button type="button" onClick={() => { clearNotifications(); setNotificationsCleared(true); }} disabled={!getNotifications().length || notificationsCleared} className="text-sm font-medium text-rose-600 hover:underline disabled:text-slate-400 disabled:no-underline">{notificationsCleared ? 'Notification history cleared' : `Clear ${getNotifications().length} stored notifications`}</button>
         </div>

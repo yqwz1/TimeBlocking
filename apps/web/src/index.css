@@ -183,12 +183,14 @@ html[data-density='spacious'] { --spacing: 0.285rem; }
 }
 
 body {
-  background-color: #f8fafc;
+  --tb-app-canvas: #f8fafc;
+  background-color: var(--tb-app-canvas);
   color: #0f172a;
 }
 
 .dark body {
-  background-color: #0a0a0a;
+  --tb-app-canvas: #0a0a0a;
+  background-color: var(--tb-app-canvas);
   color: #e5e5e5;
 }
 
@@ -202,6 +204,25 @@ body {
     1rem,
     calc(100vw - env(titlebar-area-x, 0px) - env(titlebar-area-width, 100vw) + 1rem)
   );
+}
+
+/*
+ * Electron's hidden title bar does not make web content draggable by itself.
+ * The main pane has an empty title-bar-height strip above its content, so use
+ * that space for dragging while leaving the native caption buttons uncovered.
+ */
+.tb-window-drag-region {
+  position: absolute;
+  z-index: 50;
+  top: 0;
+  right: max(
+    9rem,
+    calc(100vw - env(titlebar-area-x, 0px) - env(titlebar-area-width, 100vw))
+  );
+  left: 0;
+  height: env(titlebar-area-height, 0px);
+  user-select: none;
+  -webkit-app-region: drag;
 }
 
 /* Keep native scrollbars in the same quiet palette as the surrounding UI. */
@@ -2514,7 +2535,7 @@ a,
   --sb-line-strong: #cbd1d8;
   --sb-paper: #ffffff;
   --sb-rail: #f7f8f9;
-  --sb-canvas: #f2f4f6;
+  --sb-canvas: var(--tb-app-canvas);
   --sb-hover: #eceff2;
   --sb-accent: #347d73;
   --sb-accent-dark: #28675f;
@@ -3800,7 +3821,7 @@ a,
   --sb-line-strong: #373b42;
   --sb-paper: #101214;
   --sb-rail: #111315;
-  --sb-canvas: #0b0d0f;
+  --sb-canvas: var(--tb-app-canvas);
   --sb-hover: #1a1d21;
   --sb-accent: #5d9f96;
   --sb-accent-dark: #7fb8b0;

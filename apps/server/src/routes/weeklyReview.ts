@@ -13,6 +13,7 @@ import { getSettings } from '../settings.js';
 import { nowUtcIso } from '../config.js';
 import { objectiveToDTO } from '../plan/objectives.js';
 import { awardXp } from '../gamification/engine.js';
+import { recordProgressionFact } from '../gamification/progression.js';
 
 type Row = typeof weeklyReviews.$inferSelect;
 
@@ -137,6 +138,7 @@ export function registerWeeklyReviewRoutes(app: FastifyInstance, db: DB) {
       .where(eq(weeklyReviews.weekStart, weekStart))
       .run();
     awardXp(db, settings, { kind: 'weekly_review', sourceId: weekStart, amount: REVIEW_XP, dateLocal: weekStart, meta: { title: 'Weekly review' } }, now);
+    recordProgressionFact(db, settings, { kind: 'weekly_review_completed', sourceId: weekStart, atUtc: now }, now);
     return toDTO(db, getRow(db, weekStart), weekStart, tz);
   });
 

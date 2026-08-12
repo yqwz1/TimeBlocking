@@ -2,7 +2,9 @@ import {
   app,
   BrowserWindow,
   dialog,
+  ipcMain,
   Menu,
+  Notification,
   screen,
   shell,
   Tray,
@@ -63,6 +65,7 @@ const USES_REPOSITORY_DATA = path.resolve(APP_DATA_DIR) === path.resolve(REPO_DA
 let serverProcess: UtilityProcess | null = null;
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
+const attentionNotifications = new Map<string, Notification>();
 let isQuitting = false;
 let settings: DesktopSettings = { closeToTray: true, launchAtStartup: false, showPet: true, playfulPet: true };
 
@@ -292,6 +295,37 @@ function showMainWindow() {
   mainWindow.show();
   mainWindow.focus();
 }
+
+function attentionPayload(value: unknown): { id: string; title: string; body: string } | null {
+  if (!value || typeof value !== 'object') return null;
+  const payload = value as Record<string, unknown>;
+  return typeof payload.id === 'string' && typeof payload.title === 'string' && typeof payload.body === 'string'
+    ? { id: payload.id, title: payload.title, body: payload.body }
+    : null;
+}
+
+ipcMain.handle('attention:show', (_event, value: unknown) => {
+  const payload = attentionPayload(value);
+  if (!payload) return;
+  attentionNotifications.get(payload.id)?.close();
+  const notification = new Notification({ title: payload.title, body: payload.body, icon: ICON_PATH, silent: true, timeoutType: 'never' });
+  notification.on('click', () => {
+    showMainWindow();
+    mainWindow?.webContents.send('attention:open', payload.id);
+  });
+  notification.on('close', () => attentionNotifications.delete(payload.id));
+  attentionNotifications.set(payload.id, notification);
+  notification.show();
+  mainWindow?.flashFrame(true);
+});
+
+ipcMain.handle('attention:escalate', () => showMainWindow());
+ipcMain.handle('attention:clear', (_event, id: unknown) => {
+  if (typeof id !== 'string') return;
+  attentionNotifications.get(id)?.close();
+  attentionNotifications.delete(id);
+  mainWindow?.flashFrame(false);
+});
 
 function syncLoginItem() {
   // In dev this would register electron.exe as a startup app — packaged only.

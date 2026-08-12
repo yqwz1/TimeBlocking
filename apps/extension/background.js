@@ -148,9 +148,18 @@ async function addWishlistProduct(product) {
   if (!settingsResponse.ok) throw new Error('Could not read wishlist settings');
   const wishlistSettings = await settingsResponse.json();
   let enriched = product;
-  const missingCoreFields = Number(!product?.title) + Number(!product?.imageUrl) + Number(!(Number.isFinite(Number(product?.price)) && product?.currency));
+  const hostname = (() => {
+    try { return new URL(product?.url || '').hostname.replace(/^www\./, '').toLowerCase(); }
+    catch { return ''; }
+  })();
+  const isAmazonProduct = /^amazon\./.test(hostname);
+  const hasPrice = product?.price != null && String(product.price).trim() !== '' && Number.isFinite(Number(product.price));
+  const missingCoreFields = Number(!product?.title) + Number(!product?.imageUrl) + Number(!(hasPrice && product?.currency));
   let renderedPreview = null;
-  if (missingCoreFields >= 2 && product?.context) {
+  // Amazon frequently places the selected price and high-resolution image in
+  // dynamic attributes. Always pass its small rendered excerpt through the
+  // deterministic server parser; it knows those Amazon-specific patterns.
+  if ((isAmazonProduct || missingCoreFields >= 1) && product?.context) {
     const previewResponse = await fetch(`${settings.serverUrl}/api/wishlist/preview/rendered`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -161,13 +170,15 @@ async function addWishlistProduct(product) {
       enriched = {
         ...product,
         title: product.title || renderedPreview.title,
-        imageUrl: product.imageUrl || renderedPreview.imageUrl,
+        imageUrl: (isAmazonProduct ? renderedPreview.imageUrl : null) || product.imageUrl,
         currency: product.currency || renderedPreview.detectedCurrency,
       };
     }
   }
   const item = buildWishlistItem(enriched, wishlistSettings.currency);
   if (renderedPreview?.priceMinor != null) item.priceMinor = renderedPreview.priceMinor;
+  if (renderedPreview?.listedPriceMinor != null) item.listedPriceMinor = renderedPreview.listedPriceMinor;
+  if (renderedPreview?.detectedCurrency) item.listedCurrency = renderedPreview.detectedCurrency;
   if (!item.notes && renderedPreview?.warnings?.length) item.notes = renderedPreview.warnings.join(' ');
   const response = await fetch(`${settings.serverUrl}/api/wishlist/items`, {
     method: 'POST',
