@@ -26,7 +26,7 @@ describe('ActivityWatch adapter', () => {
     expect(probe.sourceKey).not.toContain('workstation');
     expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
       'http://127.0.0.1:5600/api/0/info',
-      'http://127.0.0.1:5600/api/0/buckets',
+      'http://127.0.0.1:5600/api/0/buckets/',
     ]);
     for (const [, init] of fetchMock.mock.calls) expect(init).toMatchObject({ method: 'GET', redirect: 'error' });
   });
@@ -37,6 +37,23 @@ describe('ActivityWatch adapter', () => {
 
     const large = new ActivityWatchAdapter(5600, vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ padding: 'x'.repeat(600_000) }), { headers: { 'Content-Type': 'application/json' } }))));
     await expect(large.probe()).rejects.toMatchObject({ code: 'response_too_large' } satisfies Partial<ActivityWatchAdapterError>);
+  });
+
+  it('uses the current ActivityWatch query payload without requiring server-side categories', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(response([[]]));
+    await expect(new ActivityWatchAdapter(5600, fetchMock).canonicalEvents('2026-08-18T00:00:00.000Z', '2026-08-18T01:00:00.000Z')).resolves.toEqual([]);
+
+    expect(fetchMock).toHaveBeenCalledWith('http://127.0.0.1:5600/api/0/query/', expect.objectContaining({
+      method: 'POST',
+      redirect: 'error',
+      body: expect.any(String),
+    }));
+    const payload = JSON.parse(fetchMock.mock.calls[0]![1].body as string) as { query: string[] };
+    expect(payload.query).toEqual(expect.arrayContaining([
+      'events = flood(query_bucket(find_bucket("aw-watcher-window_")));',
+      'RETURN = events;',
+    ]));
+    expect(payload.query).not.toContain('events = categorize(events, __CATEGORIES__);');
   });
 });
 

@@ -37,8 +37,10 @@ import { registerWorkoutRoutes } from './workout.js';
 import type { WorkoutEngineService } from '../workout/engine.js';
 import { registerActivityRoutes } from './activity.js';
 import { registerKitchenRoutes } from './kitchen.js';
+import { registerEmailRoutes } from './email.js';
+import type { EmailNotificationService } from '../email/service.js';
 
-export function registerApiRoutes(app: FastifyInstance, db: DB, manager: SyncManager, driveBackups: DriveBackupService, workout: WorkoutEngineService) {
+export function registerApiRoutes(app: FastifyInstance, db: DB, manager: SyncManager, driveBackups: DriveBackupService, workout: WorkoutEngineService, emailNotifications: EmailNotificationService) {
   app.get('/health', async () => ({ ok: true }));
 
   registerSetupRoutes(app, db, manager);
@@ -72,6 +74,7 @@ export function registerApiRoutes(app: FastifyInstance, db: DB, manager: SyncMan
   registerWorkoutRoutes(app, workout);
   registerActivityRoutes(app, db);
   registerKitchenRoutes(app, db);
+  registerEmailRoutes(app, db, emailNotifications);
   app.register(async (integration) => registerIntegrationRoutes(integration, db), { prefix: '/integration' });
   if (!env.isProd) registerDemoRoutes(app, db, manager);
 }

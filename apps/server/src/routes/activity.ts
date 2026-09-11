@@ -1,10 +1,15 @@
 import type { FastifyInstance } from 'fastify';
-import { ActivityAiAnalyzeInputSchema, ActivityAiPreviewInputSchema, ActivityConnectInputSchema, ActivityCorrectionInputSchema } from '@timeblock/shared';
+import { ActivityAiAnalyzeInputSchema, ActivityAiPreviewInputSchema, ActivityClassificationRuleInputSchema, ActivityConnectInputSchema, ActivityCorrectionInputSchema, FocusWorkSessionInputSchema } from '@timeblock/shared';
+import { z } from 'zod';
+import { desc } from 'drizzle-orm';
 import type { DB } from '../db/client.js';
 import { ActivityWatchAdapter } from '../integrations/activitywatch/adapter.js';
 import { ModelGateway } from '../assistant/modelGateway.js';
 import { ActivityAiPreviewError, type ActivityAiGateway, analyzeActivityAiPreview, connectActivityWatch, correctBlockActivitySummary, createActivityAiPreview, getActivityAnalytics, getActivityPersonalAnalytics, getActivityStatus, getBlockActivitySummary, listActivityRecommendations, refreshActivityWatchHealth, updateActivityRecommendation } from '../activity/service.js';
 import { getSettings } from '../settings.js';
+import { getActivitySyncService } from '../activity/sync.js';
+import { createActivityExperiment, createClassificationRule, deleteClassificationRule, getActivityCenterOverview, getActivityTimeline, listClassificationRules, recordFocusWorkSession } from '../activity/center.js';
+import { activityExperiments } from '../db/schema.js';
 
 export interface ActivityRouteOptions {
   createAdapter?: (port: number) => ActivityWatchAdapter;
@@ -21,6 +26,40 @@ export function registerActivityRoutes(app: FastifyInstance, db: DB, options: Ac
 
   app.get('/activity/status', async () => getActivityStatus(db));
 
+  const validRange = (from: string | undefined, to: string | undefined) => !!from && !!to && !Number.isNaN(Date.parse(from)) && !Number.isNaN(Date.parse(to)) && from < to;
+  app.get<{ Querystring: { from?: string; to?: string } }>('/activity/center/overview', async (req, reply) => {
+    if (!validRange(req.query.from, req.query.to)) return reply.code(400).send({ error: 'Valid from and to UTC ISO timestamps are required.' });
+    return getActivityCenterOverview(db, req.query.from!, req.query.to!);
+  });
+  app.get<{ Querystring: { from?: string; to?: string } }>('/activity/center/timeline', async (req, reply) => {
+    if (!validRange(req.query.from, req.query.to)) return reply.code(400).send({ error: 'Valid from and to UTC ISO timestamps are required.' });
+    return getActivityTimeline(db, req.query.from!, req.query.to!);
+  });
+  app.get<{ Querystring: { from?: string; to?: string } }>('/activity/center/patterns', async (req, reply) => {
+    if (!validRange(req.query.from, req.query.to)) return reply.code(400).send({ error: 'Valid from and to UTC ISO timestamps are required.' });
+    return getActivityCenterOverview(db, req.query.from!, req.query.to!);
+  });
+  app.get('/activity/classification-rules', async () => listClassificationRules(db));
+  app.post<{ Body: unknown }>('/activity/classification-rules', async (req, reply) => {
+    const parsed = ActivityClassificationRuleInputSchema.safeParse(req.body ?? {});
+    if (!parsed.success) return reply.code(400).send({ error: parsed.error.issues[0]?.message ?? 'Invalid classification rule.' });
+    return createClassificationRule(db, parsed.data);
+  });
+  app.delete<{ Params: { id: string } }>('/activity/classification-rules/:id', async (req, reply) => deleteClassificationRule(db, req.params.id) ? reply.code(204).send() : reply.code(404).send({ error: 'Classification rule not found.' }));
+  app.post<{ Body: unknown }>('/activity/focus-work-sessions', async (req, reply) => {
+    const parsed = FocusWorkSessionInputSchema.safeParse(req.body ?? {});
+    if (!parsed.success) return reply.code(400).send({ error: parsed.error.issues[0]?.message ?? 'Invalid Focus Timer event.' });
+    recordFocusWorkSession(db, parsed.data);
+    return reply.code(204).send();
+  });
+  const ExperimentInputSchema = z.object({ kind: z.enum(['focus_window', 'block_length', 'meeting_buffer', 'communication_batching', 'browser_boundary', 'estimate_adjustment']), title: z.string().trim().min(1).max(160), detail: z.string().trim().min(1).max(1000), endsAtUtc: z.string().datetime() });
+  app.get('/activity/experiments', async () => db.select().from(activityExperiments).orderBy(desc(activityExperiments.createdAtUtc)).all());
+  app.post<{ Body: unknown }>('/activity/experiments', async (req, reply) => {
+    const parsed = ExperimentInputSchema.safeParse(req.body ?? {});
+    if (!parsed.success) return reply.code(400).send({ error: parsed.error.issues[0]?.message ?? 'Invalid experiment.' });
+    return createActivityExperiment(db, parsed.data);
+  });
+
   app.post<{ Body: unknown }>('/activity/connect', async (req, reply) => {
     const parsed = ActivityConnectInputSchema.safeParse(req.body ?? {});
     if (!parsed.success) return reply.code(400).send({ error: parsed.error.issues[0]?.message ?? 'Invalid ActivityWatch connection settings.' });
@@ -33,7 +72,9 @@ export function registerActivityRoutes(app: FastifyInstance, db: DB, options: Ac
 
   app.post('/activity/sync', async (_req, reply) => {
     try {
-      return { status: await refreshActivityWatchHealth(db, createAdapter), sync: 'health_check_only' as const };
+      const service = createAdapter ? undefined : getActivitySyncService(db);
+      const status = service ? await service.sync() : await refreshActivityWatchHealth(db, createAdapter);
+      return { status, sync: service ? 'complete' as const : 'health_check_only' as const };
     } catch (error) {
       const message = errorMessage(error);
       return reply.code(message.includes('off') || message.includes('not configured') ? 409 : 502).send({ error: message });

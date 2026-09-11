@@ -92,7 +92,7 @@ const SETTINGS_GROUPS: SettingsGroupDefinition[] = [
       { id: 'task_defaults', label: 'Tasks', description: 'Default view, sorting, and project sidebar behavior.', icon: Focus, keywords: ['tasks', 'list', 'kanban', 'gantt', 'upcoming', 'dashboard', 'sort', 'project sidebar'] },
       { id: 'calendar_defaults', label: 'Calendar', description: 'Opening range, time increments, and planning rail.', icon: CalendarRange, keywords: ['calendar', 'day', 'week', 'month', 'year', 'time slot', 'rail'] },
       { id: 'focus_timer', label: 'Focus timer', description: 'Session rhythm, breaks, auto-start, and ambience.', icon: CalendarClock, keywords: ['focus', 'pomodoro', 'timer', 'break', 'ambience', 'volume', 'auto start'] },
-      { id: 'notifications', label: 'Notifications', description: 'Inbox visibility, browser permission, history, and shortcuts.', icon: Bell, keywords: ['notification', 'bell', 'permission', 'history', 'shortcut', 'keyboard', 'command palette'] },
+      { id: 'notifications', label: 'Notifications', description: 'Email agenda, task reminders, browser alerts, and history.', icon: Bell, keywords: ['notification', 'email', 'gmail', 'agenda', 'recap', 'reminder', 'bell', 'permission', 'history', 'shortcut', 'keyboard'] },
     ],
   },
   {
@@ -159,7 +159,7 @@ const SETTINGS_GROUPS: SettingsGroupDefinition[] = [
   },
 ];
 
-const DEVICE_SECTION_IDS = new Set<SettingsSectionId>(['appearance', 'accessibility', 'workspace_navigation', 'task_defaults', 'calendar_defaults', 'focus_timer', 'notifications', 'local_data']);
+const DEVICE_SECTION_IDS = new Set<SettingsSectionId>(['appearance', 'accessibility', 'workspace_navigation', 'task_defaults', 'calendar_defaults', 'focus_timer', 'local_data']);
 
 const ALL_SETTINGS_SECTIONS = SETTINGS_GROUPS.flatMap((group) => group.sections.map((section) => ({ ...section, groupId: group.id, groupLabel: group.label })));
 
@@ -458,7 +458,7 @@ export default function SettingsPage() {
             </section>
           )}
 
-          <DevicePreferencesPanels isVisible={(sectionId) => sectionIsVisible(sectionId)} />
+          <DevicePreferencesPanels isVisible={(sectionId) => sectionIsVisible(sectionId)} serverSettings={form} onServerSettingChange={set} />
 
           <section hidden={!sectionIsVisible('updates')} className="settings-panel">
             <DesktopUpdatePanel />

@@ -12,14 +12,17 @@ import {
   Play,
   Plus,
   Repeat,
+  ShieldAlert,
+  ShieldCheck,
   SkipForward,
   Sparkles,
   Trash2,
+  Undo2,
   X,
 } from 'lucide-react';
 import type { HabitDTO, HabitInput, HabitWeekDay, WeekdayKey } from '@timeblock/shared';
 import { WEEKDAY_KEYS } from '@timeblock/shared';
-import { useCompleteHabitToday, useCreateHabit, useDeleteHabit, useHabits, useSkipHabitToday, useUpdateHabit } from '../hooks.js';
+import { useClearHabitLapseToday, useCompleteHabitToday, useCreateHabit, useDeleteHabit, useHabits, useRecordHabitLapseToday, useSkipHabitToday, useUpdateHabit } from '../hooks.js';
 import { listItem, springs } from '../lib/motion.js';
 
 const EMPTY: HabitInput = {
@@ -42,6 +45,7 @@ const DAY_LABELS: Record<WeekdayKey, string> = { mon: 'Mo', tue: 'Tu', wed: 'We'
 const KIND_META: Record<HabitInput['kind'], { label: string; badge: string; Icon: typeof Repeat }> = {
   habit: { label: 'Habit', badge: 'bg-teal-50 text-teal-600 dark:bg-teal-500/10 dark:text-teal-300', Icon: Repeat },
   learning: { label: 'Learning', badge: 'bg-sky-50 text-sky-600 dark:bg-sky-500/10 dark:text-sky-300', Icon: BookOpen },
+  negative: { label: 'Avoidance', badge: 'bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-300', Icon: ShieldAlert },
 };
 
 const INPUT_CLS =
@@ -79,6 +83,8 @@ const WEEK_DOT: Record<HabitWeekDay['status'], { cls: string; label: string }> =
   done: { cls: 'bg-emerald-500 text-white', label: 'done' },
   skipped: { cls: 'bg-slate-200 text-slate-500 dark:bg-neutral-700 dark:text-neutral-400', label: 'skipped' },
   missed: { cls: 'bg-rose-100 text-rose-500 dark:bg-rose-500/15 dark:text-rose-400', label: 'missed' },
+  lapsed: { cls: 'bg-rose-500 text-white', label: 'lapse recorded' },
+  clean: { cls: 'bg-teal-100 text-teal-600 dark:bg-teal-500/15 dark:text-teal-300', label: 'clean' },
   pending: { cls: 'border-2 border-teal-500 text-teal-600 dark:text-teal-400', label: 'due today' },
   upcoming: { cls: 'border border-slate-300 text-slate-400 dark:border-neutral-600 dark:text-neutral-500', label: 'upcoming' },
   off: { cls: 'text-slate-300 dark:text-neutral-700', label: 'not scheduled' },
@@ -97,7 +103,7 @@ function WeekTracker({ history }: { history: HabitWeekDay[] }) {
             title={`${DAY_LABELS[wk]} — ${meta.label}`}
             className={`flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-semibold ${meta.cls}`}
           >
-            {d.status === 'done' ? <Check className="h-3.5 w-3.5" strokeWidth={3} /> : d.status === 'skipped' ? <Minus className="h-3 w-3" /> : DAY_LABELS[wk]}
+            {d.status === 'done' || d.status === 'clean' ? <Check className="h-3.5 w-3.5" strokeWidth={3} /> : d.status === 'lapsed' ? <ShieldAlert className="h-3.5 w-3.5" strokeWidth={2.5} /> : d.status === 'skipped' ? <Minus className="h-3 w-3" /> : DAY_LABELS[wk]}
           </span>
         );
       })}
@@ -202,13 +208,13 @@ function HabitForm({
         <input
           required
           autoFocus
-          placeholder="Name (e.g. Gym, Spanish, Read 20 pages)"
+          placeholder={form.kind === 'negative' ? 'Name (e.g. No smoking, No gambling)' : 'Name (e.g. Gym, Spanish, Read 20 pages)'}
           value={form.name}
           onChange={(e) => setForm({ ...form, name: e.target.value })}
           className={`col-span-2 sm:col-span-1 ${INPUT_CLS}`}
         />
         <div className="col-span-2 flex rounded-lg bg-slate-100 p-0.5 dark:bg-neutral-800 sm:col-span-1">
-          {(['habit', 'learning'] as const).map((k) => {
+          {(['habit', 'learning', 'negative'] as const).map((k) => {
             const { label, Icon } = KIND_META[k];
             const on = form.kind === k;
             return (
@@ -228,12 +234,18 @@ function HabitForm({
         </div>
       </div>
 
+      {form.kind === 'negative' && (
+        <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700 dark:border-rose-500/25 dark:bg-rose-500/10 dark:text-rose-200">
+          Avoidances are not scheduled. Record a lapse only when it happens; the clean-day streak resets and starts again tomorrow.
+        </p>
+      )}
+
       <div>
-        <span className="mb-1 block text-xs font-medium text-slate-500 dark:text-neutral-400">Repeat on</span>
+        <span className="mb-1 block text-xs font-medium text-slate-500 dark:text-neutral-400">{form.kind === 'negative' ? 'Protect on' : 'Repeat on'}</span>
         <DayPicker value={form.days} onChange={(days) => setForm({ ...form, days })} todayKey={todayKey} />
       </div>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+      {form.kind !== 'negative' && <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         <Field label="Duration (min)">
           <input
             type="number"
@@ -264,17 +276,17 @@ function HabitForm({
             />
           </Field>
         )}
-      </div>
+      </div>}
 
-      <button
+      {form.kind !== 'negative' && <button
         type="button"
         onClick={() => setMore((m) => !m)}
         className="flex cursor-pointer items-center gap-1 text-xs font-medium text-slate-500 hover:text-slate-700 dark:text-neutral-400 dark:hover:text-neutral-200"
       >
         <ChevronDown className={`h-3.5 w-3.5 transition-transform ${more ? 'rotate-180' : ''}`} /> More options
-      </button>
+      </button>}
       <AnimatePresence initial={false}>
-        {more && (
+        {form.kind !== 'negative' && more && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
@@ -337,6 +349,32 @@ function HabitForm({
 function TodayRow({ habit }: { habit: HabitDTO }) {
   const complete = useCompleteHabitToday();
   const skip = useSkipHabitToday();
+  const lapse = useRecordHabitLapseToday();
+  const clearLapse = useClearHabitLapseToday();
+  if (habit.kind === 'negative') {
+    const lapsed = habit.todayStatus === 'lapsed';
+    return (
+      <motion.div layout variants={listItem} initial="initial" animate="animate" exit="exit" className="flex items-center gap-3 px-4 py-2.5">
+        <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${lapsed ? 'bg-rose-500 text-white' : 'bg-teal-50 text-teal-600 dark:bg-teal-500/10 dark:text-teal-300'}`}>
+          {lapsed ? <ShieldAlert className="h-5 w-5" /> : <ShieldCheck className="h-5 w-5" />}
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className={`truncate text-sm font-medium ${lapsed ? 'text-slate-400 line-through dark:text-neutral-500' : 'text-slate-900 dark:text-neutral-100'}`}>{habit.name}</p>
+          <p className={`text-xs ${lapsed ? 'text-rose-500' : 'text-slate-400 dark:text-neutral-500'}`}>{lapsed ? 'Lapse recorded — the streak restarts tomorrow' : 'Clean so far today'}</p>
+        </div>
+        <StreakBadge days={habit.streakDays} size="sm" />
+        {lapsed ? (
+          <button type="button" onClick={() => clearLapse.mutate(habit.id)} disabled={clearLapse.isPending} title="Undo recorded lapse" className="flex cursor-pointer items-center gap-1 rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 disabled:opacity-50 dark:text-neutral-400 dark:hover:bg-white/5">
+            <Undo2 className="h-4 w-4" /><span className="sr-only">Undo lapse</span>
+          </button>
+        ) : (
+          <button type="button" onClick={() => confirm(`Record a lapse for "${habit.name}"? This resets its streak.`) && lapse.mutate(habit.id)} disabled={lapse.isPending} className="cursor-pointer rounded-lg border border-rose-200 px-2.5 py-1.5 text-xs font-semibold text-rose-600 transition-colors hover:bg-rose-50 disabled:opacity-50 dark:border-rose-500/30 dark:text-rose-300 dark:hover:bg-rose-500/10">
+            Record lapse
+          </button>
+        )}
+      </motion.div>
+    );
+  }
   const done = habit.todayStatus === 'done';
   const skipped = habit.todayStatus === 'skipped';
   const missed = habit.todayStatus === 'missed';
@@ -393,8 +431,9 @@ function TodayRow({ habit }: { habit: HabitDTO }) {
 function TodayCard({ habits }: { habits: HabitDTO[] }) {
   const due = habits.filter((h) => h.active && h.todayStatus);
   if (due.length === 0) return null;
-  const done = due.filter((h) => h.todayStatus === 'done').length;
-  const allDone = done === due.length;
+  const scheduled = due.filter((h) => h.kind !== 'negative');
+  const done = scheduled.filter((h) => h.todayStatus === 'done').length;
+  const allDone = scheduled.length > 0 && done === scheduled.length;
   const sorted = [...due].sort((a, b) => {
     const rank = (h: HabitDTO) => (h.todayStatus === 'missed' ? 0 : h.todayStatus === 'pending' ? 1 : 2);
     return rank(a) - rank(b) || a.name.localeCompare(b.name);
@@ -413,7 +452,7 @@ function TodayCard({ habits }: { habits: HabitDTO[] }) {
             </p>
           )}
         </div>
-        <ProgressRing done={done} total={due.length} />
+        {scheduled.length > 0 ? <ProgressRing done={done} total={scheduled.length} /> : <span className="text-xs font-medium text-teal-600 dark:text-teal-300">Avoidance tracker</span>}
       </div>
       <div className="divide-y divide-slate-100 dark:divide-neutral-800">
         <AnimatePresence initial={false}>
@@ -433,7 +472,8 @@ function HabitRow({ habit }: { habit: HabitDTO }) {
   const update = useUpdateHabit();
   const del = useDeleteHabit();
 
-  const target = habit.kind === 'learning' && habit.weeklyTargetMin ? habit.weeklyTargetMin : habit.weekPlannedMin;
+  const isAvoidance = habit.kind === 'negative';
+  const target = isAvoidance ? 0 : habit.kind === 'learning' && habit.weeklyTargetMin ? habit.weeklyTargetMin : habit.weekPlannedMin;
   const pct = target > 0 ? Math.min(100, Math.round((habit.weekDoneMin / target) * 100)) : 0;
   const { label: kindLabel, badge: kindBadge } = KIND_META[habit.kind];
 
@@ -478,7 +518,7 @@ function HabitRow({ habit }: { habit: HabitDTO }) {
             )}
           </div>
           <p className="mt-0.5 text-xs text-slate-400 dark:text-neutral-500">
-            {fmtMin(habit.durationMin)}
+            {isAvoidance ? 'Avoidance streak' : fmtMin(habit.durationMin)}
             {habit.preferredStart ? ` · starts ${habit.preferredStart}` : ''} · {habit.days.length === 7 ? 'every day' : `${habit.days.length}×/week`}
           </p>
         </div>
@@ -488,14 +528,14 @@ function HabitRow({ habit }: { habit: HabitDTO }) {
         </div>
 
         {/* weekly progress */}
-        <div className={`w-28 shrink-0 ${habit.active ? '' : 'opacity-60'}`} title={`${habit.weekDoneMin} of ${target} min this week`}>
+        {!isAvoidance && <div className={`w-28 shrink-0 ${habit.active ? '' : 'opacity-60'}`} title={`${habit.weekDoneMin} of ${target} min this week`}>
           <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-neutral-800">
             <div className={`h-full rounded-full transition-[width] duration-500 ${pct >= 100 ? 'bg-emerald-500' : 'bg-teal-500'}`} style={{ width: `${pct}%` }} />
           </div>
           <p className="mt-1 text-[10px] tabular-nums text-slate-400 dark:text-neutral-500">
             {fmtMin(habit.weekDoneMin)} / {fmtMin(target)} wk
           </p>
-        </div>
+        </div>}
 
         <StreakBadge days={habit.streakDays} />
 
@@ -568,7 +608,7 @@ export default function HabitsPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-lg font-semibold text-slate-900 dark:text-neutral-100">Habits</h1>
-          <p className="mt-0.5 text-sm text-slate-400 dark:text-neutral-500">Routines and learning goals, auto-scheduled into your open slots.</p>
+          <p className="mt-0.5 text-sm text-slate-400 dark:text-neutral-500">Routines, learning goals, and avoidance streaks you want to protect.</p>
         </div>
         <button
           type="button"
@@ -625,7 +665,7 @@ export default function HabitsPage() {
           <CircleDashed className="mx-auto h-8 w-8 text-slate-300 dark:text-neutral-600" />
           <p className="mt-3 text-sm font-medium text-slate-600 dark:text-neutral-300">No habits yet</p>
           <p className="mx-auto mt-1 max-w-sm text-sm text-slate-400 dark:text-neutral-500">
-            Add a routine like "Gym" or a learning goal like "Spanish" and it'll be blocked into your calendar automatically.
+            Add a routine like "Gym", a learning goal like "Spanish", or an avoidance like "No smoking". Avoidances are tracked without calendar blocks.
           </p>
           <button
             type="button"

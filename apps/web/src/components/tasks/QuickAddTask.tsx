@@ -1,7 +1,7 @@
 ﻿import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { Calendar, Clock, Flag, Gauge, Hash, Plus, Tag, X } from 'lucide-react';
-import type { TaskDifficulty, TaskInput, TaskStatus } from '@timeblock/shared';
+import { Calendar, Clock, Flag, Gauge, Hash, Plus, Repeat2, Tag, X } from 'lucide-react';
+import type { TaskDifficulty, TaskInput, TaskRecurrence, TaskStatus } from '@timeblock/shared';
 import { useCreateTask, useLabelColorMap, useProjects } from '../../hooks.js';
 import { popoverVariants } from '../../lib/motion.js';
 import { LabelChip, quickDateOptions, STATUS_DOT, STATUS_LABEL } from './taskDisplay.js';
@@ -21,7 +21,13 @@ const DIFFICULTIES: { value: TaskDifficulty; label: string; dot: string }[] = [
 
 const STATUSES: TaskStatus[] = ['backlog', 'todo', 'in_progress', 'done', 'cancelled'];
 
-type Picker = 'date' | 'labels' | 'priority' | 'status' | 'duration' | 'difficulty' | null;
+type Picker = 'date' | 'labels' | 'priority' | 'status' | 'duration' | 'difficulty' | 'recurrence' | null;
+
+const RECURRENCES: { value: TaskRecurrence; label: string }[] = [
+  { value: 'daily', label: 'Daily' },
+  { value: 'weekly', label: 'Weekly' },
+  { value: 'monthly', label: 'Monthly' },
+];
 
 const pillBase =
   'flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors';
@@ -53,6 +59,7 @@ export default function QuickAddTask({
   const [priority, setPriority] = useState<number | undefined>(undefined);
   const [durationMin, setDurationMin] = useState<number | undefined>(undefined);
   const [difficulty, setDifficulty] = useState<TaskDifficulty | undefined>(undefined);
+  const [recurrence, setRecurrence] = useState<TaskRecurrence | undefined>(undefined);
   const [labels, setLabels] = useState<string[]>([]);
   const [labelInput, setLabelInput] = useState('');
   const [projectId, setProjectId] = useState<string>(defaults?.projectId ?? '');
@@ -74,6 +81,7 @@ export default function QuickAddTask({
     setPriority(undefined);
     setDurationMin(undefined);
     setDifficulty(undefined);
+    setRecurrence(undefined);
     setLabels([]);
     setLabelInput('');
     setProjectId(defaults?.projectId ?? '');
@@ -93,6 +101,7 @@ export default function QuickAddTask({
         priority,
         durationMin,
         difficulty,
+        recurrence,
         labels: labels.length ? labels : undefined,
         projectId: projectId || null,
         ...defaults,
@@ -173,6 +182,11 @@ export default function QuickAddTask({
             <button type="button" onClick={() => toggle('difficulty')} className={`${pillBase} ${picker === 'difficulty' || difficulty ? pillOn : pillOff}`}>
               <Gauge size={12} /> {DIFFICULTIES.find((d) => d.value === difficulty)?.label ?? 'Difficulty'}
             </button>
+            {!defaults?.parentId && (
+              <button type="button" onClick={() => toggle('recurrence')} className={`${pillBase} ${picker === 'recurrence' || recurrence ? pillOn : pillOff}`}>
+                <Repeat2 size={12} /> {RECURRENCES.find((rule) => rule.value === recurrence)?.label ?? 'Repeat'}
+              </button>
+            )}
           </div>
 
           {picker && (
@@ -320,6 +334,33 @@ export default function QuickAddTask({
                       {d.label}
                     </button>
                   ))}
+                </div>
+              )}
+
+              {picker === 'recurrence' && (
+                <div className="flex flex-col gap-1">
+                  {!dueDate && <p className="px-2 pb-1 text-[11px] text-amber-600 dark:text-amber-400">Choose a date before making this task repeat.</p>}
+                  {RECURRENCES.map((rule) => (
+                    <button
+                      key={rule.value}
+                      type="button"
+                      disabled={!dueDate}
+                      onClick={() => {
+                        setRecurrence(recurrence === rule.value ? undefined : rule.value);
+                        setPicker(null);
+                      }}
+                      className={`rounded-md px-2 py-1 text-left text-sm hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-45 dark:hover:bg-neutral-800 ${
+                        recurrence === rule.value ? 'font-semibold text-slate-900 dark:text-neutral-100' : 'text-slate-600 dark:text-neutral-300'
+                      }`}
+                    >
+                      {rule.label}
+                    </button>
+                  ))}
+                  {recurrence && (
+                    <button type="button" onClick={() => { setRecurrence(undefined); setPicker(null); }} className="mt-1 px-2 text-left text-xs text-slate-400 hover:text-red-500">
+                      Does not repeat
+                    </button>
+                  )}
                 </div>
               )}
             </div>

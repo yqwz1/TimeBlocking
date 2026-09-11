@@ -75,6 +75,13 @@ describe('KitchenPage', () => {
     expect(screen.getAllByText('Chicken breast').length).toBeGreaterThan(0);
     expect(screen.getAllByText('72 g').length).toBeGreaterThan(0);
     expect(screen.getByRole('button', { name: /Add exact bags/i })).toBeTruthy();
+    await userEvent.click(screen.getByRole('button', { name: /240 g/i }));
+    expect(screen.getByRole('button', { name: 'Delete portion' })).toBeTruthy();
+    const deleteConfirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    await userEvent.click(screen.getByRole('button', { name: 'Delete portion' }));
+    expect(mocks.mutateAsync).toHaveBeenCalledWith({ stockId: 'bag-1', input: { deltaQuantity: -240, reason: 'discarded', note: 'Stock portion deleted' } });
+    deleteConfirm.mockRestore();
+
   });
 
   it('adds an available stock portion to today’s plan', async () => {

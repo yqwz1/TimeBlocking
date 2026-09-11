@@ -1,6 +1,7 @@
 import { DateTime } from 'luxon';
 import { Activity, Clock3, Coffee, Shuffle, TimerReset } from 'lucide-react';
 import { useActivityAnalytics, useActivityRecommendations, useUpdateActivityRecommendation } from '../../hooks.js';
+import { Link } from 'react-router-dom';
 
 function minutes(value: number | null): string {
   if (value === null) return '—';
@@ -33,6 +34,7 @@ export default function ActivityAnalyticsPanel({ weekStart }: { weekStart: strin
           <h2 className="flex items-center gap-2 font-semibold text-slate-900 dark:text-neutral-100"><Activity size={17} className="text-teal-600" /> Planned vs observed</h2>
           <p className="mt-1 text-xs text-slate-400 dark:text-neutral-500">Activity evidence is observational; it never completes tasks or changes your schedule.</p>
         </div>
+        <Link to="/activity" className="shrink-0 rounded-md border border-teal-200 px-2 py-1 text-xs font-medium text-teal-700 hover:bg-teal-50 dark:border-teal-500/30 dark:text-teal-300 dark:hover:bg-teal-500/10">Open Activity Center</Link>
         {data && <span className="rounded-full bg-teal-50 px-2 py-1 text-xs font-medium text-teal-700 dark:bg-teal-500/10 dark:text-teal-300">{data.verifiedBlockCount}/{data.blockCount} verified</span>}
       </div>
       {!data || data.blockCount === 0 ? (

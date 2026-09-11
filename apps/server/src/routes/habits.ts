@@ -35,12 +35,32 @@ function computeStreak(instances: InstanceRow[], days: string[], tz: string): nu
   return streak;
 }
 
+/** Consecutive scheduled days without a recorded lapse, including today while it remains clean. */
+function computeAvoidanceStreak(instances: InstanceRow[], days: string[], tz: string, createdAtUtc: string | null): number {
+  const byDate = new Map(instances.map((i) => [i.date, i.status]));
+  const recur = new Set(days);
+  const createdDate = createdAtUtc ? DateTime.fromISO(createdAtUtc, { zone: 'utc' }).setZone(tz).toISODate() : null;
+  let cursor = DateTime.now().setZone(tz).startOf('day');
+  let streak = 0;
+  for (let i = 0; i < 400; i++) {
+    const date = cursor.toISODate()!;
+    if (createdDate && date < createdDate) break;
+    if (recur.has(WEEKDAY_KEYS[cursor.weekday - 1])) {
+      if (byDate.get(date) === 'lapsed') break;
+      streak++;
+    }
+    cursor = cursor.minus({ days: 1 });
+  }
+  return streak;
+}
+
 function todayStatusOf(instances: InstanceRow[], days: string[], today: string, todayWk: string): HabitDTO['todayStatus'] {
   if (!days.includes(todayWk)) return null;
   const status = instances.find((i) => i.date === today)?.status;
   if (status === 'done') return 'done';
   if (status === 'skipped') return 'skipped';
   if (status === 'missed') return 'missed';
+  if (status === 'lapsed') return 'lapsed';
   return 'pending';
 }
 
@@ -51,6 +71,7 @@ function weekHistoryOf(
   today: string,
   tz: string,
   createdAtUtc: string | null,
+  isAvoidance: boolean,
 ): HabitDTO['weekHistory'] {
   const byDate = new Map(weekInstances.map((i) => [i.date, i.status]));
   const monday = DateTime.fromISO(weekStart, { zone: tz });
@@ -60,6 +81,12 @@ function weekHistoryOf(
     // days before the habit existed don't count as missed
     if (!days.includes(wk) || (createdDate && date < createdDate)) return { date, status: 'off' as const };
     const status = byDate.get(date);
+    if (isAvoidance) {
+      if (status === 'lapsed') return { date, status: 'lapsed' as const };
+      if (date < today) return { date, status: 'clean' as const };
+      if (date === today) return { date, status: 'pending' as const };
+      return { date, status: 'upcoming' as const };
+    }
     if (status === 'done' || status === 'skipped' || status === 'missed') return { date, status };
     // planned or no record yet — derive from where the day sits relative to today
     if (date < today) return { date, status: 'missed' as const };
@@ -70,6 +97,7 @@ function weekHistoryOf(
 
 function toDTO(db: DB, h: HabitRow, tz: string): HabitDTO {
   const days = rruleToDays(h.rrule);
+  const isAvoidance = h.kind === 'negative';
   const instances = db.select().from(habitInstances).where(eq(habitInstances.habitId, h.id)).all();
   const now = DateTime.now().setZone(tz);
   const today = now.toISODate()!;
@@ -85,15 +113,15 @@ function toDTO(db: DB, h: HabitRow, tz: string): HabitDTO {
     windowStart: h.windowStart,
     windowEnd: h.windowEnd,
     priority: h.priority,
-    kind: h.kind as 'habit' | 'learning',
+    kind: h.kind as HabitDTO['kind'],
     weeklyTargetMin: h.weeklyTargetMin,
     notes: h.notes,
     active: !!h.active,
-    weekPlannedMin: weekInstances.filter((i) => i.status !== 'skipped').length * h.durationMin,
-    weekDoneMin: weekInstances.filter((i) => i.status === 'done').length * h.durationMin,
-    streakDays: computeStreak(instances, days, tz),
+    weekPlannedMin: isAvoidance ? 0 : weekInstances.filter((i) => i.status !== 'skipped').length * h.durationMin,
+    weekDoneMin: isAvoidance ? 0 : weekInstances.filter((i) => i.status === 'done').length * h.durationMin,
+    streakDays: isAvoidance ? computeAvoidanceStreak(instances, days, tz, h.createdAtUtc) : computeStreak(instances, days, tz),
     todayStatus: todayStatusOf(instances, days, today, todayWk),
-    weekHistory: weekHistoryOf(weekInstances, days, week, today, tz, h.createdAtUtc),
+    weekHistory: weekHistoryOf(weekInstances, days, week, today, tz, h.createdAtUtc, isAvoidance),
   };
 }
 
@@ -192,6 +220,7 @@ export function registerHabitRoutes(app: FastifyInstance, db: DB, manager: SyncM
   app.post<{ Params: { id: string } }>('/habits/:id/complete-today', async (req, reply) => {
     const habit = db.select().from(habits).where(eq(habits.id, req.params.id)).get();
     if (!habit) return reply.code(404).send({ error: 'not found' });
+    if (habit.kind === 'negative') return reply.code(400).send({ error: 'Avoidances do not complete; record a lapse only when it happens.' });
     const settings = getSettings(db);
     const tz = settings.timezone;
     const today = DateTime.now().setZone(tz).toISODate()!;
@@ -236,7 +265,10 @@ export function registerHabitRoutes(app: FastifyInstance, db: DB, manager: SyncM
     return { ok: true };
   });
 
-  app.post<{ Params: { id: string } }>('/habits/:id/skip-today', async (req) => {
+  app.post<{ Params: { id: string } }>('/habits/:id/skip-today', async (req, reply) => {
+    const habit = db.select().from(habits).where(eq(habits.id, req.params.id)).get();
+    if (!habit) return reply.code(404).send({ error: 'not found' });
+    if (habit.kind === 'negative') return reply.code(400).send({ error: 'Avoidances cannot be skipped; record a lapse only when it happens.' });
     const tz = getSettings(db).timezone;
     const today = DateTime.now().setZone(tz).toISODate()!;
     const existing = db
@@ -248,6 +280,28 @@ export function registerHabitRoutes(app: FastifyInstance, db: DB, manager: SyncM
     if (existing) db.update(habitInstances).set({ status: 'skipped' }).where(eq(habitInstances.id, existing.id)).run();
     else db.insert(habitInstances).values({ id: randomUUID(), habitId: req.params.id, date: today, status: 'skipped' }).run();
     await manager.forcePlan('habit-skip-today');
+    return { ok: true };
+  });
+
+  app.post<{ Params: { id: string } }>('/habits/:id/lapse-today', async (req, reply) => {
+    const habit = db.select().from(habits).where(eq(habits.id, req.params.id)).get();
+    if (!habit) return reply.code(404).send({ error: 'not found' });
+    if (habit.kind !== 'negative') return reply.code(400).send({ error: 'Only avoidance habits can record a lapse.' });
+    const tz = getSettings(db).timezone;
+    const today = DateTime.now().setZone(tz).toISODate()!;
+    const existing = db.select().from(habitInstances).where(eq(habitInstances.habitId, req.params.id)).all().find((i) => i.date === today);
+    if (existing) db.update(habitInstances).set({ status: 'lapsed' }).where(eq(habitInstances.id, existing.id)).run();
+    else db.insert(habitInstances).values({ id: randomUUID(), habitId: req.params.id, date: today, status: 'lapsed' }).run();
+    return { ok: true };
+  });
+
+  app.post<{ Params: { id: string } }>('/habits/:id/clear-lapse-today', async (req, reply) => {
+    const habit = db.select().from(habits).where(eq(habits.id, req.params.id)).get();
+    if (!habit) return reply.code(404).send({ error: 'not found' });
+    if (habit.kind !== 'negative') return reply.code(400).send({ error: 'Only avoidance habits can clear a lapse.' });
+    const today = DateTime.now().setZone(getSettings(db).timezone).toISODate()!;
+    const existing = db.select().from(habitInstances).where(eq(habitInstances.habitId, req.params.id)).all().find((i) => i.date === today && i.status === 'lapsed');
+    if (existing) db.delete(habitInstances).where(eq(habitInstances.id, existing.id)).run();
     return { ok: true };
   });
 }

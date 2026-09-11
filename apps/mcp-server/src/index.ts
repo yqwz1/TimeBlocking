@@ -66,7 +66,7 @@ const habitFields = {
   windowStart: HHMM,
   windowEnd: HHMM,
   priority: z.number().int().min(1).max(4),
-  kind: z.enum(['habit', 'learning']),
+  kind: z.enum(['habit', 'learning', 'negative']).describe('negative is an avoidance: it is never scheduled and only records a lapse'),
   weeklyTargetMin: z.number().int().positive().nullable().describe('Learning goals: extra sessions are added until this many minutes/week are planned'),
   notes: z.string(),
   active: z.boolean(),
@@ -291,13 +291,13 @@ server.registerTool(
 
 server.registerTool(
   'list_habits',
-  { title: 'List habits', description: 'List all habits/learning routines with this week\'s progress, streaks, and today\'s status.', inputSchema: {} },
+  { title: 'List habits', description: 'List all routines, learning goals, and avoidance streaks with this week\'s progress and today\'s status.', inputSchema: {} },
   async () => tool(() => api('GET', '/habits')),
 );
 
 server.registerTool(
   'create_habit',
-  { title: 'Create habit', description: 'Create a new recurring habit or learning routine.', inputSchema: habitFields },
+  { title: 'Create habit', description: 'Create a recurring habit, learning routine, or negative avoidance habit.', inputSchema: habitFields },
   async (input) => tool(() => api('POST', '/habits', input)),
 );
 
@@ -327,6 +327,12 @@ server.registerTool(
   'skip_habit_today',
   { title: 'Skip habit for today', description: "Mark today's occurrence of a habit as skipped.", inputSchema: { id: z.string() } },
   async ({ id }) => tool(() => api('POST', `/habits/${id}/skip-today`)),
+);
+
+server.registerTool(
+  'record_habit_lapse_today',
+  { title: 'Record avoidance lapse', description: 'Record that a negative habit happened today. This resets only that avoidance streak.', inputSchema: { id: z.string() } },
+  async ({ id }) => tool(() => api('POST', `/habits/${id}/lapse-today`)),
 );
 
 server.registerTool(

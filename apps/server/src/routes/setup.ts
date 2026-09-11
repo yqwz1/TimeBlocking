@@ -23,6 +23,7 @@ export function registerSetupRoutes(app: FastifyInstance, db: DB, manager: SyncM
 
   app.post('/setup/google/disconnect', async () => {
     disconnectGoogle(db);
+    updateSettings(db, { emailNotificationsEnabled: false });
     return { ok: true };
   });
 

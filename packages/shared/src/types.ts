@@ -176,6 +176,14 @@ export const SettingsSchema = z.object({
   assistantQuietHoursEnd: z.string().regex(HHMM),
   /** Maximum proactive alerts surfaced per local day. */
   assistantDailyNotificationBudget: z.number().int().min(0).max(20),
+  /** Master switch for deterministic Gmail agenda, block reminder, and recap messages. */
+  emailNotificationsEnabled: z.boolean(),
+  emailMorningAgendaEnabled: z.boolean(),
+  emailMorningAgendaTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
+  emailTaskReminderEnabled: z.boolean(),
+  emailTaskReminderMinutesBefore: z.number().int().min(1).max(1440),
+  emailDailyRecapEnabled: z.boolean(),
+  emailDailyRecapTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
 });
 export type Settings = z.infer<typeof SettingsSchema>;
 export type StreakRule = Settings['streakRule'];
@@ -269,7 +277,31 @@ export const DEFAULT_SETTINGS: Settings = {
   assistantQuietHoursStart: '21:30',
   assistantQuietHoursEnd: '07:30',
   assistantDailyNotificationBudget: 3,
+  emailNotificationsEnabled: false,
+  emailMorningAgendaEnabled: true,
+  emailMorningAgendaTime: '07:30',
+  emailTaskReminderEnabled: true,
+  emailTaskReminderMinutesBefore: 30,
+  emailDailyRecapEnabled: true,
+  emailDailyRecapTime: '21:30',
 };
+
+export type EmailNotificationKind = 'morning_agenda' | 'task_reminder' | 'daily_recap' | 'test';
+
+export interface EmailNotificationStatusDTO {
+  googleConnected: boolean;
+  gmailPermissionGranted: boolean;
+  encryptionConfigured: boolean;
+  senderEmail: string | null;
+  recipientEmail: string | null;
+  lastDelivery: {
+    kind: EmailNotificationKind;
+    status: 'sent' | 'skipped' | 'failed';
+    at: string;
+    error: string | null;
+  } | null;
+  currentError: string | null;
+}
 
 // ---------- Google Drive (Phase 5) ----------
 
@@ -313,7 +345,8 @@ export const HabitInputSchema = z.object({
   windowStart: z.string().regex(HHMM),
   windowEnd: z.string().regex(HHMM),
   priority: z.number().int().min(1).max(4),
-  kind: z.enum(['habit', 'learning']),
+  /** negative habits are avoidances: they are never scheduled and only record lapses. */
+  kind: z.enum(['habit', 'learning', 'negative']),
   /** learning goals: extra sessions are added until this many minutes/week are planned */
   weeklyTargetMin: z.number().int().positive().nullable(),
   notes: z.string(),
@@ -327,10 +360,10 @@ export interface HabitWeekDay {
   date: string;
   /**
    * off = not scheduled that weekday; missed = scheduled in the past with no
-   * completion recorded (matches the streak rule); upcoming = scheduled later
-   * this week.
+   * completion recorded; clean = an avoidance day with no lapse recorded;
+   * upcoming = scheduled later this week.
    */
-  status: 'done' | 'skipped' | 'missed' | 'pending' | 'upcoming' | 'off';
+  status: 'done' | 'skipped' | 'missed' | 'lapsed' | 'clean' | 'pending' | 'upcoming' | 'off';
 }
 
 export interface HabitDTO extends HabitInput {
@@ -340,7 +373,7 @@ export interface HabitDTO extends HabitInput {
   weekDoneMin: number;
   streakDays: number;
   /** today's occurrence status; null when the habit isn't scheduled today */
-  todayStatus: 'pending' | 'done' | 'skipped' | 'missed' | null;
+  todayStatus: 'pending' | 'done' | 'skipped' | 'missed' | 'lapsed' | null;
   /** Mon–Sun of the current week */
   weekHistory: HabitWeekDay[];
 }
@@ -431,6 +464,10 @@ export interface GoalDTO extends GoalInput {
 export const TaskStatusSchema = z.enum(['backlog', 'todo', 'in_progress', 'done', 'cancelled']);
 export type TaskStatus = z.infer<typeof TaskStatusSchema>;
 
+/** Repeats create the next dated task when the current occurrence is completed. */
+export const TaskRecurrenceSchema = z.enum(['daily', 'weekly', 'monthly']);
+export type TaskRecurrence = z.infer<typeof TaskRecurrenceSchema>;
+
 /** How hard a task is. Feeds the scheduler's energy matching: hard => deep work (prefers peak-focus windows), easy => shallow (prefers low-energy windows), medium => existing heuristic. */
 export const TaskDifficultySchema = z.enum(['easy', 'medium', 'hard']);
 export type TaskDifficulty = z.infer<typeof TaskDifficultySchema>;
@@ -449,6 +486,7 @@ export const TaskInputSchema = z.object({
   priority: z.number().int().min(1).max(4).optional(),
   dueDate: z.string().nullable().optional(),
   dueDatetimeUtc: z.string().nullable().optional(),
+  recurrence: TaskRecurrenceSchema.nullable().optional(),
   durationMin: z.number().int().positive().nullable().optional(),
   difficulty: TaskDifficultySchema.nullable().optional(),
   labels: z.array(z.string()).optional(),
@@ -501,6 +539,7 @@ export interface TaskDTO {
   priority: number;
   dueDate: string | null;
   dueDatetimeUtc: string | null;
+  recurrence: TaskRecurrence | null;
   durationMin: number | null;
   difficulty: TaskDifficulty | null;
   labels: string[];
@@ -689,10 +728,16 @@ export interface ScheduleItemDTO {
   title: string;
   start: string; // UTC ISO
   end: string;
-  status?: 'pending_create' | 'scheduled' | 'done' | 'missed' | 'cancelled';
+  status?: 'pending_create' | 'scheduled' | 'done' | 'missed' | 'cancelled' | 'lapsed';
   locked?: boolean;
   taskId?: string;
   habitId?: string;
+  /** A recurring habit shown for tracking only, rather than a planner-created block. */
+  isHabitOccurrence?: boolean;
+  /** Local date represented by a display-only habit occurrence (YYYY-MM-DD). */
+  habitDate?: string;
+  /** Allows the calendar to offer the correct action for regular versus avoidance habits. */
+  habitKind?: 'habit' | 'learning' | 'negative';
   /** Set on `kind: 'event'` items — the native event's id. */
   eventId?: string;
   projectName?: string;

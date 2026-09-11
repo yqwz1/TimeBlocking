@@ -11,6 +11,7 @@ import WorkoutPage from './pages/WorkoutPage.js';
 import SettingsPage from './pages/SettingsPage.js';
 import ProgressPage from './pages/ProgressPage.js';
 import KitchenPage from './pages/KitchenPage.js';
+import ActivityCenterPage from './pages/ActivityCenterPage.js';
 import { decodeNoteDeepLinkId } from './lib/noteDeepLinks.js';
 import { CommandPaletteProvider } from './lib/commandPalette.js';
 import { getUiPreferences, WORKSPACE_PATHS } from './lib/uiPreferences.js';
@@ -48,6 +49,7 @@ export default function App() {
             <Route path="/wishlist" element={<WishlistPage />} />
             <Route path="/kitchen" element={<KitchenPage />} />
             <Route path="/workout" element={<WorkoutPage />} />
+            <Route path="/activity" element={<ActivityCenterPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/progress" element={<ProgressPage />} />
             <Route path="/calendar" element={<Navigate to="/tasks?view=calendar" replace />} />

@@ -4,7 +4,7 @@ import fastifyStatic from '@fastify/static';
 import multipart from '@fastify/multipart';
 import { env, OAUTH_CALLBACK_PATH, WEB_DIST } from './config.js';
 import { createDb } from './db/client.js';
-import { ensureTimezoneDefault, getSettings } from './settings.js';
+import { ensureTimezoneDefault, getSettings, updateSettings } from './settings.js';
 import { SyncManager } from './sync/manager.js';
 import { registerApiRoutes } from './routes/index.js';
 import { handleOAuthCallback } from './integrations/google/auth.js';
@@ -17,6 +17,9 @@ import { reembedAllNotes } from './notes/embeddings.js';
 import { aiConfigured } from './ai/client.js';
 import { DriveBackupService } from './integrations/google/driveBackups.js';
 import { WorkoutEngineService } from './workout/engine.js';
+import { getActivitySyncService } from './activity/sync.js';
+import { EmailNotificationService } from './email/service.js';
+import { GMAIL_SEND_SCOPE, hasGoogleScope, markGoogleScopeGranted } from './integrations/google/auth.js';
 
 async function main() {
   const db = createDb();
@@ -37,6 +40,7 @@ async function main() {
   const manager = new SyncManager(db);
   const driveBackups = new DriveBackupService(db);
   const workout = new WorkoutEngineService(db);
+  const emailNotifications = new EmailNotificationService(db);
 
   const app = Fastify({ logger: { level: env.isProd ? 'warn' : 'info' } });
   await app.register(cors, { origin: env.isProd ? (env.integrationOrigin || false) : true });
@@ -44,23 +48,29 @@ async function main() {
 
   await app.register(
     async (api) => {
-      registerApiRoutes(api, db, manager, driveBackups, workout);
+      registerApiRoutes(api, db, manager, driveBackups, workout, emailNotifications);
     },
     { prefix: '/api' },
   );
 
-  app.get<{ Querystring: { code?: string; error?: string } }>(OAUTH_CALLBACK_PATH, async (req, reply) => {
+  app.get<{ Querystring: { code?: string; error?: string; state?: string } }>(OAUTH_CALLBACK_PATH, async (req, reply) => {
     const clientOrigin = env.isProd ? '' : 'http://localhost:5173';
     if (req.query.error || !req.query.code) {
       return reply.type('text/html').send(`<p>Google authorization failed (${req.query.error ?? 'no code returned'}). You can close this tab and retry.</p>`);
     }
     try {
       await handleOAuthCallback(db, req.query.code);
+      if (req.query.state === 'email-notifications') {
+        markGoogleScopeGranted(db, GMAIL_SEND_SCOPE);
+        if (hasGoogleScope(db, GMAIL_SEND_SCOPE)) updateSettings(db, { emailNotificationsEnabled: true });
+      }
     } catch (err) {
       return reply.type('text/html').send(`<p>Google authorization failed: ${err instanceof Error ? err.message : String(err)}</p>`);
     }
     void manager.runCycle('oauth-callback', { forceGoogle: true });
-    return reply.redirect(`${clientOrigin}/setup?connected=1`);
+    return reply.redirect(req.query.state === 'email-notifications'
+      ? `${clientOrigin}/settings?settingsTab=workspace&settingsSection=notifications&emailConnected=1`
+      : `${clientOrigin}/setup?connected=1`);
   });
 
   if (env.isProd) {
@@ -72,6 +82,9 @@ async function main() {
   }
 
   manager.start();
+  emailNotifications.start();
+  app.addHook('onClose', async () => emailNotifications.stop());
+  getActivitySyncService(db).start();
   // A lightweight scheduler only enqueues when the configured interval is due;
   // DriveBackupService makes concurrent/manual requests single-flight.
   setInterval(() => { void driveBackups.runScheduled(); }, 60 * 60 * 1000).unref();

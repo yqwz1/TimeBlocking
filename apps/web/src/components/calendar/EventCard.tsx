@@ -20,7 +20,7 @@ export function styleKey(item: ScheduleItemDTO): keyof typeof STYLES {
   if (item.kind === 'external') return 'external';
   if (item.kind === 'event') return 'event';
   if (item.status === 'done') return 'done';
-  if (item.status === 'missed') return 'missed';
+  if (item.status === 'missed' || item.status === 'lapsed') return 'missed';
   if (item.kind === 'habit') return 'habit';
   return 'task';
 }
@@ -58,7 +58,7 @@ export default function EventCard({ arg, atRiskTaskIds }: { arg: EventContentArg
   const short = durationMin > 0 && durationMin < 45;
   const roomy = !compact && durationMin >= 60;
 
-  const missed = item.status === 'missed';
+  const missed = item.status === 'missed' || item.status === 'lapsed';
   const isPast = !!end && end.getTime() < Date.now();
 
   const cls = ['tb-ev'];
@@ -76,7 +76,7 @@ export default function EventCard({ arg, atRiskTaskIds }: { arg: EventContentArg
 
   const missedTag = missed ? (
     <span className="tb-missed-tag">
-      <X size={9} className="shrink-0" /> Missed
+      <X size={9} className="shrink-0" /> {item.status === 'lapsed' ? 'Lapsed' : 'Missed'}
     </span>
   ) : null;
   const verification = item.activityVerification;

@@ -22,6 +22,10 @@ export const ActivityStatusSchema = z.object({
   requiredSourcesAvailable: z.boolean(),
   lastSuccessfulSyncAt: z.string().datetime().nullable(),
   lastErrorCode: z.string().nullable(),
+  /** True only after the local server accepted an ActivityWatch canonical query. */
+  canonicalQueryAvailable: z.boolean().default(false),
+  watcherDetails: z.object({ windowBucket: z.string().nullable(), afkBucket: z.string().nullable(), browserBucket: z.string().nullable() }).default({ windowBucket: null, afkBucket: null, browserBucket: null }),
+  sync: z.object({ state: z.enum(['idle', 'backfilling', 'syncing', 'retrying', 'unsupported']), completedPartitions: z.number().int().min(0), totalPartitions: z.number().int().min(0), lastSuccessfulRange: z.object({ fromUtc: z.string().datetime(), toUtc: z.string().datetime() }).nullable(), warning: z.string().nullable() }).default({ state: 'idle', completedPartitions: 0, totalPartitions: 0, lastSuccessfulRange: null, warning: null }),
 });
 export type ActivityStatus = z.infer<typeof ActivityStatusSchema>;
 
@@ -31,6 +35,38 @@ export const ActivityConnectInputSchema = z.object({
   mode: ActivityModeSchema.default('off'),
 });
 export type ActivityConnectInput = z.infer<typeof ActivityConnectInputSchema>;
+
+export const ActivityClassificationSchema = z.enum(['relevant', 'supporting', 'neutral', 'distraction', 'unknown', 'sensitive', 'ignore']);
+export type ActivityClassification = z.infer<typeof ActivityClassificationSchema>;
+export const ActivityClassificationRuleInputSchema = z.object({
+  scope: z.enum(['global', 'project', 'task_class']),
+  scopeId: z.string().max(200).nullable().default(null),
+  matchType: z.enum(['application', 'domain', 'activitywatch_category']),
+  matchValue: z.string().trim().min(1).max(300),
+  classification: ActivityClassificationSchema,
+});
+export type ActivityClassificationRuleInput = z.infer<typeof ActivityClassificationRuleInputSchema>;
+export const ActivityClassificationRuleSchema = ActivityClassificationRuleInputSchema.extend({ id: z.string(), createdAtUtc: z.string().datetime(), updatedAtUtc: z.string().datetime() });
+export type ActivityClassificationRule = z.infer<typeof ActivityClassificationRuleSchema>;
+
+const SafeBreakdownSchema = z.object({ label: z.string().max(300), minutes: z.number().min(0), classification: ActivityClassificationSchema });
+export const ActivityCenterOverviewSchema = z.object({
+  fromUtc: z.string().datetime(), toUtc: z.string().datetime(),
+  score: z.number().min(0).max(100).nullable(),
+  gateReasons: z.array(z.string()),
+  confidence: z.number().min(0).max(100),
+  confidenceInputs: z.object({ watcherCoverage: z.number().min(0).max(100), classificationCoverage: z.number().min(0).max(100), sampleFactor: z.number().min(0).max(100) }),
+  components: z.object({ intentAlignment: z.number().min(0).max(100).nullable(), focusStability: z.number().min(0).max(100).nullable(), followThrough: z.number().min(0).max(100).nullable(), planDelivery: z.number().min(0).max(100).nullable(), startAdherence: z.number().min(0).max(100).nullable() }),
+  totals: z.object({ alignedMinutes: z.number().min(0), plannedMinutes: z.number().min(0), observedMinutes: z.number().min(0), relevantMinutes: z.number().min(0), supportingMinutes: z.number().min(0), neutralMinutes: z.number().min(0), distractionMinutes: z.number().min(0), unknownMinutes: z.number().min(0) }),
+  topBreakdowns: z.array(SafeBreakdownSchema),
+  insights: z.array(z.object({ id: z.string(), title: z.string(), detail: z.string(), sample: z.string(), confidence: z.number().min(0).max(100), limitations: z.string() })),
+  activeExperiment: z.object({ id: z.string(), kind: z.string(), title: z.string(), status: z.enum(['active', 'completed', 'dismissed']), startedAtUtc: z.string().datetime(), endsAtUtc: z.string().datetime() }).nullable(),
+});
+export type ActivityCenterOverview = z.infer<typeof ActivityCenterOverviewSchema>;
+export const ActivityTimelineSegmentSchema = z.object({ startUtc: z.string().datetime(), endUtc: z.string().datetime(), classification: ActivityClassificationSchema, application: z.string().nullable(), domain: z.string().nullable(), category: z.string().nullable() }).strict();
+export type ActivityTimelineSegment = z.infer<typeof ActivityTimelineSegmentSchema>;
+export const FocusWorkSessionInputSchema = z.object({ id: z.string().uuid(), taskId: z.string().nullable(), projectId: z.string().nullable(), phase: z.enum(['work', 'short_break', 'long_break']), state: z.enum(['started', 'paused', 'resumed', 'finished', 'reset']), occurredAtUtc: z.string().datetime() });
+export type FocusWorkSessionInput = z.infer<typeof FocusWorkSessionInputSchema>;
 
 export const ActivityVerificationStateSchema = z.enum(['unobserved', 'insufficient_data', 'observed', 'verified', 'needs_review', 'corrected']);
 export type ActivityVerificationState = z.infer<typeof ActivityVerificationStateSchema>;

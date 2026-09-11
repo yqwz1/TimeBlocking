@@ -30,6 +30,7 @@ import { useTaskList, useUpdateTask } from '../../hooks.js';
 import { PriorityBadge, formatDuration } from './taskDisplay.js';
 import { popoverVariants, springs } from '../../lib/motion.js';
 import { FOCUS_TIMER_STATE_EVENT } from '../../lib/focusTimer.js';
+import { api } from '../../api.js';
 import {
   AMBIENCE_META,
   getAmbienceVolume,
@@ -158,6 +159,17 @@ export default function FocusView({ onOpenTask }: { onOpenTask: (id: string) => 
     [allTasks, state.selectedTaskId],
   );
 
+  // This is an observational lifecycle ledger. A failed local request never
+  // blocks the timer, and the server never turns these events into task state.
+  const recordWorkLifecycle = (state: 'started' | 'paused' | 'resumed' | 'finished' | 'reset') => {
+    if (state !== 'reset' && (!selectedTask || state === 'started' && !selectedTask)) return;
+    if (!selectedTask) return;
+    void api.post<void>('/activity/focus-work-sessions', {
+      id: crypto.randomUUID(), taskId: selectedTask.id, projectId: selectedTask.projectId ?? null,
+      phase: 'work', state, occurredAtUtc: new Date().toISOString(),
+    }).catch(() => undefined);
+  };
+
   // Persist state & settings.
   useEffect(() => localStorage.setItem(STATE_KEY, JSON.stringify(state)), [state]);
   useEffect(() => localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)), [settings]);
@@ -232,13 +244,16 @@ export default function FocusView({ onOpenTask }: { onOpenTask: (id: string) => 
   }, [settings]);
 
   const start = () => {
+    recordWorkLifecycle(state.remainingMs < phaseMs('work', settings) ? 'resumed' : 'started');
     setState((p) => ({ ...p, running: true, endsAt: Date.now() + p.remainingMs }));
   };
-  const pause = () =>
+  const pause = () => {
+    recordWorkLifecycle('paused');
     setState((p) => ({ ...p, running: false, remainingMs: p.endsAt != null ? Math.max(0, p.endsAt - Date.now()) : p.remainingMs, endsAt: null }));
+  };
   const reset = () =>
-    setState((p) => ({ ...p, running: false, endsAt: null, remainingMs: phaseMs(p.phase, settings) }));
-  const skip = () => advance();
+    (recordWorkLifecycle('reset'), setState((p) => ({ ...p, running: false, endsAt: null, remainingMs: phaseMs(p.phase, settings) })));
+  const skip = () => { if (state.phase === 'work') recordWorkLifecycle('finished'); advance(); };
 
   const setPhase = (phase: Phase) =>
     setState((p) => ({ ...p, phase, running: false, endsAt: null, remainingMs: phaseMs(phase, settings) }));

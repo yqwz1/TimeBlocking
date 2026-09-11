@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
+import { DateTime } from 'luxon';
 import type { ScheduleItemDTO } from '@timeblock/shared';
 import { Check, ExternalLink, Lock, MapPin, Pencil, Trash2, Unlock, Video, X } from 'lucide-react';
-import { useBlockActivity, useCompleteTask, useCorrectBlockActivity, useDeleteEvent, useDeleteTask, useLockBlock, useUnlockBlock, useUnscheduleTask } from '../../hooks.js';
+import { useBlockActivity, useCompleteHabitToday, useCompleteTask, useCorrectBlockActivity, useDeleteEvent, useDeleteTask, useLockBlock, useUnlockBlock, useUnscheduleTask } from '../../hooks.js';
 import { popoverVariants } from '../../lib/motion.js';
 import { STYLES, priorityColor, styleKey } from './EventCard.js';
 
@@ -20,6 +21,7 @@ export default function DetailPopover({
   onEdit?: (taskId: string) => void;
 }) {
   const complete = useCompleteTask();
+  const completeHabit = useCompleteHabitToday();
   const unschedule = useUnscheduleTask();
   const lock = useLockBlock();
   const unlock = useUnlockBlock();
@@ -34,6 +36,9 @@ export default function DetailPopover({
   const [category, setCategory] = useState('');
   const [note, setNote] = useState('');
   const isEvent = item.kind === 'event';
+  const isTodayHabit = item.kind === 'habit' && item.habitId && item.habitDate === DateTime.local().toISODate();
+  const isRegularHabit = item.kind === 'habit' && item.habitId && item.habitKind !== 'negative';
+  const canCompleteHabit = isTodayHabit && item.habitKind !== 'negative' && item.status !== 'done';
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
@@ -107,6 +112,7 @@ export default function DetailPopover({
           )}
           {item.kind === 'external' && <span>external calendar</span>}
           {isEvent && <span className="font-medium text-purple-500 dark:text-purple-300">Event</span>}
+          {item.isHabitOccurrence && <span className="font-medium text-teal-600 dark:text-teal-300">Habit tracking</span>}
         </div>
         {isEvent && (item.location || item.meetingUrl || item.description) && (
           <div className="mt-2 space-y-1.5 px-4 text-xs text-slate-600 dark:text-neutral-300">
@@ -200,6 +206,21 @@ export default function DetailPopover({
                 className="flex items-center gap-1 rounded-md bg-emerald-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-500"
               >
                 <Check size={12} /> Complete
+              </motion.button>
+            )}
+            {isRegularHabit && (
+              <motion.button
+                whileTap={{ scale: 0.94 }}
+                disabled={!canCompleteHabit || completeHabit.isPending}
+                onClick={() => {
+                  if (!canCompleteHabit) return;
+                  completeHabit.mutate(item.habitId!);
+                  onClose();
+                }}
+                title={item.status === 'done' ? 'Already registered as done' : !isTodayHabit ? 'You can register this habit on its scheduled day' : 'Register this habit as done'}
+                className="flex items-center gap-1 rounded-md bg-emerald-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-emerald-600 dark:hover:bg-emerald-500"
+              >
+                <Check size={12} /> {completeHabit.isPending ? 'Registering…' : item.status === 'done' ? 'Done' : isTodayHabit ? 'Done' : 'Available on its day'}
               </motion.button>
             )}
             {item.kind === 'task' &&

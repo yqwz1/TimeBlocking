@@ -40,7 +40,7 @@ export function registerDriveRoutes(app: FastifyInstance, db: DB, backups: Drive
 
   app.get<{ Querystring: { broader?: string } }>('/drive/connect', async (req, reply) => {
     if (!tokenEncryptionConfigured()) return reply.code(400).send({ error: 'Set TB_TOKEN_ENCRYPTION_KEY (at least 32 characters) before connecting Google Drive.' });
-    return reply.redirect(getAuthUrl(req.query.broader === '1'));
+    return reply.redirect(getAuthUrl({ includeDriveReadonly: req.query.broader === '1' }));
   });
 
   app.get('/drive/backups/status', async (): Promise<DriveBackupStatusDTO> => backups.status());

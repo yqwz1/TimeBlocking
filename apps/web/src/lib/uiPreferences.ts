@@ -2,7 +2,7 @@ import { useSyncExternalStore } from 'react';
 import type { SortBy, TasksView } from '../components/tasks/types.js';
 import type { CalendarView, SlotDuration } from '../components/calendar/CalendarToolbar.js';
 
-export type WorkspaceId = 'tasks' | 'whiteboard' | 'notes' | 'wishlist' | 'kitchen' | 'workout' | 'progress';
+export type WorkspaceId = 'tasks' | 'whiteboard' | 'notes' | 'wishlist' | 'kitchen' | 'workout' | 'activity' | 'progress';
 export type ThemeDensity = 'compact' | 'comfortable' | 'spacious';
 export type TextScale = 'small' | 'default' | 'large' | 'xlarge';
 export type MotionPreference = 'system' | 'reduce' | 'full';
@@ -53,6 +53,7 @@ export const WORKSPACE_PATHS: Record<WorkspaceId, string> = {
   wishlist: '/wishlist',
   kitchen: '/kitchen',
   workout: '/workout',
+  activity: '/activity',
   progress: '/progress',
 };
 
@@ -65,8 +66,8 @@ export const DEFAULT_UI_PREFERENCES: UiPreferences = {
   underlineLinks: false,
   largeTargets: false,
   defaultWorkspace: 'tasks',
-  workspaceOrder: ['tasks', 'whiteboard', 'notes', 'wishlist', 'kitchen', 'workout', 'progress'],
-  visibleWorkspaces: { tasks: true, whiteboard: true, notes: true, wishlist: true, kitchen: true, workout: true, progress: true },
+  workspaceOrder: ['tasks', 'whiteboard', 'notes', 'wishlist', 'kitchen', 'workout', 'activity', 'progress'],
+  visibleWorkspaces: { tasks: true, whiteboard: true, notes: true, wishlist: true, kitchen: true, workout: true, activity: true, progress: true },
   sidebarMode: 'remember',
   sidebarWidth: 176,
   showQuickCapture: true,

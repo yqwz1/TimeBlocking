@@ -9,6 +9,7 @@ import { nowUtcIso } from '../config.js';
 import { ModelGateway } from '../assistant/modelGateway.js';
 import { ActivityWatchAdapter, ActivityWatchAdapterError } from '../integrations/activitywatch/adapter.js';
 import { getSettings } from '../settings.js';
+import { getActivitySyncService } from './sync.js';
 
 const EMPTY_CAPABILITIES: ActivityCapabilities = { window: false, afk: false, browser: false, editor: false, input: false };
 
@@ -39,6 +40,9 @@ function toStatus(row: typeof activitySources.$inferSelect | undefined): Activit
       requiredSourcesAvailable: false,
       lastSuccessfulSyncAt: null,
       lastErrorCode: null,
+      canonicalQueryAvailable: false,
+      watcherDetails: { windowBucket: null, afkBucket: null, browserBucket: null },
+      sync: { state: 'idle', completedPartitions: 0, totalPartitions: 0, lastSuccessfulRange: null, warning: null },
     };
   }
   const capabilities = parseCapabilities(row.capabilities);
@@ -52,6 +56,9 @@ function toStatus(row: typeof activitySources.$inferSelect | undefined): Activit
     requiredSourcesAvailable: capabilities.window && capabilities.afk,
     lastSuccessfulSyncAt: row.lastSuccessfulSyncAtUtc,
     lastErrorCode: row.lastErrorCode,
+    canonicalQueryAvailable: false,
+    watcherDetails: { windowBucket: capabilities.window ? 'available' : null, afkBucket: capabilities.afk ? 'available' : null, browserBucket: capabilities.browser ? 'available' : null },
+    sync: { state: 'idle', completedPartitions: 0, totalPartitions: 0, lastSuccessfulRange: null, warning: null },
   });
 }
 
@@ -60,7 +67,7 @@ function errorCode(error: unknown): string {
 }
 
 export function getActivityStatus(db: DB): ActivityStatus {
-  return toStatus(db.select().from(activitySources).orderBy(desc(activitySources.updatedAtUtc)).get());
+  return getActivitySyncService(db).status();
 }
 
 export async function connectActivityWatch(

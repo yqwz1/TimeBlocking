@@ -15,6 +15,7 @@ import {
   Dumbbell,
   Trophy,
   CookingPot,
+  Orbit,
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { NavLink, useLocation, useNavigate, useOutlet } from 'react-router-dom';
@@ -68,6 +69,7 @@ const workspaceTabs: Array<{ id: WorkspaceId; to: string; label: string; icon: t
   { id: 'wishlist', to: '/wishlist', label: 'Wishlist', icon: ShoppingBag },
   { id: 'kitchen', to: '/kitchen', label: 'Kitchen', icon: CookingPot },
   { id: 'workout', to: '/workout', label: 'Workout', icon: Dumbbell },
+  { id: 'activity', to: '/activity', label: 'Activity Center', icon: Orbit },
   { id: 'progress', to: '/progress', label: 'Progress', icon: Trophy },
 ];
 
@@ -119,6 +121,7 @@ export default function Layout() {
       { id: 'nav-notes', title: 'Go to Second Brain', subtitle: 'Open your notes workspace', shortcut: 'G N', keywords: ['notes second brain vault'], run: () => navigate('/notes') },
       { id: 'nav-wishlist', title: 'Go to Wishlist', subtitle: 'Plan purchases against your goals and budget', shortcut: 'G L', keywords: ['wishlist shopping budget buy'], run: () => navigate('/wishlist') },
       { id: 'nav-workout', title: 'Go to Workout', subtitle: 'Open the strength coaching workspace', shortcut: 'G F', keywords: ['workout fitness strength training hevy'], run: () => navigate('/workout') },
+      { id: 'nav-activity', title: 'Go to Activity Center', subtitle: 'Review observed focus and plan alignment', shortcut: 'G A', keywords: ['activity focus activitywatch observatory'], run: () => navigate('/activity') },
       { id: 'nav-settings', title: 'Open Settings', subtitle: 'Jump to app settings', shortcut: 'G S', keywords: ['settings preferences'], run: () => navigate('/settings') },
       { id: 'quick-capture', title: 'Quick capture', subtitle: 'Create a fast note from anywhere', shortcut: 'Ctrl/Cmd+Shift+C', keywords: ['capture inbox note'], run: () => setShowQuickCapture(true) },
       ...scopedCommands,

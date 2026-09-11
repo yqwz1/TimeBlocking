@@ -7,6 +7,7 @@ import { blocks, labels, taskDependencies, tasks } from '../db/schema.js';
 import {
   blockerIdsOf,
   completeTask,
+  createNextRecurringTask,
   deleteTask,
   descendantIds,
   dueDatePatchForMove,
@@ -77,6 +78,29 @@ describe('tasks/service', () => {
     expect(db.select().from(tasks).where(eq(tasks.id, root)).get()!.status).toBe('done');
     expect(db.select().from(tasks).where(eq(tasks.id, openChild)).get()!.status).toBe('done');
     expect(db.select().from(tasks).where(eq(tasks.id, cancelledChild)).get()!.status).toBe('cancelled');
+  });
+
+  it('creates the next recurrence with matching task details when a standalone task is completed', async () => {
+    const id = insertTask(db, {
+      content: 'Review budget',
+      description: 'Check monthly spend',
+      dueDate: '2026-01-31',
+      dueDatetimeUtc: '2026-01-31T09:00:00.000Z',
+      recurrence: 'monthly',
+      durationMin: 30,
+      priority: 3,
+      labels: '["finance"]',
+    });
+    await completeTask(db, null, { ...DEFAULT_SETTINGS, timezone: 'UTC' }, id);
+    const next = db.select().from(tasks).where(eq(tasks.content, 'Review budget')).all().find((task) => task.id !== id)!;
+    expect(next).toMatchObject({ status: 'todo', dueDate: '2026-02-28', dueDatetimeUtc: '2026-02-28T09:00:00.000Z', recurrence: 'monthly', priority: 3 });
+    expect(next.labels).toBe('["finance"]');
+  });
+
+  it('does not create a recurrence for a task with subtasks, even after they are completed', () => {
+    const parent = insertTask(db, { dueDate: '2026-01-01', recurrence: 'daily' });
+    insertTask(db, { parentId: parent, status: 'done' });
+    expect(createNextRecurringTask(db, parent, DEFAULT_SETTINGS, '2026-01-01T00:00:00.000Z')).toBeNull();
   });
 
   it('deleteTask soft-deletes the task + descendants and cancels live blocks', async () => {

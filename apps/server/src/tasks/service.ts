@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { DateTime } from 'luxon';
 import { and, eq, inArray, or } from 'drizzle-orm';
-import type { Settings, TaskStatus } from '@timeblock/shared';
+import type { Settings, TaskRecurrence, TaskStatus } from '@timeblock/shared';
 import { attachments, labels, reminders, taskDependencies, tasks } from '../db/schema.js';
 import type { DB } from '../db/client.js';
 import { DATA_DIR, nowUtcIso } from '../config.js';
@@ -11,6 +11,57 @@ import { applyCompletionToCalendar, applyDeletionToCalendar } from '../sync/reco
 import type { Gcal } from '../integrations/google/client.js';
 
 const TERMINAL_STATUSES: TaskStatus[] = ['done', 'cancelled'];
+
+function nextOccurrenceDate(dueDate: string, recurrence: TaskRecurrence): string {
+  const date = DateTime.fromISO(dueDate, { zone: 'utc' }).startOf('day');
+  const duration = recurrence === 'daily' ? { days: 1 } : recurrence === 'weekly' ? { weeks: 1 } : { months: 1 };
+  return date.plus(duration).toISODate()!;
+}
+
+function nextOccurrenceDatetime(dueDatetimeUtc: string | null, recurrence: TaskRecurrence, timezone: string): string | null {
+  if (!dueDatetimeUtc) return null;
+  const date = DateTime.fromISO(dueDatetimeUtc, { zone: 'utc' }).setZone(timezone);
+  const duration = recurrence === 'daily' ? { days: 1 } : recurrence === 'weekly' ? { weeks: 1 } : { months: 1 };
+  return date.plus(duration).toUTC().toISO();
+}
+
+/** Creates the next standalone occurrence, carrying editable task details but never task-specific blocks, reminders, files, or dependencies. */
+export function createNextRecurringTask(db: DB, taskId: string, settings: Settings, now: string): string | null {
+  const task = db.select().from(tasks).where(eq(tasks.id, taskId)).get();
+  const recurrence = task?.recurrence as TaskRecurrence | null;
+  if (!task || !recurrence || !task.dueDate || task.parentId || hasChildren(db, taskId)) return null;
+
+  const id = randomUUID();
+  db.insert(tasks)
+    .values({
+      id,
+      content: task.content,
+      description: task.description,
+      projectId: task.projectId,
+      projectName: task.projectName,
+      priority: task.priority,
+      dueDate: nextOccurrenceDate(task.dueDate, recurrence),
+      dueDatetimeUtc: nextOccurrenceDatetime(task.dueDatetimeUtc, recurrence, settings.timezone),
+      recurrence,
+      durationMin: task.durationMin,
+      difficulty: task.difficulty,
+      labels: task.labels,
+      links: task.links,
+      color: task.color,
+      status: 'todo',
+      isCompleted: 0,
+      isDeleted: 0,
+      skipScheduling: task.skipScheduling,
+      forceSchedule: 0,
+      plannedForDate: null,
+      sortOrder: task.sortOrder,
+      pinned: task.pinned,
+      createdAtUtc: now,
+      updatedAtUtc: now,
+    })
+    .run();
+  return id;
+}
 
 /**
  * When a task's block is dragged/scheduled onto a new time, its due date should
@@ -68,6 +119,15 @@ export function hasOpenChildren(db: DB, id: string): boolean {
     .some((c) => !TERMINAL_STATUSES.includes(c.status as TaskStatus));
 }
 
+/** True if a task owns any non-deleted subtasks, including already completed history. */
+export function hasChildren(db: DB, id: string): boolean {
+  return !!db
+    .select({ id: tasks.id })
+    .from(tasks)
+    .where(and(eq(tasks.parentId, id), eq(tasks.isDeleted, 0)))
+    .get();
+}
+
 /**
  * Marks a task (and any open descendants) done, cleans up their calendar events,
  * and awards XP/learning. Returns the ids that were actually transitioned.
@@ -82,6 +142,7 @@ export async function completeTask(db: DB, gcal: Gcal | null, settings: Settings
     setTaskStatus(db, id, 'done', now);
     transitioned.push(id);
   }
+  for (const id of transitioned) createNextRecurringTask(db, id, settings, now);
   if (transitioned.length) await applyCompletionToCalendar(db, gcal, settings, transitioned);
   return transitioned;
 }

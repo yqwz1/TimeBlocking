@@ -25,6 +25,7 @@ export const tasks = sqliteTable(
     priority: integer('priority').notNull().default(1), // 1..4, 4 = urgent (UI P1)
     dueDate: text('due_date'), // YYYY-MM-DD (local)
     dueDatetimeUtc: text('due_datetime_utc'),
+    recurrence: text('recurrence'), // daily|weekly|monthly; creates the next occurrence on completion
     durationMin: integer('duration_min'),
     difficulty: text('difficulty'), // easy|medium|hard — feeds scheduler energy matching (hard=deep, easy=shallow)
     labels: text('labels').notNull().default('[]'), // JSON string[] of label names
@@ -121,6 +122,32 @@ export const reminders = sqliteTable(
   (t) => [index('idx_reminders_task').on(t.taskId), index('idx_reminders_remind_at').on(t.remindAtUtc)],
 );
 
+/** Durable, deduplicated ledger for outbound Gmail notifications. */
+export const emailDispatches = sqliteTable(
+  'email_dispatches',
+  {
+    id: text('id').primaryKey(),
+    kind: text('kind').notNull(), // morning_agenda|task_reminder|daily_recap|test
+    dedupeKey: text('dedupe_key').notNull(),
+    blockId: text('block_id'),
+    intendedSendAtUtc: text('intended_send_at_utc').notNull(),
+    nextAttemptAtUtc: text('next_attempt_at_utc').notNull(),
+    attempts: integer('attempts').notNull().default(0),
+    providerMessageId: text('provider_message_id'),
+    status: text('status').notNull().default('pending'), // pending|sending|retry|sent|skipped|failed
+    lastError: text('last_error'),
+    createdAtUtc: text('created_at_utc').notNull(),
+    updatedAtUtc: text('updated_at_utc').notNull(),
+    sentAtUtc: text('sent_at_utc'),
+    skippedAtUtc: text('skipped_at_utc'),
+  },
+  (t) => [
+    uniqueIndex('idx_email_dispatch_dedupe').on(t.dedupeKey),
+    index('idx_email_dispatch_due').on(t.status, t.nextAttemptAtUtc),
+    index('idx_email_dispatch_block').on(t.blockId),
+  ],
+);
+
 /**
  * Native calendar events (meetings/appointments). Fixed-time entries the scheduler
  * never touches. Pushed one-way to the app's Google Calendar; `gcalEventId` maps the
@@ -192,7 +219,7 @@ export const habits = sqliteTable('habits', {
   windowStart: text('window_start').notNull().default('06:00'),
   windowEnd: text('window_end').notNull().default('22:00'),
   priority: integer('priority').notNull().default(2),
-  kind: text('kind').notNull().default('habit'), // habit|learning
+  kind: text('kind').notNull().default('habit'), // habit|learning|negative (avoidance, never scheduled)
   weeklyTargetMin: integer('weekly_target_min'),
   notes: text('notes').notNull().default(''),
   active: integer('active').notNull().default(1),
@@ -205,7 +232,7 @@ export const habitInstances = sqliteTable(
     id: text('id').primaryKey(),
     habitId: text('habit_id').notNull(),
     date: text('date').notNull(), // local YYYY-MM-DD
-    status: text('status').notNull().default('planned'), // planned|done|skipped|missed
+    status: text('status').notNull().default('planned'), // planned|done|skipped|missed|lapsed
   },
   (t) => [uniqueIndex('idx_habit_instance').on(t.habitId, t.date)],
 );
@@ -1257,6 +1284,8 @@ export const computerActivityEvents = sqliteTable(
     sourceId: text('source_id').notNull(),
     bucketId: text('bucket_id').notNull(),
     sourceEventId: text('source_event_id').notNull(),
+    partitionStartUtc: text('partition_start_utc').notNull().default(''),
+    fingerprint: text('fingerprint').notNull().default(''),
     startUtc: text('start_utc').notNull(),
     durationSec: real('duration_sec').notNull(),
     application: text('application'),
@@ -1264,6 +1293,7 @@ export const computerActivityEvents = sqliteTable(
     editorProjectKey: text('editor_project_key'),
     language: text('language'),
     category: text('category').notNull().default('unknown'),
+    activityWatchCategory: text('activitywatch_category'),
     isAfk: integer('is_afk').notNull().default(0),
     isIncognito: integer('is_incognito').notNull().default(0),
     keyboardCount: integer('keyboard_count'),
@@ -1274,10 +1304,26 @@ export const computerActivityEvents = sqliteTable(
   },
   (t) => [
     uniqueIndex('idx_activity_event_source').on(t.sourceId, t.bucketId, t.sourceEventId),
+    index('idx_activity_event_fingerprint').on(t.sourceId, t.partitionStartUtc, t.fingerprint),
+    index('idx_activity_events_partition').on(t.sourceId, t.partitionStartUtc),
     index('idx_activity_events_start').on(t.startUtc),
     index('idx_activity_events_source_start').on(t.sourceId, t.startUtc),
   ],
 );
+
+/** User-confirmed mappings. Raw ActivityWatch values are never persisted beyond sanitized app/domain/category fields. */
+export const activityClassificationRules = sqliteTable('activity_classification_rules', {
+  id: text('id').primaryKey(), scope: text('scope').notNull(), scopeId: text('scope_id'), matchType: text('match_type').notNull(), matchValue: text('match_value').notNull(), classification: text('classification').notNull(), createdAtUtc: text('created_at_utc').notNull(), updatedAtUtc: text('updated_at_utc').notNull(),
+}, (t) => [index('idx_activity_rules_scope').on(t.scope, t.scopeId), index('idx_activity_rules_match').on(t.matchType, t.matchValue)]);
+
+/** Lifecycle audit for explicit task/project-linked Focus Timer work. Breaks are stored but do not score. */
+export const focusWorkSessions = sqliteTable('focus_work_sessions', {
+  id: text('id').primaryKey(), taskId: text('task_id'), projectId: text('project_id'), phase: text('phase').notNull(), state: text('state').notNull(), occurredAtUtc: text('occurred_at_utc').notNull(), createdAtUtc: text('created_at_utc').notNull(),
+}, (t) => [index('idx_focus_sessions_occurred').on(t.occurredAtUtc), index('idx_focus_sessions_task').on(t.taskId)]);
+
+export const activityExperiments = sqliteTable('activity_experiments', {
+  id: text('id').primaryKey(), kind: text('kind').notNull(), title: text('title').notNull(), detail: text('detail').notNull(), status: text('status').notNull().default('active'), baselineJson: text('baseline_json').notNull().default('{}'), resultJson: text('result_json'), startedAtUtc: text('started_at_utc').notNull(), endsAtUtc: text('ends_at_utc').notNull(), createdAtUtc: text('created_at_utc').notNull(), updatedAtUtc: text('updated_at_utc').notNull(),
+}, (t) => [index('idx_activity_experiments_status').on(t.status)]);
 
 /** Per-scope opt-in controls. A missing profile remains manual and can never auto-verify. */
 export const activityProfiles = sqliteTable(

@@ -49,7 +49,6 @@ import {
 import { api } from './../api';
 import { useTheme } from '../hooks/useTheme.js';
 import ActivityAnalyticsPanel from '../components/activity/ActivityAnalyticsPanel.js';
-import PersonalActivityAnalyticsPanel from '../components/activity/PersonalActivityAnalyticsPanel.js';
 
 // ---------------- formatting helpers ----------------
 
@@ -621,6 +620,8 @@ const HABIT_DOT: Record<HabitWeekDay['status'], string> = {
   done: 'bg-emerald-500',
   missed: 'bg-rose-400',
   skipped: 'bg-sky-400',
+  lapsed: 'bg-rose-500',
+  clean: 'bg-teal-400',
   pending: 'border-2 border-teal-500 bg-transparent',
   upcoming: 'bg-slate-200 dark:bg-neutral-700',
   off: 'bg-slate-100 dark:bg-neutral-800/70',
@@ -1010,7 +1011,6 @@ export default function AnalyticsPage() {
       </div>
 
       <ActivityAnalyticsPanel weekStart={weekStart} />
-      <PersonalActivityAnalyticsPanel weekStart={weekStart} />
 
       {isLoading ? (
         <Skeleton />

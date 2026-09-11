@@ -213,7 +213,8 @@ export function buildPlanInput(
   }
 
   // ---- habits ----
-  const allHabits = db.select().from(habits).where(eq(habits.active, 1)).all();
+  // Avoidances are tracked only by their lapse history; they must never consume a calendar slot.
+  const allHabits = db.select().from(habits).where(eq(habits.active, 1)).all().filter((h) => h.kind !== 'negative');
   const doneOrSkipped = db
     .select()
     .from(habitInstances)

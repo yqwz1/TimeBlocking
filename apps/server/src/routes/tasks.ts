@@ -11,7 +11,7 @@ import { APP_TAG, eventIdForBlock, Gcal } from '../integrations/google/client.js
 import { attachmentToDTO, dependencyRefs, reminderToDTO, taskToDTO, taskToView } from '../plan/mappers.js';
 import { blockHash } from '../sync/hash.js';
 import { nowUtcIso } from '../config.js';
-import { completeTask, deleteTask, dueDatePatchForMove, ensureLabelsExist, isSelfOrAncestor, setTaskStatus } from '../tasks/service.js';
+import { completeTask, deleteTask, dueDatePatchForMove, ensureLabelsExist, hasChildren, isSelfOrAncestor, setTaskStatus } from '../tasks/service.js';
 import { applyDeletionToCalendar } from '../sync/reconciler.js';
 
 function latestRunIds(db: DB): { atRisk: Set<string>; unplaceable: Set<string> } {
@@ -133,9 +133,13 @@ export function registerTaskRoutes(app: FastifyInstance, db: DB, manager: SyncMa
     if (!parsed.success) return reply.code(400).send({ error: parsed.error.message });
     const input = parsed.data;
 
+    if (input.recurrence && !input.dueDate) return reply.code(400).send({ error: 'a recurring task needs a due date' });
+    if (input.recurrence && input.parentId) return reply.code(400).send({ error: 'a recurring task cannot be a subtask' });
+
     if (input.parentId) {
       const parent = db.select().from(tasks).where(eq(tasks.id, input.parentId)).get();
       if (!parent || parent.isDeleted) return reply.code(400).send({ error: 'parent task not found' });
+      if (parent.recurrence) return reply.code(400).send({ error: 'subtasks cannot be added to a recurring task' });
     }
     if (input.labels?.length) ensureLabelsExist(db, input.labels);
 
@@ -157,6 +161,7 @@ export function registerTaskRoutes(app: FastifyInstance, db: DB, manager: SyncMa
         priority: input.priority ?? 1,
         dueDate: input.dueDate ?? null,
         dueDatetimeUtc: input.dueDatetimeUtc ?? null,
+        recurrence: input.recurrence ?? null,
         durationMin: input.durationMin ?? null,
         difficulty: input.difficulty ?? null,
         labels: JSON.stringify(input.labels ?? []),
@@ -185,12 +190,21 @@ export function registerTaskRoutes(app: FastifyInstance, db: DB, manager: SyncMa
     if (!parsed.success) return reply.code(400).send({ error: parsed.error.message });
     const input = parsed.data;
 
+    const nextRecurrence = input.recurrence === undefined ? t.recurrence : input.recurrence;
+    const nextDueDate = input.dueDate === undefined ? t.dueDate : input.dueDate;
+    const nextParentId = input.parentId === undefined ? t.parentId : input.parentId;
+    if (nextRecurrence && !nextDueDate) return reply.code(400).send({ error: 'a recurring task needs a due date' });
+    if (nextRecurrence && (nextParentId || hasChildren(db, t.id))) {
+      return reply.code(400).send({ error: 'only standalone tasks can recur' });
+    }
+
     if (input.parentId) {
       if (input.parentId === t.id || isSelfOrAncestor(db, t.id, input.parentId)) {
         return reply.code(400).send({ error: 'a task cannot be its own ancestor' });
       }
       const parent = db.select().from(tasks).where(eq(tasks.id, input.parentId)).get();
       if (!parent || parent.isDeleted) return reply.code(400).send({ error: 'parent task not found' });
+      if (parent.recurrence) return reply.code(400).send({ error: 'subtasks cannot be added to a recurring task' });
     }
     if (input.labels?.length) ensureLabelsExist(db, input.labels);
 
@@ -205,6 +219,7 @@ export function registerTaskRoutes(app: FastifyInstance, db: DB, manager: SyncMa
     if (input.priority !== undefined) patch.priority = input.priority;
     if (input.dueDate !== undefined) patch.dueDate = input.dueDate;
     if (input.dueDatetimeUtc !== undefined) patch.dueDatetimeUtc = input.dueDatetimeUtc;
+    if (input.recurrence !== undefined) patch.recurrence = input.recurrence;
     if (input.durationMin !== undefined) patch.durationMin = input.durationMin;
     if (input.difficulty !== undefined) patch.difficulty = input.difficulty;
     if (input.labels !== undefined) patch.labels = JSON.stringify(input.labels);
@@ -233,6 +248,7 @@ export function registerTaskRoutes(app: FastifyInstance, db: DB, manager: SyncMa
     const scheduleAffecting =
       input.dueDate !== undefined ||
       input.dueDatetimeUtc !== undefined ||
+      input.recurrence !== undefined ||
       input.durationMin !== undefined ||
       input.difficulty !== undefined ||
       input.priority !== undefined ||

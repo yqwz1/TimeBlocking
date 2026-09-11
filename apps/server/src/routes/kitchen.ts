@@ -17,10 +17,10 @@ import {
   addKitchenPlanLine,
   addKitchenStock,
   adjustKitchenStock,
-  archiveKitchenFood,
   cancelKitchenPlan,
   consumeKitchenPlanLine,
   createKitchenFood,
+  deleteKitchenFood,
   generateKitchenPlan,
   getKitchenDashboard,
   getKitchenSettings,
@@ -75,7 +75,7 @@ export function registerKitchenRoutes(app: FastifyInstance, db: DB, dealFetcher:
     try { return updateKitchenFood(db, req.params.id, parsed.data); } catch (error) { return fail(reply, error); }
   });
   app.delete<{ Params: { id: string } }>('/kitchen/foods/:id', async (req, reply) => {
-    try { archiveKitchenFood(db, req.params.id); return reply.code(204).send(); } catch (error) { return fail(reply, error); }
+    try { deleteKitchenFood(db, req.params.id, localToday(db)); return reply.code(204).send(); } catch (error) { return fail(reply, error); }
   });
 
   app.post<{ Params: { id: string }; Body: unknown }>('/kitchen/foods/:id/stock', async (req, reply) => {

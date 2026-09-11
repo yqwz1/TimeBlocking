@@ -1,8 +1,9 @@
 import { createHash } from 'node:crypto';
 import type { ActivityCapabilities } from '@timeblock/shared';
 
-const REQUEST_TIMEOUT_MS = 5_000;
-const MAX_RESPONSE_BYTES = 512 * 1024;
+const REQUEST_TIMEOUT_MS = 15_000;
+const MAX_PROBE_RESPONSE_BYTES = 512 * 1024;
+const MAX_QUERY_RESPONSE_BYTES = 2 * 1024 * 1024;
 
 export class ActivityWatchAdapterError extends Error {
   constructor(public readonly code: 'unavailable' | 'invalid_response' | 'response_too_large', message: string) {
@@ -16,6 +17,13 @@ export interface ActivityWatchProbe {
   capabilities: ActivityCapabilities;
 }
 
+/** Internal-only representation. It is deliberately converted to a safe projection before persistence. */
+export interface ActivityWatchCanonicalEvent {
+  timestamp: string;
+  duration: number;
+  data: Record<string, unknown>;
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value);
 }
@@ -26,7 +34,7 @@ function sourceKey(hostname: string | undefined): string {
   return `activitywatch:${fingerprint}`;
 }
 
-async function readJson(response: Response): Promise<unknown> {
+async function readJson(response: Response, maxBytes: number = MAX_PROBE_RESPONSE_BYTES): Promise<unknown> {
   const contentType = response.headers.get('content-type')?.toLowerCase() ?? '';
   if (!contentType.includes('application/json')) {
     throw new ActivityWatchAdapterError('invalid_response', 'ActivityWatch returned a non-JSON response.');
@@ -41,7 +49,7 @@ async function readJson(response: Response): Promise<unknown> {
       const { done, value } = await reader.read();
       if (done) break;
       size += value.byteLength;
-      if (size > MAX_RESPONSE_BYTES) {
+      if (size > maxBytes) {
         await reader.cancel();
         throw new ActivityWatchAdapterError('response_too_large', 'ActivityWatch response exceeded the safety limit.');
       }
@@ -75,11 +83,11 @@ export class ActivityWatchAdapter {
     if (!Number.isInteger(port) || port < 1 || port > 65_535) throw new Error('ActivityWatch port must be a valid TCP port.');
   }
 
-  private url(path: '/api/0/info' | '/api/0/buckets'): string {
+  private url(path: '/api/0/info' | '/api/0/buckets/' | '/api/0/query/'): string {
     return `http://127.0.0.1:${this.port}${path}`;
   }
 
-  private async get(path: '/api/0/info' | '/api/0/buckets'): Promise<unknown> {
+  private async get(path: '/api/0/info' | '/api/0/buckets/'): Promise<unknown> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
     try {
@@ -90,7 +98,7 @@ export class ActivityWatchAdapter {
         headers: { Accept: 'application/json' },
       });
       if (!response.ok) throw new ActivityWatchAdapterError('unavailable', `ActivityWatch returned HTTP ${response.status}.`);
-      return await readJson(response);
+      return await readJson(response, MAX_PROBE_RESPONSE_BYTES);
     } catch (error) {
       if (error instanceof ActivityWatchAdapterError) throw error;
       throw new ActivityWatchAdapterError('unavailable', 'ActivityWatch is unavailable on localhost.');
@@ -99,8 +107,24 @@ export class ActivityWatchAdapter {
     }
   }
 
+  private async postQuery(body: unknown): Promise<unknown> {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    try {
+      const response = await this.fetchImpl(this.url('/api/0/query/'), {
+        method: 'POST', redirect: 'error', signal: controller.signal,
+        headers: { Accept: 'application/json', 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+      });
+      if (!response.ok) throw new ActivityWatchAdapterError('unavailable', `ActivityWatch canonical query returned HTTP ${response.status}.`);
+      return await readJson(response, MAX_QUERY_RESPONSE_BYTES);
+    } catch (error) {
+      if (error instanceof ActivityWatchAdapterError) throw error;
+      throw new ActivityWatchAdapterError('unavailable', 'ActivityWatch canonical query is unavailable on localhost.');
+    } finally { clearTimeout(timeout); }
+  }
+
   async probe(): Promise<ActivityWatchProbe> {
-    const [infoRaw, bucketsRaw] = await Promise.all([this.get('/api/0/info'), this.get('/api/0/buckets')]);
+    const [infoRaw, bucketsRaw] = await Promise.all([this.get('/api/0/info'), this.get('/api/0/buckets/')]);
     if (!isRecord(infoRaw) || typeof infoRaw.version !== 'string' || !isRecord(bucketsRaw)) {
       throw new ActivityWatchAdapterError('invalid_response', 'ActivityWatch returned an unsupported API schema.');
     }
@@ -117,5 +141,29 @@ export class ActivityWatchAdapter {
         input: has('watcher-input'),
       },
     };
+  }
+
+  /**
+   * Mirrors ActivityWatch's documented canonical pipeline. `flood` resolves
+   * heartbeat/zero-duration events, AFK is intersected before categorization,
+   * and categories come from the user's local hierarchy. No writes are made.
+   */
+  async canonicalEvents(fromUtc: string, toUtc: string): Promise<ActivityWatchCanonicalEvent[]> {
+    // ActivityWatch v0.13 expects individual query statements, not one
+    // newline-delimited program. Keep classification local: its optional
+    // __CATEGORIES__ variable is not available on a standard local server.
+    const query = [
+      'events = flood(query_bucket(find_bucket("aw-watcher-window_")));',
+      'not_afk = flood(query_bucket(find_bucket("aw-watcher-afk_")));',
+      'not_afk = filter_keyvals(not_afk, "status", ["not-afk"]);',
+      'events = filter_period_intersect(events, not_afk);',
+      'RETURN = events;',
+    ];
+    const raw = await this.postQuery({ timeperiods: [`${fromUtc}/${toUtc}`], query });
+    const events = Array.isArray(raw) && Array.isArray(raw[0]) ? raw[0] : Array.isArray(raw) ? raw : null;
+    if (!events || !events.every((event) => isRecord(event) && typeof event.timestamp === 'string' && typeof event.duration === 'number' && isRecord(event.data))) {
+      throw new ActivityWatchAdapterError('invalid_response', 'ActivityWatch returned an unsupported canonical query result.');
+    }
+    return events.map((event) => ({ timestamp: event.timestamp as string, duration: Math.max(0, event.duration as number), data: event.data as Record<string, unknown> }));
   }
 }

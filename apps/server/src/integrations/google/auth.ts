@@ -18,6 +18,7 @@ export const GOOGLE_SCOPES = [
 ];
 
 export const DRIVE_READONLY_SCOPE = 'https://www.googleapis.com/auth/drive.readonly';
+export const GMAIL_SEND_SCOPE = 'https://www.googleapis.com/auth/gmail.send';
 const ENCRYPTED_PREFIX = 'enc:v1:';
 
 export function googleCredsPresent(): boolean {
@@ -29,7 +30,7 @@ export function tokenEncryptionConfigured(): boolean {
 }
 
 function encryptionKey(): Buffer {
-  if (!tokenEncryptionConfigured()) throw new Error('TB_TOKEN_ENCRYPTION_KEY must be set to at least 32 characters before connecting Google Drive');
+  if (!tokenEncryptionConfigured()) throw new Error('TB_TOKEN_ENCRYPTION_KEY must be set to at least 32 characters before connecting Google');
   return createHash('sha256').update(env.tokenEncryptionKey).digest();
 }
 
@@ -59,11 +60,18 @@ function makeClient(): OAuth2Client {
   });
 }
 
-export function getAuthUrl(includeDriveReadonly = false): string {
+export function getAuthUrl(options: { includeDriveReadonly?: boolean; includeGmailSend?: boolean; state?: string } = {}): string {
+  const scopes = [
+    ...GOOGLE_SCOPES,
+    ...(options.includeDriveReadonly ? [DRIVE_READONLY_SCOPE] : []),
+    ...(options.includeGmailSend ? [GMAIL_SEND_SCOPE] : []),
+  ];
   return makeClient().generateAuthUrl({
     access_type: 'offline',
     prompt: 'consent',
-    scope: includeDriveReadonly ? [...GOOGLE_SCOPES, DRIVE_READONLY_SCOPE] : GOOGLE_SCOPES,
+    include_granted_scopes: true,
+    scope: scopes,
+    state: options.state,
   });
 }
 
@@ -73,7 +81,7 @@ function persistTokens(db: DB, tokens: Credentials) {
     accessToken: tokens.access_token ? encrypt(tokens.access_token) : (existing?.accessToken ?? null),
     refreshToken: tokens.refresh_token ? encrypt(tokens.refresh_token) : (existing?.refreshToken ?? null),
     expiryUtc: tokens.expiry_date ? new Date(tokens.expiry_date).toISOString() : (existing?.expiryUtc ?? null),
-    scopes: tokens.scope ?? existing?.scopes ?? null,
+    scopes: [...new Set([...(existing?.scopes ?? '').split(/\s+/), ...(tokens.scope ?? '').split(/\s+/)].filter(Boolean))].join(' ') || null,
   };
   db.insert(oauthTokens)
     .values({ provider: 'google', ...row })
@@ -90,6 +98,23 @@ export async function handleOAuthCallback(db: DB, code: string): Promise<void> {
 export function isGoogleAuthed(db: DB): boolean {
   const row = db.select().from(oauthTokens).where(eq(oauthTokens.provider, 'google')).get();
   return !!row?.refreshToken;
+}
+
+export function getGrantedGoogleScopes(db: DB): string[] {
+  const raw = db.select().from(oauthTokens).where(eq(oauthTokens.provider, 'google')).get()?.scopes ?? '';
+  return raw.split(/\s+/).filter(Boolean);
+}
+
+export function hasGoogleScope(db: DB, scope: string): boolean {
+  return getGrantedGoogleScopes(db).includes(scope);
+}
+
+/** Records a scope requested by a successful incremental-authorization callback. */
+export function markGoogleScopeGranted(db: DB, scope: string): void {
+  const existing = db.select().from(oauthTokens).where(eq(oauthTokens.provider, 'google')).get();
+  if (!existing) return;
+  const scopes = [...new Set([...getGrantedGoogleScopes(db), scope])].join(' ');
+  db.update(oauthTokens).set({ scopes }).where(eq(oauthTokens.provider, 'google')).run();
 }
 
 export function disconnectGoogle(db: DB) {

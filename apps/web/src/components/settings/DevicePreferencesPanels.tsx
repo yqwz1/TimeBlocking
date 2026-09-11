@@ -32,6 +32,8 @@ import {
 import { clearNotifications, getNotifications } from '../../lib/notifications.js';
 import { enqueueAttentionAlert } from '../../lib/attentionAlerts.js';
 import { primeAlarmAudio } from '../../lib/sound.js';
+import type { Settings } from '@timeblock/shared';
+import { useEmailNotificationStatus, useSendTestEmail } from '../../hooks.js';
 
 export type DeviceSettingsSectionId =
   | 'appearance'
@@ -50,6 +52,7 @@ const WORKSPACE_LABELS: Record<WorkspaceId, string> = {
   wishlist: 'Wishlist',
   kitchen: 'Kitchen',
   workout: 'Workout',
+  activity: 'Activity Center',
   progress: 'Progress',
 };
 
@@ -139,13 +142,27 @@ function formatBytes(bytes: number) {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
 
-export default function DevicePreferencesPanels({ isVisible }: { isVisible: (id: DeviceSettingsSectionId) => boolean }) {
+export default function DevicePreferencesPanels({
+  isVisible,
+  serverSettings,
+  onServerSettingChange,
+}: {
+  isVisible: (id: DeviceSettingsSectionId) => boolean;
+  serverSettings: Settings;
+  onServerSettingChange: <K extends keyof Settings>(key: K, value: Settings[K]) => void;
+}) {
   const { setting: theme, resolved, setSetting: setTheme } = useTheme();
   const { preferences, updatePreferences, resetPreferences } = useUiPreferences();
   const [resetArmed, setResetArmed] = useState(false);
   const [notificationsCleared, setNotificationsCleared] = useState(false);
   const [storageEstimate, setStorageEstimate] = useState<{ usage?: number; quota?: number }>({});
   const [notificationPermission, setNotificationPermission] = useState(() => (typeof Notification === 'undefined' ? 'unsupported' : Notification.permission));
+  const emailStatus = useEmailNotificationStatus();
+  const testEmail = useSendTestEmail();
+  const deliveryError = emailStatus.data?.lastDelivery?.status === 'failed'
+    ? emailStatus.data.lastDelivery.error
+    : null;
+  const emailError = emailStatus.data?.currentError ?? deliveryError;
 
   useEffect(() => {
     void navigator.storage?.estimate?.().then((estimate) => setStorageEstimate({ usage: estimate.usage, quota: estimate.quota }));
@@ -294,6 +311,65 @@ export default function DevicePreferencesPanels({ isVisible }: { isVisible: (id:
 
       <SectionShell id="notifications" visible={isVisible('notifications')} icon={Bell} title="Notifications & shortcuts" description="Control the global inbox, stored history, browser permission, and app-wide keyboard actions.">
         <div className="space-y-5">
+          <div className="rounded-xl border border-slate-200 p-4 dark:border-neutral-700">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <p className="font-semibold text-slate-800 dark:text-neutral-100">Email notifications</p>
+                <p className="mt-1 text-sm text-slate-500 dark:text-neutral-400">Agenda, scheduled task-block reminders, and a daily recap through your connected Google account.</p>
+              </div>
+              <label className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-neutral-200">
+                <input
+                  type="checkbox"
+                  checked={serverSettings.emailNotificationsEnabled}
+                  onChange={(event) => {
+                    if (event.target.checked && !emailStatus.data?.gmailPermissionGranted) {
+                      if (emailStatus.data && !emailStatus.data.encryptionConfigured) return;
+                      window.location.assign('/api/email/connect');
+                      return;
+                    }
+                    onServerSettingChange('emailNotificationsEnabled', event.target.checked);
+                  }}
+                />
+                Enable email
+              </label>
+            </div>
+
+            <div className={`mt-4 rounded-lg px-3 py-2 text-sm ${emailError ? 'bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-300' : emailStatus.data?.gmailPermissionGranted ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300' : 'bg-amber-50 text-amber-800 dark:bg-amber-500/10 dark:text-amber-300'}`}>
+              {emailStatus.isLoading ? 'Checking Gmail connection…' : emailError
+                ? emailError
+                : !emailStatus.data?.encryptionConfigured
+                  ? 'Set TB_TOKEN_ENCRYPTION_KEY to at least 32 characters, restart TimeBlocking, then connect Gmail.'
+                  : emailStatus.data?.gmailPermissionGranted
+                    ? `Gmail send permission granted${emailStatus.data.senderEmail ? ` for ${emailStatus.data.senderEmail}` : ''}. Messages are sent to the same address.`
+                    : 'Gmail send permission has not been granted. No inbox-reading permission is requested.'}
+            </div>
+
+            {(!emailStatus.data?.gmailPermissionGranted || emailStatus.data?.currentError) && emailStatus.data?.encryptionConfigured && (
+              <a href="/api/email/connect" className="mt-3 inline-flex rounded-lg bg-teal-600 px-3 py-2 text-sm font-semibold text-white hover:bg-teal-700">{emailStatus.data?.gmailPermissionGranted ? 'Reconnect Gmail' : 'Connect Gmail'}</a>
+            )}
+
+            <div className="mt-4 divide-y divide-slate-100 rounded-xl bg-slate-50/70 dark:divide-neutral-800 dark:bg-neutral-950/45">
+              <div className="grid gap-3 px-3 py-3 sm:grid-cols-[1fr_auto] sm:items-center">
+                <ToggleRow label="Morning agenda" description="Chronological blocks, habits, events, and unscheduled work for today." checked={serverSettings.emailMorningAgendaEnabled} onChange={(value) => onServerSettingChange('emailMorningAgendaEnabled', value)} />
+                <label><FieldLabel>Send at</FieldLabel><input type="time" value={serverSettings.emailMorningAgendaTime} onChange={(event) => onServerSettingChange('emailMorningAgendaTime', event.target.value)} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-800" /></label>
+              </div>
+              <div className="grid gap-3 px-3 py-3 sm:grid-cols-[1fr_9rem] sm:items-center">
+                <ToggleRow label="Task-block reminders" description="Email once for every upcoming scheduled or pending task block, including split blocks." checked={serverSettings.emailTaskReminderEnabled} onChange={(value) => onServerSettingChange('emailTaskReminderEnabled', value)} />
+                <label><FieldLabel>Minutes before</FieldLabel><input type="number" min="1" max="1440" value={serverSettings.emailTaskReminderMinutesBefore} onChange={(event) => onServerSettingChange('emailTaskReminderMinutesBefore', Number(event.target.value))} className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-800" /></label>
+              </div>
+              <div className="grid gap-3 px-3 py-3 sm:grid-cols-[1fr_auto] sm:items-center">
+                <ToggleRow label="Daily recap" description="Completed, missed, and remaining work, plus shutdown reflection details." checked={serverSettings.emailDailyRecapEnabled} onChange={(value) => onServerSettingChange('emailDailyRecapEnabled', value)} />
+                <label><FieldLabel>Send at</FieldLabel><input type="time" value={serverSettings.emailDailyRecapTime} onChange={(event) => onServerSettingChange('emailDailyRecapTime', event.target.value)} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-800" /></label>
+              </div>
+            </div>
+
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              <button type="button" disabled={!emailStatus.data?.gmailPermissionGranted || testEmail.isPending} onClick={() => testEmail.mutate()} className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-white/5">{testEmail.isPending ? 'Sending…' : 'Send test email'}</button>
+              {testEmail.isSuccess && <span className="text-sm text-emerald-600 dark:text-emerald-400">Test email sent.</span>}
+              {testEmail.isError && <span className="text-sm text-rose-600 dark:text-rose-400">{testEmail.error instanceof Error ? testEmail.error.message : 'Test email failed.'}</span>}
+              {emailStatus.data?.lastDelivery && <span className="text-xs text-slate-400">Last result: {emailStatus.data.lastDelivery.status} · {new Date(emailStatus.data.lastDelivery.at).toLocaleString()}</span>}
+            </div>
+          </div>
           <div className="divide-y divide-slate-100 rounded-xl bg-slate-50/70 dark:divide-neutral-800 dark:bg-neutral-950/45">
             <ToggleRow label="Show notification inbox" description="Keep the bell and unread count in the global sidebar." checked={preferences.showNotifications} onChange={(value) => set('showNotifications', value)} />
             <ToggleRow label="Global keyboard shortcuts" description="Enable Ctrl/Cmd+K for commands and Ctrl/Cmd+Shift+C for quick capture." checked={preferences.globalShortcuts} onChange={(value) => set('globalShortcuts', value)} />

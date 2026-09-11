@@ -88,6 +88,32 @@ describe('kitchen routes', () => {
     expect(dashboard.json().foods[0].availableQuantity).toBe(240);
   });
 
+  it('deletes an unreserved food and records its remaining stock as discarded', async () => {
+    const food = await createChicken();
+    await app.inject({ method: 'POST', url: `/kitchen/foods/${food.id}/stock`, payload: { portions: [{ amount: 240, label: 'To delete' }] } });
+
+    const deleted = await app.inject({ method: 'DELETE', url: `/kitchen/foods/${food.id}` });
+    expect(deleted.statusCode).toBe(204);
+
+    const dashboard = await app.inject({ method: 'GET', url: '/kitchen/dashboard?date=2026-08-11' });
+    expect(dashboard.json().foods).toEqual([]);
+    expect(dashboard.json().movements).toEqual(expect.arrayContaining([
+      expect.objectContaining({ foodId: food.id, deltaQuantity: -240, reason: 'discarded', note: 'Food deleted' }),
+    ]));
+  });
+
+  it('does not delete food whose stock is reserved by today’s plan', async () => {
+    const food = await createChicken();
+    await app.inject({ method: 'POST', url: `/kitchen/foods/${food.id}/stock`, payload: { portions: [{ amount: 400 }] } });
+    await app.inject({ method: 'POST', url: '/kitchen/plans/generate', payload: { dateLocal: '2026-08-11' } });
+
+    const deleted = await app.inject({ method: 'DELETE', url: `/kitchen/foods/${food.id}` });
+    expect(deleted.statusCode).toBe(409);
+    expect(deleted.json().error).toContain('Remove this food from today’s plan');
+    const dashboard = await app.inject({ method: 'GET', url: '/kitchen/dashboard?date=2026-08-11' });
+    expect(dashboard.json().foods).toHaveLength(1);
+  });
+
   it('clears the dashboard after cancellation and does not duplicate lines when regenerated', async () => {
     const food = await createChicken();
     await app.inject({ method: 'POST', url: `/kitchen/foods/${food.id}/stock`, payload: { portions: [{ amount: 200, label: 'Bag A' }, { amount: 200, label: 'Bag B' }] } });

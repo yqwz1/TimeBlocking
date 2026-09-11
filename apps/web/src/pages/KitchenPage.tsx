@@ -159,7 +159,8 @@ function FoodEditor({ food, onClose }: { food: KitchenFoodDTO | null; onClose: (
   const [error, setError] = useState('');
   const create = useCreateKitchenFood();
   const update = useUpdateKitchenFood();
-  const busy = create.isPending || update.isPending;
+  const remove = useArchiveKitchenFood();
+  const busy = create.isPending || update.isPending || remove.isPending;
   const set = <K extends keyof FoodDraft>(key: K, value: FoodDraft[K]) => setDraft((current) => ({ ...current, [key]: value }));
 
   const submit = async (event: FormEvent) => {
@@ -185,6 +186,17 @@ function FoodEditor({ food, onClose }: { food: KitchenFoodDTO | null; onClose: (
     try {
       if (food) await update.mutateAsync({ id: food.id, patch: input });
       else await create.mutateAsync(input);
+      onClose();
+    } catch (reason) {
+      setError(errorMessage(reason));
+    }
+  };
+
+  const deleteFood = async () => {
+    if (!food || !window.confirm(`Delete "${food.name}"? Any stock not reserved in today’s plan will be marked as discarded.`)) return;
+    setError('');
+    try {
+      await remove.mutateAsync(food.id);
       onClose();
     } catch (reason) {
       setError(errorMessage(reason));
@@ -222,7 +234,7 @@ function FoodEditor({ food, onClose }: { food: KitchenFoodDTO | null; onClose: (
 
         <label className="flex items-center gap-3 rounded-xl border border-slate-200 px-3 py-3 text-sm dark:border-neutral-800"><input type="checkbox" checked={draft.plannerEligible} onChange={(e) => set('plannerEligible', e.target.checked)} className="h-4 w-4 accent-teal-600" /><span><strong className="font-semibold">Use in generated plans</strong><span className="block text-xs text-slate-500 dark:text-neutral-400">Turn this off to track stock without letting Kitchen select it.</span></span></label>
         {error && <p role="alert" className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:bg-rose-500/10 dark:text-rose-300">{error}</p>}
-        <div className="flex justify-end gap-2"><button type="button" onClick={onClose} className={`${button} text-slate-600 hover:bg-slate-100 dark:text-neutral-300 dark:hover:bg-neutral-800`}>Cancel</button><button disabled={busy} className={`${button} bg-teal-600 px-4 text-white hover:bg-teal-700`}><Check size={15} /> {food ? 'Save changes' : 'Add food'}</button></div>
+        <div className="flex flex-wrap justify-between gap-2"><div>{food && <button type="button" disabled={busy} onClick={() => void deleteFood()} className={`${button} border border-rose-200 text-rose-600 hover:bg-rose-50 dark:border-rose-500/30 dark:text-rose-300 dark:hover:bg-rose-500/10`}><Trash2 size={15} /> Delete food</button>}</div><div className="flex gap-2"><button type="button" onClick={onClose} className={`${button} text-slate-600 hover:bg-slate-100 dark:text-neutral-300 dark:hover:bg-neutral-800`}>Cancel</button><button disabled={busy} className={`${button} bg-teal-600 px-4 text-white hover:bg-teal-700`}><Check size={15} /> {food ? 'Save changes' : 'Add food'}</button></div></div>
       </form>
     </Modal>
   );
@@ -275,6 +287,16 @@ function AdjustmentEditor({ food, portion, onClose }: { food: KitchenFoodDTO; po
       setError(errorMessage(cause));
     }
   };
+  const deletePortion = async () => {
+    if (portion.reservedQuantity > 0 || !window.confirm(`Delete this ${format(portion.remainingQuantity)} ${food.unit} stock portion? It will be recorded as discarded.`)) return;
+    setError('');
+    try {
+      await adjust.mutateAsync({ stockId: portion.id, input: { deltaQuantity: -portion.remainingQuantity, reason: 'discarded', note: 'Stock portion deleted' } });
+      onClose();
+    } catch (cause) {
+      setError(errorMessage(cause));
+    }
+  };
   return (
     <Modal title={`Use ${food.name}`} description={`${format(portion.availableQuantity)} ${food.unit} is available in this portion.`} onClose={onClose}>
       <form onSubmit={submit} className="space-y-4 p-5">
@@ -282,7 +304,7 @@ function AdjustmentEditor({ food, portion, onClose }: { food: KitchenFoodDTO; po
         <label><span className={label}>Reason</span><select value={reason} onChange={(e) => setReason(e.target.value as typeof reason)} className={field}><option value="eaten">Eaten — count toward today</option><option value="correction">Stock correction</option><option value="discarded">Discarded</option></select></label>
         <label><span className={label}>Note (optional)</span><input value={note} onChange={(e) => setNote(e.target.value)} className={field} /></label>
         {error && <p role="alert" className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:bg-rose-500/10 dark:text-rose-300">{error}</p>}
-        <div className="flex justify-end gap-2"><button type="button" onClick={onClose} className={`${button} text-slate-600 hover:bg-slate-100 dark:text-neutral-300 dark:hover:bg-neutral-800`}>Cancel</button><button disabled={adjust.isPending} className={`${button} bg-slate-900 px-4 text-white hover:bg-slate-700 dark:bg-white dark:text-neutral-900`}>Update stock</button></div>
+        <div className="flex flex-wrap justify-between gap-2"><button type="button" disabled={adjust.isPending || portion.reservedQuantity > 0} onClick={() => void deletePortion()} title={portion.reservedQuantity > 0 ? 'Remove this portion from today’s plan before deleting it' : 'Delete this stock portion'} className={`${button} border border-rose-200 text-rose-600 hover:bg-rose-50 dark:border-rose-500/30 dark:text-rose-300 dark:hover:bg-rose-500/10`}><Trash2 size={15} /> Delete portion</button><div className="flex gap-2"><button type="button" onClick={onClose} className={`${button} text-slate-600 hover:bg-slate-100 dark:text-neutral-300 dark:hover:bg-neutral-800`}>Cancel</button><button disabled={adjust.isPending} className={`${button} bg-slate-900 px-4 text-white hover:bg-slate-700 dark:bg-white dark:text-neutral-900`}>Update stock</button></div></div>
       </form>
     </Modal>
   );

@@ -214,11 +214,24 @@ export function updateKitchenFood(db: DB, id: string, patch: KitchenFoodPatch): 
   return listKitchenFoods(db).find((food) => food.id === id)!;
 }
 
-export function archiveKitchenFood(db: DB, id: string) {
-  requireFood(db, id);
-  const hasRemaining = db.select().from(kitchenStockPortions).all().some((portion) => portion.foodId === id && portion.remainingQuantity > EPSILON);
-  if (hasRemaining) throw new KitchenError('Remove, eat, or discard remaining stock before archiving this food', 409);
-  db.update(kitchenFoods).set({ archived: 1, plannerEligible: 0, updatedAtUtc: nowUtcIso() }).where(eq(kitchenFoods.id, id)).run();
+export function deleteKitchenFood(db: DB, id: string, dateLocal: string) {
+  const food = requireFood(db, id);
+  const portions = db.select().from(kitchenStockPortions).all().filter((portion) => portion.foodId === id && portion.remainingQuantity > EPSILON);
+  const reservations = reservedQuantities(db);
+  if (portions.some((portion) => (reservations.get(portion.id) ?? 0) > EPSILON)) {
+    throw new KitchenError('Remove this food from today’s plan before deleting it', 409);
+  }
+
+  const now = nowUtcIso();
+  (db as any).transaction((tx: DB) => {
+    for (const portion of portions) {
+      const quantity = portion.remainingQuantity;
+      const macros = macrosFor(food, quantity);
+      tx.update(kitchenStockPortions).set({ remainingQuantity: 0, status: 'discarded', updatedAtUtc: now }).where(eq(kitchenStockPortions.id, portion.id)).run();
+      tx.insert(kitchenStockMovements).values({ id: randomUUID(), foodId: id, stockPortionId: portion.id, planLineId: null, deltaQuantity: -quantity, reason: 'discarded', dateLocal, note: 'Food deleted', proteinG: macros.proteinG, caloriesKcal: macros.caloriesKcal, carbsG: macros.carbsG, fatG: macros.fatG, reversalOfId: null, reversedAtUtc: null, createdAtUtc: now }).run();
+    }
+    tx.update(kitchenFoods).set({ archived: 1, plannerEligible: 0, updatedAtUtc: now }).where(eq(kitchenFoods.id, id)).run();
+  });
 }
 
 export function addKitchenStock(db: DB, foodId: string, input: KitchenStockAddInput, dateLocal: string): KitchenStockPortionDTO[] {

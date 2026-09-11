@@ -17,12 +17,13 @@ import {
   Paperclip,
   Pin,
   Plus,
+  Repeat2,
   Tag,
   Trash2,
   Upload,
   X,
 } from 'lucide-react';
-import type { TaskDifficulty, TaskLink, TaskStatus } from '@timeblock/shared';
+import type { TaskDifficulty, TaskLink, TaskRecurrence, TaskStatus } from '@timeblock/shared';
 import {
   useAddDependency,
   useAttachments,
@@ -59,7 +60,13 @@ const DIFFICULTIES: { value: TaskDifficulty; label: string; dot: string }[] = [
   { value: 'hard', label: 'Hard', dot: 'bg-rose-500' },
 ];
 
-type Picker = 'status' | 'priority' | 'project' | 'date' | 'duration' | 'difficulty' | 'color' | null;
+type Picker = 'status' | 'priority' | 'project' | 'date' | 'duration' | 'difficulty' | 'color' | 'recurrence' | null;
+
+const RECURRENCES: { value: TaskRecurrence; label: string }[] = [
+  { value: 'daily', label: 'Daily' },
+  { value: 'weekly', label: 'Weekly' },
+  { value: 'monthly', label: 'Monthly' },
+];
 
 const pillBase =
   'flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors';
@@ -465,6 +472,11 @@ export default function TaskEditorPanel({ taskId, onClose, onOpen }: { taskId: s
               <button type="button" onClick={() => toggle('color')} className={`${pillBase} ${picker === 'color' || task.color ? pillOn : pillOff}`}>
                 <Paintbrush size={12} /> {task.color ? <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: task.color }} /> : 'Color'}
               </button>
+              {!task.parentId && task.subtaskCount === 0 && (
+                <button type="button" onClick={() => toggle('recurrence')} className={`${pillBase} ${picker === 'recurrence' || task.recurrence ? pillOn : pillOff}`}>
+                  <Repeat2 size={12} /> {RECURRENCES.find((rule) => rule.value === task.recurrence)?.label ?? 'Repeat'}
+                </button>
+              )}
             </div>
 
             {picker && (
@@ -652,6 +664,33 @@ export default function TaskEditorPanel({ taskId, onClose, onOpen }: { taskId: s
                         style={{ backgroundColor: c ?? 'transparent' }}
                       />
                     ))}
+                  </div>
+                )}
+
+                {picker === 'recurrence' && (
+                  <div className="flex flex-col gap-1">
+                    {!task.dueDate && <p className="px-2 pb-1 text-[11px] text-amber-600 dark:text-amber-400">Choose a date before making this task repeat.</p>}
+                    {RECURRENCES.map((rule) => (
+                      <button
+                        key={rule.value}
+                        type="button"
+                        disabled={!task.dueDate}
+                        onClick={() => {
+                          patch({ recurrence: task.recurrence === rule.value ? null : rule.value });
+                          setPicker(null);
+                        }}
+                        className={`rounded-md px-2 py-1 text-left text-sm hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-45 dark:hover:bg-neutral-800 ${
+                          task.recurrence === rule.value ? 'font-semibold text-slate-900 dark:text-neutral-100' : 'text-slate-600 dark:text-neutral-300'
+                        }`}
+                      >
+                        {rule.label}
+                      </button>
+                    ))}
+                    {task.recurrence && (
+                      <button type="button" onClick={() => { patch({ recurrence: null }); setPicker(null); }} className="mt-1 px-2 text-left text-xs text-slate-400 hover:text-red-500">
+                        Does not repeat
+                      </button>
+                    )}
                   </div>
                 )}
               </div>

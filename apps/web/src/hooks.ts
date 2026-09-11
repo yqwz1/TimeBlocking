@@ -4,6 +4,7 @@ import { celebrateTaskComplete } from './lib/celebrate.js';
 import type {
   AchievementDTO,
   ActivityAnalytics,
+  ActivityCenterOverview,
   ActivityAiAnalysis,
   ActivityAiAnalyzeInput,
   ActivityAiPreview,
@@ -14,6 +15,7 @@ import type {
   ActivityRecommendation,
   BlockActivitySummary,
   ActivityStatus,
+  ActivityTimelineSegment,
   AnalyticsDailyDTO,
   AttachmentDTO,
   BriefDTO,
@@ -23,6 +25,7 @@ import type {
   DriveBackupDTO,
   DriveBackupStatusDTO,
   DriveConnectionDTO,
+  EmailNotificationStatusDTO,
   DailyShutdownInput,
   DayResultDTO,
   EventDTO,
@@ -165,6 +168,22 @@ export const useRestoreDriveBackup = () =>
 
 export const useActivityStatus = () =>
   useQuery({ queryKey: ['activity', 'status'], queryFn: () => api.get<ActivityStatus>('/activity/status'), refetchInterval: 30_000 });
+
+export const useActivityCenterOverview = (fromUtc: string, toUtc: string) =>
+  useQuery({ queryKey: ['activity', 'center', 'overview', fromUtc, toUtc], queryFn: () => api.get<ActivityCenterOverview>(`/activity/center/overview?from=${encodeURIComponent(fromUtc)}&to=${encodeURIComponent(toUtc)}`), refetchInterval: 60_000 });
+
+export const useActivityCenterTimeline = (fromUtc: string, toUtc: string) =>
+  useQuery({ queryKey: ['activity', 'center', 'timeline', fromUtc, toUtc], queryFn: () => api.get<ActivityTimelineSegment[]>(`/activity/center/timeline?from=${encodeURIComponent(fromUtc)}&to=${encodeURIComponent(toUtc)}`), refetchInterval: 60_000 });
+
+export const useSyncActivity = () => {
+  const qc = useQueryClient();
+  return useMutation({ mutationFn: () => api.post<{ status: ActivityStatus; sync: string }>('/activity/sync'), onSuccess: () => void qc.invalidateQueries({ queryKey: ['activity'] }) });
+};
+
+export const useCreateActivityExperiment = () => {
+  const qc = useQueryClient();
+  return useMutation({ mutationFn: (input: { kind: string; title: string; detail: string; endsAtUtc: string }) => api.post('/activity/experiments', input), onSuccess: () => void qc.invalidateQueries({ queryKey: ['activity'] }) });
+};
 
 export const useConnectActivityWatch = () => {
   const qc = useQueryClient();
@@ -545,6 +564,7 @@ export function taskToInput(t: TaskDTO): TaskInput {
     priority: t.priority,
     dueDate: t.dueDate,
     dueDatetimeUtc: t.dueDatetimeUtc,
+    recurrence: t.recurrence,
     durationMin: t.durationMin,
     difficulty: t.difficulty,
     labels: t.labels,
@@ -844,15 +864,31 @@ export const useUpdateSettings = () => {
   });
 };
 
+export const useEmailNotificationStatus = () =>
+  useQuery({ queryKey: ['email', 'status'], queryFn: () => api.get<EmailNotificationStatusDTO>('/email/status'), refetchInterval: 30_000, retry: false });
+
+export const useSendTestEmail = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.post<{ ok: true }>('/email/test'),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['email', 'status'] }),
+  });
+};
+
 // ---------- habits ----------
 
 export const useHabits = () => useQuery({ queryKey: ['habits'], queryFn: () => api.get<HabitDTO[]>('/habits') });
+
+function invalidateHabitCalendar(qc: ReturnType<typeof useQueryClient>) {
+  qc.invalidateQueries({ queryKey: ['habits'] });
+  qc.invalidateQueries({ queryKey: ['schedule'] });
+}
 
 export const useCreateHabit = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (input: HabitInput) => api.post<HabitDTO>('/habits', input),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['habits'] }),
+    onSuccess: () => invalidateHabitCalendar(qc),
   });
 };
 
@@ -860,7 +896,7 @@ export const useUpdateHabit = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, patch }: { id: string; patch: Partial<HabitInput> }) => api.patch<HabitDTO>(`/habits/${id}`, patch),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['habits'] }),
+    onSuccess: () => invalidateHabitCalendar(qc),
   });
 };
 
@@ -868,7 +904,7 @@ export const useDeleteHabit = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => api.delete(`/habits/${id}`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['habits'] }),
+    onSuccess: () => invalidateHabitCalendar(qc),
   });
 };
 
@@ -877,8 +913,7 @@ export const useSkipHabitToday = () => {
   return useMutation({
     mutationFn: (id: string) => api.post(`/habits/${id}/skip-today`),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['habits'] });
-      qc.invalidateQueries({ queryKey: ['schedule'] });
+      invalidateHabitCalendar(qc);
     },
   });
 };
@@ -888,11 +923,26 @@ export const useCompleteHabitToday = () => {
   return useMutation({
     mutationFn: (id: string) => api.post(`/habits/${id}/complete-today`),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['habits'] });
-      qc.invalidateQueries({ queryKey: ['schedule'] });
+      invalidateHabitCalendar(qc);
       qc.invalidateQueries({ queryKey: ['plan'] });
       qc.invalidateQueries({ queryKey: ['gamification'] });
     },
+  });
+};
+
+export const useRecordHabitLapseToday = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.post(`/habits/${id}/lapse-today`),
+    onSuccess: () => invalidateHabitCalendar(qc),
+  });
+};
+
+export const useClearHabitLapseToday = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.post(`/habits/${id}/clear-lapse-today`),
+    onSuccess: () => invalidateHabitCalendar(qc),
   });
 };
 
