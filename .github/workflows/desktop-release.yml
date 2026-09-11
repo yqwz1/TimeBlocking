@@ -101,11 +101,16 @@ jobs:
 
       - name: Publish release
         working-directory: apps/desktop
+        # electron-builder can create the release and upload the installer
+        # before failing on a secondary updater asset. The synchronization
+        # step below is the authoritative asset repair and verification path.
+        continue-on-error: true
         run: npx electron-builder --publish always
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Synchronize and verify release assets
+        if: always()
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
